@@ -14,8 +14,8 @@ import org.springframework.data.repository.query.Param;
 public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificationExecutor<Post>,
         PostCountRepository {
 
-    /** 가시성 판단에 필요한 블로그와 블로그 주인을 함께 읽는다. 삭제된 글도 나온다. */
-    @Query("select p from Post p join fetch p.blog b join fetch b.member where p.id = :id")
+    /** 가시성 판단에 필요한 블로그와 블로그 주인, 글 상세에 쓰는 카테고리를 함께 읽는다. 삭제된 글도 나온다. */
+    @Query("select p from Post p join fetch p.blog b join fetch b.member left join fetch p.category where p.id = :id")
     Optional<Post> findWithBlogById(@Param("id") Long id);
 
     /**
@@ -45,5 +45,13 @@ public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificat
             + " OR (target_type = 'COMMENT' AND target_id IN (SELECT id FROM comment WHERE post_id = :postId))",
             nativeQuery = true)
     int deleteNotifications(@Param("postId") Long postId);
+
+    /**
+     * 댓글 수 늘리기·줄이기 (CMT-01). 한 줄 UPDATE라 동시에 여러 댓글이 달려도 값이 어긋나지 않는다.
+     * 작성자가 글을 고친 것이 아니라서 updated_at은 그대로 둔다.
+     */
+    @Modifying(clearAutomatically = true)
+    @Query("update Post p set p.commentCount = p.commentCount + :delta, p.updatedAt = p.updatedAt where p.id = :postId")
+    int addCommentCount(@Param("postId") Long postId, @Param("delta") int delta);
 
 }

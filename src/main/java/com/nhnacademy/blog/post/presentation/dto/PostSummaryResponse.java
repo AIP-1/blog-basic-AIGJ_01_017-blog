@@ -20,7 +20,10 @@ public record PostSummaryResponse(Long id, String title, String summary, String 
     public record CategoryRef(Long id, String name) {
     }
 
-    /** blog는 목록을 부른 블로그다. post.getBlog()는 지연 로딩이라 읽지 않는다. */
+    /**
+     * blog는 글이 속한 블로그다. 블로그 메인은 목록을 부른 블로그를 넘기고(post.getBlog()를 읽지 않음),
+     * 홈은 블로그를 함께 읽어 온 post.getBlog()를 넘긴다.
+     */
     public static PostSummaryResponse of(Post post, Blog blog) {
         Category category = post.getCategory();
         return new PostSummaryResponse(post.getId(), post.getTitle(), post.getSummary(), null,

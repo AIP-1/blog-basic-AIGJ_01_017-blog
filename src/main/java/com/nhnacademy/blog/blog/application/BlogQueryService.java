@@ -4,8 +4,6 @@ import com.nhnacademy.blog.admin.domain.ModerationAction;
 import com.nhnacademy.blog.admin.domain.ModerationLogRepository;
 import com.nhnacademy.blog.admin.domain.ModerationTargetType;
 import com.nhnacademy.blog.blog.domain.Blog;
-import com.nhnacademy.blog.blog.domain.BlogRepository;
-import com.nhnacademy.blog.global.visibility.BlogVisibilityPolicy;
 import com.nhnacademy.blog.global.visibility.PostSpecifications;
 import com.nhnacademy.blog.post.domain.PostRepository;
 import com.nhnacademy.blog.subscription.domain.SubscriptionRepository;
@@ -20,22 +18,19 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class BlogQueryService {
 
-    private final BlogRepository blogRepository;
     private final PostRepository postRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final ModerationLogRepository moderationLogRepository;
-    private final BlogVisibilityPolicy blogVisibilityPolicy;
+    private final PrimaryBlogAddresses primaryBlogAddresses;
     private final Clock clock;
 
-    public BlogQueryService(BlogRepository blogRepository, PostRepository postRepository,
-                            SubscriptionRepository subscriptionRepository,
+    public BlogQueryService(PostRepository postRepository, SubscriptionRepository subscriptionRepository,
                             ModerationLogRepository moderationLogRepository,
-                            BlogVisibilityPolicy blogVisibilityPolicy, Clock clock) {
-        this.blogRepository = blogRepository;
+                            PrimaryBlogAddresses primaryBlogAddresses, Clock clock) {
         this.postRepository = postRepository;
         this.subscriptionRepository = subscriptionRepository;
         this.moderationLogRepository = moderationLogRepository;
-        this.blogVisibilityPolicy = blogVisibilityPolicy;
+        this.primaryBlogAddresses = primaryBlogAddresses;
         this.clock = clock;
     }
 
@@ -48,18 +43,8 @@ public class BlogQueryService {
         long subscriberCount = subscriptionRepository.countByBlogId(blog.getId());
         boolean subscribed = viewerId != null
                 && subscriptionRepository.existsByMemberIdAndBlogId(viewerId, blog.getId());
-        return new BlogDetail(blog, ownerPrimaryBlogAddress(blog, viewerId), postCount, subscriberCount, owner,
+        return new BlogDetail(blog, primaryBlogAddresses.ofOwner(blog, viewerId), postCount, subscriberCount, owner,
                 subscribed, owner ? restriction(blog) : null);
-    }
-
-    private String ownerPrimaryBlogAddress(Blog blog, Long viewerId) {
-        if (blog.isPrimary()) {
-            return blog.getAddress();
-        }
-        return blogRepository.findPrimaryByMemberId(blog.getMember().getId())
-                .filter(primary -> blogVisibilityPolicy.canView(primary, viewerId))
-                .map(Blog::getAddress)
-                .orElse(null);
     }
 
     /** 이용 제한 사유는 블로그 행이 아니라 moderation_log의 최신 RESTRICT_BLOG 행에 있다 (ADMIN-05). */

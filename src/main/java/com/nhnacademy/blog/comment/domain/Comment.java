@@ -69,6 +69,15 @@ public class Comment extends BaseTimeEntity {
         return new Comment(parent.getPost(), member, parent, content, secret);
     }
 
+    /** 소프트 삭제 (CMT-01, CMT-02). 답글(CMT-05)이 생기면 답글이 있는 댓글은 '삭제된 댓글입니다'로 자리를 남긴다. */
+    public void delete(LocalDateTime now) {
+        this.deletedAt = now;
+    }
+
+    public boolean isWrittenBy(Long memberId) {
+        return memberId != null && memberId.equals(member.getId());
+    }
+
     public boolean isDeleted() {
         return deletedAt != null;
     }

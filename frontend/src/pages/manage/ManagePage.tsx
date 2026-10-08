@@ -6,6 +6,7 @@ import { platformUrl } from '../../app/host'
 import { useBlog } from '../../app/useBlog'
 import { useMe } from '../../app/useMe'
 import LogoutButton from '../../components/LogoutButton'
+import ErrorPage from '../../components/ErrorPage'
 import NotFoundPage from '../error/NotFoundPage'
 import BlogSettingsPage from './BlogSettingsPage'
 import CategoriesPage from './CategoriesPage'
@@ -37,13 +38,7 @@ export default function ManagePage() {
   }
   const blog = blogState.blog
   if (!blog.viewer.isOwner) {
-    return (
-      <main className="page narrow">
-        <h1 style={{ fontSize: 22 }}>권한이 없습니다</h1>
-        <p>이 블로그의 관리 화면은 블로그 주인만 볼 수 있습니다.</p>
-        <Link to="/">블로그로 가기</Link>
-      </main>
-    )
+    return <ErrorPage status={403} message="이 블로그의 관리 화면은 블로그 주인만 볼 수 있습니다." />
   }
 
   return (

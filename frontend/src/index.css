@@ -116,3 +116,16 @@ select { border: 1px solid var(--line); background: var(--surface); border-radiu
 .editor-area .ProseMirror pre { background: var(--sunken); border-radius: 6px; padding: 10px; overflow-x: auto; font: 13px ui-monospace, Menlo, monospace; }
 .editor-area .ProseMirror a { color: var(--brand); }
 .box.row { display: flex; }
+
+/* 글 상세 (목업 post-detail) */
+.post-head { display: grid; gap: 8px; border-bottom: 1px solid var(--line); padding-bottom: 14px; }
+.post-head h1 { font-size: 26px; }
+.prose { display: grid; gap: 12px; max-width: 68ch; overflow-wrap: anywhere; }
+.prose > * { margin: 0; }
+.prose pre { background: var(--sunken); border-radius: 6px; padding: 10px; overflow-x: auto; font: 13px ui-monospace, Menlo, monospace; }
+.prose blockquote { padding-left: 12px; border-left: 3px solid var(--line); color: var(--ink-2); }
+.prose a { color: var(--brand); }
+.comment { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.comment > div { min-width: 0; display: grid; gap: 4px; }
+.comment .gone { color: var(--ink-2); font-style: italic; margin: 0; }
+.btn.small { padding: 0 6px; font-size: 12px; }

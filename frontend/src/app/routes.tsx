@@ -1,4 +1,5 @@
 import { Route, Routes } from 'react-router'
+import AdminPage from '../pages/admin/AdminPage'
 import LoginPage from '../pages/auth/LoginPage'
 import SignupPage from '../pages/auth/SignupPage'
 import BlogCreatePage from '../pages/blog/BlogCreatePage'
@@ -16,6 +17,7 @@ export function PlatformRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/blogs/new" element={<BlogCreatePage />} />
+      <Route path="/admin/*" element={<AdminPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )
