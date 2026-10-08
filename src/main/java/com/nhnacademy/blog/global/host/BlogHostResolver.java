@@ -22,6 +22,10 @@ public class BlogHostResolver {
         this.blogRepository = blogRepository;
     }
 
+    public String platform() {
+        return domainProperties.platform();
+    }
+
     public RequestHost resolve(HttpServletRequest request) {
         return resolve(request.getServerName());
     }
