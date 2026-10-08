@@ -1,11 +1,11 @@
 package com.nhnacademy.blog.global.config;
 
-import com.nhnacademy.blog.admin.domain.ModerationLogRepository;
 import com.nhnacademy.blog.global.auth.AuthCookieManager;
 import com.nhnacademy.blog.global.auth.AuthProperties;
 import com.nhnacademy.blog.global.auth.CsrfHeaderFilter;
 import com.nhnacademy.blog.global.auth.JwtAuthenticationFilter;
 import com.nhnacademy.blog.global.auth.JwtTokenProvider;
+import com.nhnacademy.blog.global.auth.SuspensionDetails;
 import com.nhnacademy.blog.global.auth.TokenStore;
 import com.nhnacademy.blog.global.error.ErrorCode;
 import com.nhnacademy.blog.global.error.ErrorResponseWriter;
@@ -39,11 +39,11 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(HttpSecurity http, AuthCookieManager cookieManager,
                                             JwtTokenProvider tokenProvider, TokenStore tokenStore,
                                             MemberRepository memberRepository,
-                                            ModerationLogRepository moderationLogRepository,
+                                            SuspensionDetails suspensionDetails,
                                             ErrorResponseWriter errorResponseWriter, AuthProperties authProperties,
                                             Clock clock) throws Exception {
         JwtAuthenticationFilter jwtFilter = new JwtAuthenticationFilter(cookieManager, tokenProvider, tokenStore,
-                memberRepository, moderationLogRepository, errorResponseWriter, authProperties, clock);
+                memberRepository, suspensionDetails, errorResponseWriter, authProperties, clock);
         CsrfHeaderFilter csrfFilter = new CsrfHeaderFilter(errorResponseWriter);
 
         return http

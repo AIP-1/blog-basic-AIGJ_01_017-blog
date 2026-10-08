@@ -1,6 +1,7 @@
 package com.nhnacademy.blog.auth.presentation;
 
 import com.nhnacademy.blog.auth.application.AuthService;
+import com.nhnacademy.blog.auth.presentation.dto.LoginRequest;
 import com.nhnacademy.blog.auth.presentation.dto.NicknameAvailabilityResponse;
 import com.nhnacademy.blog.auth.presentation.dto.SignupRequest;
 import com.nhnacademy.blog.global.auth.AuthCookieManager;
@@ -41,6 +42,14 @@ public class AuthController {
     public MeResponse signup(@Valid @RequestBody SignupRequest request, HttpServletResponse response) {
         Member member = authService.signup(request.email(), request.code(), request.password(), request.nickname());
         cookieManager.login(response, member, false);
+        return MeResponse.from(meService.me(member.getId()));
+    }
+
+    /** 로그인 유지(rememberMe)를 고르면 14일, 아니면 브라우저를 닫거나 30분 동안 요청이 없으면 끝난다 (AUTH-03). */
+    @PostMapping("/api/auth/login")
+    public MeResponse login(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
+        Member member = authService.login(request.email(), request.password());
+        cookieManager.login(response, member, request.rememberMe());
         return MeResponse.from(meService.me(member.getId()));
     }
 
