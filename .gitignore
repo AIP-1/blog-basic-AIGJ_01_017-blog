@@ -34,3 +34,6 @@ build/
 
 ### macOS ###
 .DS_Store
+
+### 업로드 이미지 (app.upload.dir) ###
+uploads/

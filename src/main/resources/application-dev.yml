@@ -1,0 +1,14 @@
+# 개발: docker compose의 MySQL 8, Redis (docker-compose.yml)
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/blog?connectionTimeZone=Asia/Seoul&characterEncoding=UTF-8
+    username: blog
+    password: blog
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+app:
+  upload:
+    dir: /Users/chosun-nhn54/IdeaProjects/blog/uploads

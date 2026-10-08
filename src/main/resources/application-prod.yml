@@ -1,0 +1,15 @@
+# 운영: 접속 정보는 환경 변수로 준다
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+
+app:
+  upload:
+    dir: ${APP_UPLOAD_DIR}
