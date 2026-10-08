@@ -52,6 +52,12 @@ describe('api', () => {
     await expect(api('/api/auth/logout', { method: 'POST' })).resolves.toBeUndefined()
   })
 
+  it('본문 없는 200·202도 성공이다', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 202 })))
+
+    await expect(api('/api/auth/email-verifications', { method: 'POST', body: {} })).resolves.toBeUndefined()
+  })
+
   it('오류는 COM-02 본문을 담은 ApiError다', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(400, {
       code: 'VALIDATION_FAILED',

@@ -32,3 +32,22 @@ export function blogUrl(address: string, path = '/', location: Location = window
   const port = location.port ? `:${location.port}` : ''
   return `${location.protocol}//${address}.${PLATFORM_DOMAIN}${port}${path}`
 }
+
+/**
+ * 로그인 뒤 돌아갈 주소. 우리 서비스 주소(플랫폼, 블로그 주소)만 허용한다(열린 리다이렉트 방지).
+ * 허용하지 않는 주소면 null이다.
+ */
+export function safeRedirect(target: string | null, platform: string = PLATFORM_DOMAIN): string | null {
+  if (!target) {
+    return null
+  }
+  let url: URL
+  try {
+    url = new URL(target)
+  } catch {
+    return null
+  }
+  const host = url.hostname.toLowerCase()
+  const ours = host === platform || host.endsWith(`.${platform}`)
+  return (url.protocol === 'http:' || url.protocol === 'https:') && ours ? url.href : null
+}

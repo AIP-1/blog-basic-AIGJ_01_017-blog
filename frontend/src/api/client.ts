@@ -69,7 +69,9 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
   })
 
   if (response.ok) {
-    return (response.status === 204 ? undefined : await response.json()) as T
+    // 202·204처럼 본문이 없는 성공도 있다
+    const text = await response.text()
+    return (text ? JSON.parse(text) : undefined) as T
   }
 
   const error = new ApiError(response.status, await readError(response))
