@@ -7,7 +7,7 @@ export default function App() {
   const host = parseHost(window.location.hostname)
   return (
     <BrowserRouter>
-      {host.kind === 'platform' ? <PlatformRoutes /> : <BlogRoutes address={host.address} />}
+      {host.kind === 'platform' ? <PlatformRoutes /> : <BlogRoutes />}
     </BrowserRouter>
   )
 }

@@ -1,10 +1,5 @@
 package com.nhnacademy.blog.global.auth;
 
-import com.nhnacademy.blog.admin.domain.ModerationAction;
-import com.nhnacademy.blog.admin.domain.ModerationLog;
-import com.nhnacademy.blog.admin.domain.ModerationLogRepository;
-import com.nhnacademy.blog.admin.domain.ModerationTargetType;
-import com.nhnacademy.blog.admin.domain.SanctionReason;
 import com.nhnacademy.blog.global.error.BusinessException;
 import com.nhnacademy.blog.global.error.ErrorCode;
 import com.nhnacademy.blog.global.error.ErrorResponseWriter;
@@ -17,7 +12,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.Clock;
 import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
 import java.util.Optional;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -39,21 +33,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtTokenProvider tokenProvider;
     private final TokenStore tokenStore;
     private final MemberRepository memberRepository;
-    private final ModerationLogRepository moderationLogRepository;
+    private final SuspensionDetails suspensionDetails;
     private final ErrorResponseWriter errorResponseWriter;
     private final AuthProperties authProperties;
     private final Clock clock;
 
     public JwtAuthenticationFilter(AuthCookieManager cookieManager, JwtTokenProvider tokenProvider,
                                    TokenStore tokenStore, MemberRepository memberRepository,
-                                   ModerationLogRepository moderationLogRepository,
+                                   SuspensionDetails suspensionDetails,
                                    ErrorResponseWriter errorResponseWriter, AuthProperties authProperties,
                                    Clock clock) {
         this.cookieManager = cookieManager;
         this.tokenProvider = tokenProvider;
         this.tokenStore = tokenStore;
         this.memberRepository = memberRepository;
-        this.moderationLogRepository = moderationLogRepository;
+        this.suspensionDetails = suspensionDetails;
         this.errorResponseWriter = errorResponseWriter;
         this.authProperties = authProperties;
         this.clock = clock;
@@ -90,7 +84,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (isApiRequest(request)) {
                 cookieManager.clear(response);
                 errorResponseWriter.write(response,
-                        new BusinessException(ErrorCode.MEMBER_SUSPENDED, suspensionDetail(member.get())));
+                        new BusinessException(ErrorCode.MEMBER_SUSPENDED, suspensionDetails.of(member.get())));
                 return;
             }
             // 화면 요청은 비회원으로 그린다. 화면이 부르는 첫 API에서 정지 안내를 받는다.
@@ -112,19 +106,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private boolean isApiRequest(HttpServletRequest request) {
         return request.getRequestURI().startsWith("/api/");
-    }
-
-    private SuspensionDetail suspensionDetail(Member member) {
-        SanctionReason reason = moderationLogRepository
-                .findFirstByTargetTypeAndTargetIdAndActionOrderByCreatedAtDescIdDesc(
-                        ModerationTargetType.MEMBER, member.getId(), ModerationAction.SUSPEND)
-                .map(ModerationLog::getReason)
-                .orElse(null);
-        OffsetDateTime until = member.getSuspendedUntil() == null
-                ? null
-                : member.getSuspendedUntil().atZone(clock.getZone()).toOffsetDateTime();
-        return new SuspensionDetail(reason == null ? null : reason.name(),
-                reason == null ? null : reason.getMessage(), until);
     }
 
 }

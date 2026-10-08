@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { blogUrl, parseHost, platformUrl } from './host'
+import { blogUrl, parseHost, platformUrl, safeRedirect } from './host'
 
 describe('parseHost', () => {
   it('플랫폼 주소', () => {
@@ -25,5 +25,20 @@ describe('주소 만들기', () => {
   it('포트를 유지한다', () => {
     expect(platformUrl('/login', location)).toBe('http://blog.test:5173/login')
     expect(blogUrl('alpha', '/12', location)).toBe('http://alpha.blog.test:5173/12')
+  })
+})
+
+describe('safeRedirect', () => {
+  it('플랫폼과 블로그 주소만 돌아간다', () => {
+    expect(safeRedirect('http://alpha.blog.test:5173/manage', 'blog.test')).toBe('http://alpha.blog.test:5173/manage')
+    expect(safeRedirect('http://blog.test:8080/', 'blog.test')).toBe('http://blog.test:8080/')
+  })
+
+  it('다른 사이트, 이상한 형식은 막는다', () => {
+    expect(safeRedirect('https://evil.com/', 'blog.test')).toBeNull()
+    expect(safeRedirect('https://evilblog.test/', 'blog.test')).toBeNull()
+    expect(safeRedirect('javascript:alert(1)', 'blog.test')).toBeNull()
+    expect(safeRedirect('/relative', 'blog.test')).toBeNull()
+    expect(safeRedirect(null, 'blog.test')).toBeNull()
   })
 })

@@ -6,4 +6,6 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
 
     boolean existsByMemberIdAndBlogId(Long memberId, Long blogId);
 
+    long countByBlogId(Long blogId);
+
 }

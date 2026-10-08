@@ -6,6 +6,7 @@ import com.nhnacademy.blog.member.domain.MemberRepository;
 import jakarta.servlet.http.Cookie;
 import java.util.UUID;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 /**
@@ -16,15 +17,25 @@ public class TestMembers {
 
     private final MemberRepository memberRepository;
     private final AuthCookieManager cookieManager;
+    private final PasswordEncoder passwordEncoder;
 
-    public TestMembers(MemberRepository memberRepository, AuthCookieManager cookieManager) {
+    public TestMembers(MemberRepository memberRepository, AuthCookieManager cookieManager,
+                       PasswordEncoder passwordEncoder) {
         this.memberRepository = memberRepository;
         this.cookieManager = cookieManager;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public Member create() {
         String suffix = UUID.randomUUID().toString().substring(0, 8);
         return memberRepository.save(Member.ofEmail(suffix + "@blog.test", "hash", "m-" + suffix));
+    }
+
+    /** 로그인 API로 들어갈 수 있는 회원. */
+    public Member createWithPassword(String password) {
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+        return memberRepository.save(
+                Member.ofEmail(suffix + "@blog.test", passwordEncoder.encode(password), "m-" + suffix));
     }
 
     public Cookie[] loginCookies(Member member) {
