@@ -128,7 +128,9 @@ function Toolbar({ editor }: { editor: TiptapEditor | null }) {
     for (const file of files) {
       try {
         const image = await uploadFile<UploadedImage>('/api/images', file)
-        editor.chain().focus().setImage({ src: image.url, alt: file.name }).run()
+        // 방금 넣은 사진이 선택된 채라 setImage는 그 사진을 바꿔 버린다. 선택의 끝 뒤에 넣어 고른 순서를 지킨다
+        editor.chain().focus().insertContentAt(editor.state.selection.to,
+          { type: 'image', attrs: { src: image.url, alt: file.name } }).run()
       } catch (error) {
         setUploadError(`${file.name}: ${errorMessage(error)}`)
       }
