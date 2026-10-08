@@ -1,35 +1,34 @@
 import { type KeyboardEvent, useState } from 'react'
-
-const MAX_TAGS = 10
-const MAX_LENGTH = 30
+import { MAX_LENGTH, MAX_TAGS, addTags, splitDraft } from './tagNames'
 
 /**
- * 태그 입력 (TAG-01). 이름을 쓰고 Enter나 쉼표로 하나씩 단다. 글당 10개, 대소문자만 다른 이름은 하나로 본다.
- * 서버(TagNames)가 같은 규칙으로 다시 정리하므로, 여기서는 사용자가 바로 알아보게 돕는 것뿐이다.
+ * 태그 입력 (TAG-01). 이름을 쓰고 Enter나 쉼표로 하나씩 단다. 쉼표가 든 글을 붙여 넣어도 나눠 단다.
+ * 글당 10개, 대소문자만 다른 이름은 하나로 본다. 서버(TagNames)가 같은 규칙으로 다시 정리하므로,
+ * 여기서는 사용자가 바로 알아보게 돕는 것뿐이다.
  */
 export default function TagInput({ tags, onChange }: { tags: string[]; onChange: (tags: string[]) => void }) {
   const [draft, setDraft] = useState('')
   const [message, setMessage] = useState<string | null>(null)
 
+  function commit(names: string[]) {
+    const result = addTags(tags, names)
+    setMessage(result.message)
+    if (result.tags.length !== tags.length) {
+      onChange(result.tags)
+    }
+  }
+
   function add() {
-    const name = draft.trim().replace(/^#+/, '').trim()
     setDraft('')
-    if (!name) {
-      return
+    commit([draft])
+  }
+
+  function onDraftChange(value: string) {
+    const { done, rest } = splitDraft(value)
+    setDraft(rest)
+    if (done.length > 0) {
+      commit(done)
     }
-    if (name.length > MAX_LENGTH) {
-      setMessage(`태그는 ${MAX_LENGTH}자까지입니다.`)
-      return
-    }
-    if (tags.some((tag) => tag.toLowerCase() === name.toLowerCase())) {
-      return
-    }
-    if (tags.length >= MAX_TAGS) {
-      setMessage(`태그는 ${MAX_TAGS}개까지 달 수 있습니다.`)
-      return
-    }
-    setMessage(null)
-    onChange([...tags, name])
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
@@ -37,7 +36,7 @@ export default function TagInput({ tags, onChange }: { tags: string[]; onChange:
     if (event.nativeEvent.isComposing) {
       return
     }
-    if (event.key === 'Enter' || event.key === ',') {
+    if (event.key === 'Enter') {
       event.preventDefault()
       add()
     } else if (event.key === 'Backspace' && draft === '' && tags.length > 0) {
@@ -55,9 +54,9 @@ export default function TagInput({ tags, onChange }: { tags: string[]; onChange:
                     onClick={() => onChange(tags.filter((item) => item !== tag))}>×</button>
           </span>
         ))}
-        <input type="text" value={draft} maxLength={MAX_LENGTH + 1} placeholder="태그 입력 후 Enter"
+        <input type="text" value={draft} maxLength={(MAX_LENGTH + 1) * MAX_TAGS} placeholder="태그 입력 후 Enter"
                style={{ flex: '1 1 160px', width: 'auto' }}
-               onChange={(event) => setDraft(event.target.value)} onKeyDown={onKeyDown} onBlur={add} />
+               onChange={(event) => onDraftChange(event.target.value)} onKeyDown={onKeyDown} onBlur={add} />
       </div>
       <span className="hint">{message ?? `최대 ${MAX_TAGS}개. Enter나 쉼표로 하나씩 단다.`}</span>
     </div>
