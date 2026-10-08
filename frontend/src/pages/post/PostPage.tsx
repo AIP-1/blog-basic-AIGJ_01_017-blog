@@ -128,13 +128,13 @@ function Article({ post, me, onDelete, onCommentCount }: {
           {post.tags.map((tag) => <Link key={tag} className="chip" to={`/tag/${encodeURIComponent(tag)}`}>#{tag}</Link>)}
         </div>
       )}
-      <LikeButton key={post.id} postId={post.id} me={me} initialLiked={post.viewer.liked}
+      <LikeButton key={`like-${post.id}`} postId={post.id} me={me} initialLiked={post.viewer.liked}
                   initialCount={post.likeCount} />
       <nav className="row between small" aria-label="이전·다음 글">
         <span>이전 글 {post.prev ? <Link to={`/${post.prev.id}`}>{post.prev.title}</Link> : <span className="muted">없음</span>}</span>
         <span>다음 글 {post.next ? <Link to={`/${post.next.id}`}>{post.next.title}</Link> : <span className="muted">없음</span>}</span>
       </nav>
-      <Comments key={post.id} postId={post.id} me={me} commentAllowed={post.commentAllowed}
+      <Comments key={`comments-${post.id}`} postId={post.id} me={me} commentAllowed={post.commentAllowed}
                 onCountChange={onCommentCount} />
     </article>
   )
