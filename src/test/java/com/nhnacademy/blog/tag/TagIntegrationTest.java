@@ -16,7 +16,13 @@ import com.nhnacademy.blog.member.domain.Member;
 import com.nhnacademy.blog.support.TestBlogs;
 import com.nhnacademy.blog.support.TestMembers;
 import jakarta.servlet.http.Cookie;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -109,6 +115,34 @@ class TagIntegrationTest extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.content[*].id", contains((int) both, (int) springPost)));
         mockMvc.perform(get("/api/posts").param("tag", "없는태그").header(HttpHeaders.HOST, TestBlogs.host(blog)))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void accentOnlyDifferenceIsTheSameTagLikeTheDatabaseSays() throws Exception {
+        // DB 정렬 규칙(utf8mb4_0900_ai_ci)은 악센트도 무시해 Café와 cafe를 같은 이름(UNIQUE)으로 본다
+        publish("[\"Café\"]");
+        long id = publish("[\"cafe\", \"résumé\", \"resume\"]");
+
+        mockMvc.perform(get("/api/posts/" + id).header(HttpHeaders.HOST, TestBlogs.host(blog)))
+                .andExpect(jsonPath("$.tags", contains("Café", "résumé")));
+        assertThat(tagCount()).isEqualTo(2);
+    }
+
+    @Test
+    void sameNewTagFromConcurrentPostsIsCreatedOnce() throws Exception {
+        List<Callable<Integer>> posts = new ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            posts.add(() -> send(post("/api/posts").header("Idempotency-Key", UUID.randomUUID().toString()),
+                    body("[\"동시\"]")).andReturn().getResponse().getStatus());
+        }
+        try (ExecutorService executor = Executors.newFixedThreadPool(5)) {
+            for (Future<Integer> result : executor.invokeAll(posts)) {
+                assertThat(result.get()).isEqualTo(201);
+            }
+        }
+        assertThat(tagCount()).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM post_tag pt JOIN tag t ON t.id = pt.tag_id "
+                + "WHERE t.blog_id = ?", Integer.class, blog.getId())).isEqualTo(5);
     }
 
     private long publish(String tagNames) throws Exception {

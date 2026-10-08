@@ -6,6 +6,10 @@ describe('addTags', () => {
     expect(addTags(['Java'], ['#java', '  여행 ', '', '#'])).toEqual({ tags: ['Java', '여행'], message: null })
   })
 
+  it('악센트만 다른 이름도 하나로 본다', () => {
+    expect(addTags(['Café'], ['cafe', '여행'])).toEqual({ tags: ['Café', '여행'], message: null })
+  })
+
   it('10개를 넘으면 더하지 않고 알린다', () => {
     const ten = Array.from({ length: 10 }, (_, i) => `t${i}`)
     expect(addTags(ten, ['더'])).toEqual({ tags: ten, message: '태그는 10개까지 달 수 있습니다.' })

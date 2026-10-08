@@ -2,7 +2,8 @@ export const MAX_TAGS = 10
 export const MAX_LENGTH = 30
 
 /**
- * 입력한 이름들을 태그 목록에 더한다 (TAG-01). 앞의 #과 공백을 떼고, 빈 이름·대소문자만 다른 이름은 건너뛴다.
+ * 입력한 이름들을 태그 목록에 더한다 (TAG-01). 앞의 #과 공백을 떼고, 빈 이름·대소문자나 악센트만 다른 이름은 건너뛴다
+ * (서버 DB가 Café와 cafe를 같은 이름으로 보므로).
  * 넘치거나 너무 긴 이름이 있으면 그 이름은 빼고 안내 문구를 돌려준다. 서버(TagNames)도 같은 규칙으로 다시 정리한다.
  */
 export function addTags(tags: string[], rawNames: string[]): { tags: string[]; message: string | null } {
@@ -10,7 +11,7 @@ export function addTags(tags: string[], rawNames: string[]): { tags: string[]; m
   let message: string | null = null
   for (const raw of rawNames) {
     const name = raw.trim().replace(/^#+/, '').trim()
-    if (!name || result.some((tag) => tag.toLowerCase() === name.toLowerCase())) {
+    if (!name || result.some((tag) => sameName(tag, name))) {
       continue
     }
     if (name.length > MAX_LENGTH) {
@@ -28,4 +29,9 @@ export function addTags(tags: string[], rawNames: string[]): { tags: string[]; m
 export function splitDraft(value: string): { done: string[]; rest: string } {
   const parts = value.split(',')
   return { done: parts.slice(0, -1), rest: parts[parts.length - 1] }
+}
+
+/** 대소문자·악센트를 무시하고 같은 이름인가. 서버 TagNames와 같은 기준이다. */
+export function sameName(a: string, b: string): boolean {
+  return a.localeCompare(b, undefined, { sensitivity: 'base' }) === 0
 }
