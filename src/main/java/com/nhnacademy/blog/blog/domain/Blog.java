@@ -24,6 +24,8 @@ import java.time.LocalDateTime;
 public class Blog extends BaseTimeEntity {
 
     public static final String DEFAULT_SKIN = "BASIC";
+    /** 한 회원이 가질 수 있는 활성(삭제되지 않은) 블로그 수 (BLOG-01). */
+    public static final int MAX_ACTIVE_PER_MEMBER = 5;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -77,10 +79,11 @@ public class Blog extends BaseTimeEntity {
     protected Blog() {
     }
 
-    private Blog(Member member, String address, String name, boolean primary) {
+    private Blog(Member member, String address, String name, String description, boolean primary) {
         this.member = member;
         this.address = address;
         this.name = name;
+        this.description = description;
         this.primary = primary;
         this.skin = DEFAULT_SKIN;
         this.listLayout = ListLayout.LIST;
@@ -89,7 +92,21 @@ public class Blog extends BaseTimeEntity {
 
     /** 블로그 개설 (BLOG-01). 회원의 첫 블로그면 대표 블로그다. */
     public static Blog open(Member member, String address, String name, boolean primary) {
-        return new Blog(member, address, name, primary);
+        return open(member, address, name, null, primary);
+    }
+
+    public static Blog open(Member member, String address, String name, String description, boolean primary) {
+        return new Blog(member, address, name, description, primary);
+    }
+
+    /** 이름·소개 수정 (BLOG-02). null이면 그대로 둔다. 주소는 바꿀 수 없다. */
+    public void changeInfo(String name, String description) {
+        if (name != null) {
+            this.name = name;
+        }
+        if (description != null) {
+            this.description = description.isBlank() ? null : description;
+        }
     }
 
     public boolean isDeleted() {
