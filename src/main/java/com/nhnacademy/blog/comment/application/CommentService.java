@@ -128,6 +128,8 @@ public class CommentService {
     @Transactional
     public CommentView write(Blog blog, Long postId, LoginMember member, String content, Long parentId) {
         Post post = writablePost(blog, postId, member);
+        // 댓글 INSERT(외래 키 공유 잠금) 뒤 댓글 수 UPDATE(배타 잠금)가 동시에 엇갈리면 데드락이라 글 행부터 잠근다
+        postRepository.lockById(post.getId());
         Member author = memberRepository.getReferenceById(member.id());
         Comment comment = commentRepository.save(parentId == null
                 ? Comment.write(post, author, content.trim(), false)
@@ -171,6 +173,7 @@ public class CommentService {
         if (!comment.isWrittenBy(viewerId) && !blog.isOwnedBy(viewerId)) {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
+        postRepository.lockById(comment.getPost().getId());
         comment.delete(LocalDateTime.now(clock));
         // 댓글 수 UPDATE가 영속성 컨텍스트를 비우므로(clearAutomatically) 삭제를 먼저 DB에 보낸다
         commentRepository.flush();

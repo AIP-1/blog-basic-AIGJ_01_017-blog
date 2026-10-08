@@ -1,5 +1,6 @@
 package com.nhnacademy.blog.post.domain;
 
+import jakarta.persistence.LockModeType;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -7,6 +8,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -61,5 +63,14 @@ public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificat
 
     @Query("select p.likeCount from Post p where p.id = :postId")
     int findLikeCount(@Param("postId") Long postId);
+
+    /**
+     * 글 행을 잠근다(SELECT ... FOR UPDATE). 공감·댓글을 넣고 수를 고치는 트랜잭션이 맨 먼저 부른다.
+     * 공감·댓글 INSERT는 외래 키 확인 때문에 글 행에 공유 잠금을 걸고, 뒤의 수 UPDATE는 배타 잠금이 필요하다.
+     * 두 트랜잭션이 공유 잠금을 쥔 채 서로 배타 잠금을 기다리면 데드락이 난다. 처음부터 배타 잠금을 잡아 차례로 줄 세운다.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select p.id from Post p where p.id = :postId")
+    Optional<Long> lockById(@Param("postId") Long postId);
 
 }
