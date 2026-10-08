@@ -31,3 +31,12 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### macOS ###
+.DS_Store
+
+### 업로드 이미지 (app.upload.dir) ###
+uploads/
+
+### 프론트 빌드 결과 (scripts/build-frontend.sh) ###
+src/main/resources/static/
