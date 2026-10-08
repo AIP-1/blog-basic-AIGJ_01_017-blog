@@ -8,7 +8,9 @@ import { useMe } from '../../app/useMe'
 import LogoutButton from '../../components/LogoutButton'
 import NotFoundPage from '../error/NotFoundPage'
 import BlogSettingsPage from './BlogSettingsPage'
+import CategoriesPage from './CategoriesPage'
 import ManageHomePage from './ManageHomePage'
+import PostWritePage from './PostWritePage'
 
 /**
  * 블로그 관리 화면의 틀 (/manage/**). 비회원은 로그인 화면으로 갔다가 돌아오고, 주인이 아니면 403 안내다.
@@ -60,11 +62,16 @@ export default function ManagePage() {
         <nav className="manage-nav" aria-label="관리 메뉴">
           <div className="sec">블로그 관리</div>
           <NavLink to="/manage" end>관리 홈</NavLink>
+          <NavLink to="/manage/write">글쓰기</NavLink>
+          <NavLink to="/manage/categories">카테고리</NavLink>
           <div className="sec">설정</div>
           <NavLink to="/manage/settings">블로그 설정</NavLink>
         </nav>
         <Routes>
           <Route index element={<ManageHomePage blog={blog} />} />
+          <Route path="write" element={<PostWritePage key="new" />} />
+          <Route path="posts/:postId/edit" element={<PostWritePage key="edit" />} />
+          <Route path="categories" element={<CategoriesPage />} />
           <Route path="settings" element={<BlogSettingsPage blog={blog} onSaved={setBlog} />} />
           <Route path="*" element={<main className="page"><p className="muted">준비 중인 화면입니다.</p></main>} />
         </Routes>

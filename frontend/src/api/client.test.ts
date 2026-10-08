@@ -58,6 +58,12 @@ describe('api', () => {
     await expect(api('/api/auth/email-verifications', { method: 'POST', body: {} })).resolves.toBeUndefined()
   })
 
+  it('randomUUID가 없는 주소(HTTP 개발 주소)에서도 UUID v4를 만든다', () => {
+    vi.stubGlobal('crypto', { getRandomValues: (array: Uint8Array) => array.fill(0xab) })
+
+    expect(newIdempotencyKey()).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
+  })
+
   it('오류는 COM-02 본문을 담은 ApiError다', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(400, {
       code: 'VALIDATION_FAILED',

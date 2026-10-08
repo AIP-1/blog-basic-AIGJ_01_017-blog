@@ -90,8 +90,19 @@ async function readError(response: Response): Promise<ErrorBody> {
   }
 }
 
+/**
+ * 연타 방지 키(UUID v4). crypto.randomUUID()는 보안 컨텍스트(HTTPS, localhost)에서만 있어서
+ * 개발 주소 http://alpha.blog.test에서는 없다. 그때는 어디서나 되는 crypto.getRandomValues로 만든다.
+ */
 export function newIdempotencyKey(): string {
-  return crypto.randomUUID()
+  if (typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  const bytes = crypto.getRandomValues(new Uint8Array(16))
+  bytes[6] = (bytes[6] & 0x0f) | 0x40 // 버전 4
+  bytes[8] = (bytes[8] & 0x3f) | 0x80 // RFC 4122 변형
+  const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('')
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
 }
 
 /** 로그인 화면 주소. 로그인 뒤 returnTo로 돌아온다 */
