@@ -22,6 +22,13 @@ spring:
   jackson:
     time-zone: Asia/Seoul
 
+server:
+  error:
+    include-stacktrace: never
+    include-message: never
+    include-exception: false
+    include-binding-errors: never
+
 app:
   upload:
     dir: ${APP_UPLOAD_DIR:./uploads}

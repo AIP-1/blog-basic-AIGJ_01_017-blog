@@ -2,7 +2,7 @@ package com.nhnacademy.blog.global.entity;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.nhnacademy.blog.TestcontainersConfiguration;
+import com.nhnacademy.blog.IntegrationTestSupport;
 import com.nhnacademy.blog.blog.AccentColor;
 import com.nhnacademy.blog.blog.Blog;
 import com.nhnacademy.blog.blog.BlogRepository;
@@ -24,17 +24,13 @@ import jakarta.persistence.EntityManager;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 엔티티를 실제 MySQL(schema.sql)에 저장하고 다시 읽어 컬럼 매핑과 기본값을 확인한다.
  */
-@SpringBootTest
-@Import(TestcontainersConfiguration.class)
 @Transactional
-class EntityMappingTest {
+class EntityMappingTest extends IntegrationTestSupport {
 
     @Autowired
     MemberRepository memberRepository;
