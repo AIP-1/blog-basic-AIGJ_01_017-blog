@@ -37,6 +37,12 @@ export interface Blog {
   restriction: { reason: string | null; reasonMessage: string | null } | null
 }
 
+/** 홈 인기 글 (GET /api/home/popular). snapshotAt은 순위를 계산한 시각(5분마다) */
+export interface PopularPosts {
+  snapshotAt: string
+  items: { rank: number; post: PostSummary }[]
+}
+
 export interface PostSummary {
   id: number
   title: string

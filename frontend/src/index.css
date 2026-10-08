@@ -139,6 +139,13 @@ select { border: 1px solid var(--line); background: var(--surface); border-radiu
 .tag-cloud { display: flex; flex-wrap: wrap; gap: 6px; }
 .tag-cloud a { text-decoration: none; }
 
+/* 홈 인기 글 (HOME-02) */
+.section > h2 small { font-weight: 400; color: var(--ink-2); font-size: 13px; }
+.rank-list { display: grid; gap: 6px; }
+.rank { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 8px; align-items: center; font-size: 14px; }
+.rank b { color: var(--brand); font-variant-numeric: tabular-nums; }
+.rank a { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 .comment.reply { margin-left: 42px; }
 
 .search-box { display: flex; gap: 6px; min-width: 0; flex: 0 1 280px; }
