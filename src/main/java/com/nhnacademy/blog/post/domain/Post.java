@@ -58,6 +58,10 @@ public class Post extends BaseTimeEntity {
     @Column(name = "summary", length = 300)
     private String summary;
 
+    /** 본문에서 태그를 뺀 글자. 블로그 안 검색이 본다 (SRCH-01, research R-16). */
+    @Column(name = "content_text", nullable = false, columnDefinition = "mediumtext")
+    private String contentText;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private PostStatus status;
@@ -105,13 +109,14 @@ public class Post extends BaseTimeEntity {
     protected Post() {
     }
 
-    private Post(Blog blog, Category category, String title, String contentHtml, String summary,
-                 PostStatus status, Visibility visibility, Topic topic) {
+    private Post(Blog blog, Category category, String title, PostBody body, PostStatus status, Visibility visibility,
+                 Topic topic) {
         this.blog = blog;
         this.category = category;
         this.title = title;
-        this.contentHtml = contentHtml;
-        this.summary = summary;
+        this.contentHtml = body.html();
+        this.contentText = body.text();
+        this.summary = body.summary();
         this.status = status;
         this.visibility = visibility;
         this.topic = topic;
@@ -119,29 +124,29 @@ public class Post extends BaseTimeEntity {
     }
 
     /** 임시저장 글. */
-    public static Post draft(Blog blog, Category category, String title, String contentHtml, String summary,
-                             Visibility visibility, Topic topic) {
-        return new Post(blog, category, title, contentHtml, summary, PostStatus.DRAFT, visibility, topic);
+    public static Post draft(Blog blog, Category category, String title, PostBody body, Visibility visibility,
+                             Topic topic) {
+        return new Post(blog, category, title, body, PostStatus.DRAFT, visibility, topic);
     }
 
     /** 바로 발행한 글. */
-    public static Post published(Blog blog, Category category, String title, String contentHtml, String summary,
-                                 Visibility visibility, Topic topic, LocalDateTime publishedAt) {
-        Post post = new Post(blog, category, title, contentHtml, summary, PostStatus.PUBLISHED, visibility, topic);
+    public static Post published(Blog blog, Category category, String title, PostBody body, Visibility visibility,
+                                 Topic topic, LocalDateTime publishedAt) {
+        Post post = new Post(blog, category, title, body, PostStatus.PUBLISHED, visibility, topic);
         post.publishedAt = publishedAt;
         return post;
     }
 
     /**
      * 글 수정 (POST-02). 주소(id), 처음 발행 시각, 수치는 그대로다. 수정 시각(updated_at)은 Auditing이 남긴다.
-     * contentHtml은 정화를 거친 값이어야 한다.
+     * body.html은 정화를 거친 값이어야 한다.
      */
-    public void edit(Category category, String title, String contentHtml, String summary, Visibility visibility,
-                     Topic topic) {
+    public void edit(Category category, String title, PostBody body, Visibility visibility, Topic topic) {
         this.category = category;
         this.title = title;
-        this.contentHtml = contentHtml;
-        this.summary = summary;
+        this.contentHtml = body.html();
+        this.contentText = body.text();
+        this.summary = body.summary();
         this.visibility = visibility;
         this.topic = topic;
     }
@@ -193,6 +198,10 @@ public class Post extends BaseTimeEntity {
 
     public String getContentHtml() {
         return contentHtml;
+    }
+
+    public String getContentText() {
+        return contentText;
     }
 
     public String getSummary() {

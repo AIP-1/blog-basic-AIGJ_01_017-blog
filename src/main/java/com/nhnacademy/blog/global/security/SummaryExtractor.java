@@ -4,7 +4,7 @@ import org.jsoup.Jsoup;
 import org.springframework.stereotype.Component;
 
 /**
- * 목록에 보일 글 요약을 만든다. 본문에서 태그를 모두 지운 글자만 남긴다 (R-05).
+ * 목록에 보일 글 요약과 검색용 본문 글자를 만든다. 본문에서 태그를 모두 지운 글자만 남긴다 (R-05, R-16).
  */
 @Component
 public class SummaryExtractor {
@@ -14,11 +14,19 @@ public class SummaryExtractor {
 
     private static final String ELLIPSIS = "…";
 
-    public String extract(String html) {
+    /** 본문 전체 글자(검색용, SRCH-01). &amp;amp; 같은 문자 참조도 글자로 풀린다. */
+    public String plainText(String html) {
         if (html == null || html.isBlank()) {
             return "";
         }
-        String text = Jsoup.parse(html).text().strip();
+        return Jsoup.parse(html).text().strip();
+    }
+
+    public String extract(String html) {
+        String text = plainText(html);
+        if (text.isEmpty()) {
+            return "";
+        }
         if (text.codePointCount(0, text.length()) <= MAX_LENGTH) {
             return text;
         }

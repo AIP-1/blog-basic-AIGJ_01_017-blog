@@ -10,6 +10,7 @@ import com.nhnacademy.blog.IntegrationTestSupport;
 import com.nhnacademy.blog.blog.domain.Blog;
 import com.nhnacademy.blog.member.domain.Member;
 import com.nhnacademy.blog.post.domain.Post;
+import com.nhnacademy.blog.post.domain.PostBody;
 import com.nhnacademy.blog.post.domain.PostRepository;
 import com.nhnacademy.blog.post.domain.Visibility;
 import com.nhnacademy.blog.support.TestBlogs;
@@ -173,7 +174,7 @@ class SpaForwardIntegrationTest extends IntegrationTestSupport {
     }
 
     private Post post(Blog blog, Visibility visibility) {
-        return postRepository.save(Post.published(blog, null, "제목", "<p>본문</p>", "본문", visibility, null,
+        return postRepository.save(Post.published(blog, null, "제목", new PostBody("<p>본문</p>", "본문", "본문"), visibility, null,
                 LocalDateTime.now()));
     }
 

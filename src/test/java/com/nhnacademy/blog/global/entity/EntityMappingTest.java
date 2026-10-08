@@ -16,6 +16,7 @@ import com.nhnacademy.blog.member.domain.MemberRepository;
 import com.nhnacademy.blog.member.domain.MemberStatus;
 import com.nhnacademy.blog.member.domain.Role;
 import com.nhnacademy.blog.post.domain.Post;
+import com.nhnacademy.blog.post.domain.PostBody;
 import com.nhnacademy.blog.post.domain.PostRepository;
 import com.nhnacademy.blog.post.domain.PostStatus;
 import com.nhnacademy.blog.post.domain.Topic;
@@ -55,7 +56,7 @@ class EntityMappingTest extends IntegrationTestSupport {
         Member member = memberRepository.save(Member.ofEmail("a@blog.test", "hash", "에이"));
         Blog blog = blogRepository.save(Blog.open(member, "alpha", "알파 블로그", true));
         Category category = categoryRepository.save(Category.create(blog, null, "Java", 0));
-        Post post = postRepository.save(Post.published(blog, category, "제목", "<p>본문</p>", "본문",
+        Post post = postRepository.save(Post.published(blog, category, "제목", new PostBody("<p>본문</p>", "본문", "본문"),
                 Visibility.PUBLIC, Topic.IT_DEV, LocalDateTime.now()));
         Comment comment = commentRepository.save(Comment.write(post, member, "댓글", false));
         Comment reply = commentRepository.save(Comment.reply(comment, member, "답글", true));
