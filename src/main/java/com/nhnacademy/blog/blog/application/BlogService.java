@@ -69,6 +69,18 @@ public class BlogService {
         }
     }
 
+    /**
+     * 이름·소개 수정 (BLOG-02). 주인 검사는 컨트롤러가 먼저 했다.
+     * 응답에 주인 정보가 필요해 주인을 함께 읽는 findByAddress로 다시 읽는다.
+     */
+    @Transactional
+    public Blog updateInfo(String address, String name, String description) {
+        Blog blog = blogRepository.findByAddress(address)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        blog.changeInfo(name == null ? null : name.trim(), description);
+        return blog;
+    }
+
     private void checkAddressRule(String address) {
         String reason = null;
         if (!BlogAddressRule.hasValidFormat(address)) {
