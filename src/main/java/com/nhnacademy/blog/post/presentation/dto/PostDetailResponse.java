@@ -34,7 +34,8 @@ public record PostDetailResponse(Long id, BlogRef blog, String title, String con
     public record Neighbor(Long id, String title) {
     }
 
-    public static PostDetailResponse from(PostView view) {
+    /** liked: 보는 사람이 이 글에 공감했나(SOC-01). 공감 기능(reaction)이 알려 준다. */
+    public static PostDetailResponse from(PostView view, boolean liked) {
         Post post = view.post();
         Blog blog = post.getBlog();
         Category category = post.getCategory();
@@ -45,7 +46,7 @@ public record PostDetailResponse(Long id, BlogRef blog, String title, String con
                 DateTimes.toOffset(post.getPublishedAt()), DateTimes.toOffset(editedAt(post)), post.getViewCount(),
                 post.getLikeCount(), post.getCommentCount(), post.isCommentAllowed(),
                 MemberSummaryResponse.of(blog.getMember(), view.authorPrimaryBlogAddress()),
-                new Viewer(view.owner(), false, false), view.blind(), neighbor(view.prev()), neighbor(view.next()));
+                new Viewer(view.owner(), liked, false), view.blind(), neighbor(view.prev()), neighbor(view.next()));
     }
 
     /**

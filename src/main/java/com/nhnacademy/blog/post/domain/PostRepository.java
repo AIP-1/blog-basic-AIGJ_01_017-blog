@@ -54,4 +54,12 @@ public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificat
     @Query("update Post p set p.commentCount = p.commentCount + :delta, p.updatedAt = p.updatedAt where p.id = :postId")
     int addCommentCount(@Param("postId") Long postId, @Param("delta") int delta);
 
+    /** 공감 수 늘리기·줄이기 (SOC-01). 댓글 수와 같은 방식이다. */
+    @Modifying(clearAutomatically = true)
+    @Query("update Post p set p.likeCount = p.likeCount + :delta, p.updatedAt = p.updatedAt where p.id = :postId")
+    int addLikeCount(@Param("postId") Long postId, @Param("delta") int delta);
+
+    @Query("select p.likeCount from Post p where p.id = :postId")
+    int findLikeCount(@Param("postId") Long postId);
+
 }
