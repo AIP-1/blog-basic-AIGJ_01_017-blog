@@ -3,6 +3,7 @@ package com.nhnacademy.blog.tag;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -92,6 +93,22 @@ class TagIntegrationTest extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.tagNames", contains("jpa", "mysql")));
         assertThat(jdbcTemplate.queryForList("SELECT name FROM tag WHERE blog_id = ? ORDER BY name", String.class,
                 blog.getId())).containsExactly("jpa", "mysql", "spring");
+    }
+
+    @Test
+    void listsPostsByTagIgnoringCase() throws Exception {
+        long springPost = publish("[\"spring\"]");
+        long both = publish("[\"Spring\", \"jpa\"]");
+        publish("[\"jpa\"]");
+        long privatePost = publish("[\"spring\"]");
+        send(patch("/api/posts/" + privatePost + "/visibility"), "{\"visibility\":\"PRIVATE\"}")
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/posts").param("tag", "SPRING").header(HttpHeaders.HOST, TestBlogs.host(blog)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[*].id", contains((int) both, (int) springPost)));
+        mockMvc.perform(get("/api/posts").param("tag", "없는태그").header(HttpHeaders.HOST, TestBlogs.host(blog)))
+                .andExpect(status().isNotFound());
     }
 
     private long publish(String tagNames) throws Exception {
