@@ -57,7 +57,7 @@ public class CommentController {
                                  @PathVariable Long postId, @RequestBody CommentRequest request) {
         commentService.writablePost(blog, postId, member);
         requestValidator.validate(request);
-        return CommentResponse.from(commentService.write(blog, postId, member, request.content()));
+        return CommentResponse.from(commentService.write(blog, postId, member, request.content(), request.parentId()));
     }
 
     /** 작성자 본인과 블로그 주인만. */
