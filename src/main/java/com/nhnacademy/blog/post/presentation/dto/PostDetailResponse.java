@@ -13,7 +13,7 @@ import java.util.Map;
 
 /**
  * PostDetail (contracts/rest-api.md 주요 응답 객체). GET /api/posts/{id}.
- * tags는 태그 기능(스텝 7), viewer.liked·bookmarked는 공감(스텝 7)·저장(백로그) 전이라 빈 값이다.
+ * viewer.bookmarked는 저장(백로그) 전이라 false다.
  * updatedAt은 발행 뒤 고친 적이 없으면 null이다.
  */
 public record PostDetailResponse(Long id, BlogRef blog, String title, String contentHtml, CategoryRef category,
@@ -40,7 +40,7 @@ public record PostDetailResponse(Long id, BlogRef blog, String title, String con
         Category category = post.getCategory();
         return new PostDetailResponse(post.getId(), new BlogRef(blog.getId(), blog.getAddress(), blog.getName()),
                 post.getTitle(), post.getContentHtml(),
-                category == null ? null : new CategoryRef(category.getId(), category.getName()), List.of(),
+                category == null ? null : new CategoryRef(category.getId(), category.getName()), view.tagNames(),
                 post.getTopic() == null ? null : post.getTopic().name(), post.getVisibility().name(),
                 DateTimes.toOffset(post.getPublishedAt()), DateTimes.toOffset(editedAt(post)), post.getViewCount(),
                 post.getLikeCount(), post.getCommentCount(), post.isCommentAllowed(),

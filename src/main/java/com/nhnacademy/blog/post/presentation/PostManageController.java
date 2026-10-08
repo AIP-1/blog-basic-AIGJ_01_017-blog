@@ -66,8 +66,7 @@ public class PostManageController {
     @GetMapping("/api/manage/posts/{id}")
     public ManagedPostResponse managedPost(@CurrentBlog Blog blog, @AuthenticationPrincipal LoginMember member,
                                            @PathVariable Long id) {
-        Post post = postService.findOwned(blog, id, member);
-        return ManagedPostResponse.of(post, postService.blindReason(post));
+        return ManagedPostResponse.from(postService.managed(blog, id, member));
     }
 
     /** 수정 (T032). 주소·처음 발행 시각·목록 순서는 그대로다. */

@@ -17,6 +17,7 @@ import com.nhnacademy.blog.global.visibility.PostVisibilityPolicy;
 import com.nhnacademy.blog.post.domain.Post;
 import com.nhnacademy.blog.post.domain.PostRepository;
 import com.nhnacademy.blog.post.domain.Visibility;
+import com.nhnacademy.blog.tag.application.TagService;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -38,12 +39,14 @@ public class PostService {
     private final PostVisibilityPolicy postVisibilityPolicy;
     private final HtmlSanitizer htmlSanitizer;
     private final SummaryExtractor summaryExtractor;
+    private final TagService tagService;
     private final Clock clock;
 
     public PostService(PostRepository postRepository, CategoryRepository categoryRepository,
                        CommentRepository commentRepository, ModerationLogRepository moderationLogRepository,
                        PostVisibilityPolicy postVisibilityPolicy,
-                       HtmlSanitizer htmlSanitizer, SummaryExtractor summaryExtractor, Clock clock) {
+                       HtmlSanitizer htmlSanitizer, SummaryExtractor summaryExtractor, TagService tagService,
+                       Clock clock) {
         this.postRepository = postRepository;
         this.categoryRepository = categoryRepository;
         this.commentRepository = commentRepository;
@@ -51,6 +54,7 @@ public class PostService {
         this.postVisibilityPolicy = postVisibilityPolicy;
         this.htmlSanitizer = htmlSanitizer;
         this.summaryExtractor = summaryExtractor;
+        this.tagService = tagService;
         this.clock = clock;
     }
 
@@ -61,6 +65,7 @@ public class PostService {
         Post post = Post.published(blog, category(blog, command.categoryId()), command.title().trim(), contentHtml,
                 summaryExtractor.extract(contentHtml), command.visibility(), command.topic(),
                 LocalDateTime.now(clock));
+        post.replaceTags(tagService.resolve(blog, command.tagNames()));
         return postRepository.save(post);
     }
 
@@ -101,7 +106,15 @@ public class PostService {
         String contentHtml = htmlSanitizer.sanitize(command.contentHtml());
         post.edit(category(blog, command.categoryId()), command.title().trim(), contentHtml,
                 summaryExtractor.extract(contentHtml), command.visibility(), command.topic());
+        post.replaceTags(tagService.resolve(blog, command.tagNames()));
         return post;
+    }
+
+    /** 편집용 글. 태그 이름과 숨김 사유를 트랜잭션 안에서 꺼내 둔다. */
+    @Transactional(readOnly = true)
+    public ManagedPost managed(Blog blog, Long postId, LoginMember member) {
+        Post post = findOwned(blog, postId, member);
+        return new ManagedPost(post, post.tagNames(), post.isBlinded() ? blindReason(post) : null);
     }
 
     /** 공개 범위만 바꾼다 (POST-06). */

@@ -3,6 +3,7 @@ package com.nhnacademy.blog.post.domain;
 import com.nhnacademy.blog.blog.domain.Blog;
 import com.nhnacademy.blog.category.domain.Category;
 import com.nhnacademy.blog.global.entity.BaseTimeEntity;
+import com.nhnacademy.blog.tag.domain.Tag;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -12,9 +13,16 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  * 글. id가 곧 글 주소 번호다({address}.blog.com/{id}). 이사하면 blog가 바뀐다.
@@ -87,6 +95,13 @@ public class Post extends BaseTimeEntity {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
+    /** 글에 단 태그 (TAG-01). 연결 테이블 post_tag(post_id, tag_id). 글당 10개는 TagNames가 검사한다. */
+    @ManyToMany
+    @JoinTable(name = "post_tag",
+            joinColumns = @JoinColumn(name = "post_id"),
+            inverseJoinColumns = @JoinColumn(name = "tag_id"))
+    private Set<Tag> tags = new LinkedHashSet<>();
+
     protected Post() {
     }
 
@@ -129,6 +144,17 @@ public class Post extends BaseTimeEntity {
         this.summary = summary;
         this.visibility = visibility;
         this.topic = topic;
+    }
+
+    /** 태그를 통째로 바꾼다. 빠진 태그는 연결만 끊기고 블로그 태그는 남는다. */
+    public void replaceTags(Collection<Tag> newTags) {
+        tags.clear();
+        tags.addAll(newTags);
+    }
+
+    /** 태그 이름, 가나다순. 트랜잭션 안에서 불러야 한다(지연 로딩). */
+    public List<String> tagNames() {
+        return tags.stream().map(Tag::getName).sorted(Comparator.naturalOrder()).toList();
     }
 
     /** 공개 범위만 바꾼다 (POST-06). */
