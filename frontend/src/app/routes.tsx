@@ -29,6 +29,7 @@ export function BlogRoutes() {
     <Routes>
       <Route path="/" element={<BlogMainPage />} />
       <Route path="/category/:categoryId" element={<BlogMainPage />} />
+      <Route path="/tag/:tagName" element={<BlogMainPage />} />
       <Route path="/:postId" element={<PostPage />} />
       <Route path="/manage/*" element={<ManagePage />} />
       <Route path="*" element={<NotFoundPage />} />

@@ -102,6 +102,7 @@ export interface ManagedPost {
   id: number
   title: string
   contentHtml: string
+  tagNames: string[]
   categoryId: number | null
   topic: string | null
   visibility: 'PUBLIC' | 'PRIVATE' | 'SUBSCRIBERS'

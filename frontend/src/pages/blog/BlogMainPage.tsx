@@ -12,13 +12,14 @@ import Sidebar from '../../components/Sidebar'
 import NotFoundPage from '../error/NotFoundPage'
 
 /**
- * 블로그 메인 (BLOG-03, BLOG-04). 최신 글 10개씩과 사이드바. 카테고리 주소(/category/{id}, 미분류는 0)도 이 화면이다.
+ * 블로그 메인 (BLOG-03, BLOG-04). 최신 글 10개씩과 사이드바. 카테고리 주소(/category/{id}, 미분류는 0)와
+ * 태그 주소(/tag/{이름}, TAG-02)도 이 화면이다.
  * 목록·글 수는 서버가 보는 사람이 볼 수 있는 글만 준다.
  */
 export default function BlogMainPage() {
   const me = useMe()
   const [blogState] = useBlog()
-  const { categoryId } = useParams()
+  const { categoryId, tagName } = useParams()
   const [params] = useSearchParams()
   const page = Math.max(Number(params.get('page')) || 1, 1)
   const [sidebar, setSidebar] = useState<SidebarData | null>(null)
@@ -35,6 +36,9 @@ export default function BlogMainPage() {
     const query = new URLSearchParams({ page: String(page) })
     if (categoryId !== undefined) {
       query.set('categoryId', categoryId)
+    }
+    if (tagName !== undefined) {
+      query.set('tag', tagName)
     }
     api<PageResponse<PostSummary>>(`/api/posts?${query}`, { allowAnonymous: true })
       .then((result) => {
@@ -58,7 +62,7 @@ export default function BlogMainPage() {
     return () => {
       active = false
     }
-  }, [categoryId, page])
+  }, [categoryId, tagName, page])
 
   if (blogState.status === 'notFound' || postsNotFound) {
     return <NotFoundPage />
@@ -70,7 +74,8 @@ export default function BlogMainPage() {
     return null
   }
   const blog = blogState.blog
-  const basePath = categoryId === undefined ? '/' : `/category/${categoryId}`
+  const basePath = tagName !== undefined ? `/tag/${encodeURIComponent(tagName)}`
+    : categoryId === undefined ? '/' : `/category/${categoryId}`
 
   return (
     <div className="app">
@@ -80,7 +85,7 @@ export default function BlogMainPage() {
           <div className="stack" style={{ gap: 18 }}>
             <BlogProfile blog={blog} />
             <h2 style={{ fontSize: 17 }}>
-              {listTitle(categoryId, sidebar)} <span className="muted num">{posts?.totalElements ?? ''}</span>
+              {tagName !== undefined ? `#${tagName}` : listTitle(categoryId, sidebar)} <span className="muted num">{posts?.totalElements ?? ''}</span>
             </h2>
             {error && <p className="err">{error}</p>}
             {posts && posts.content.length === 0 && <EmptyPosts blog={blog} />}

@@ -4,13 +4,14 @@ import { ApiError, api, newIdempotencyKey } from '../../api/client'
 import { type FieldMessages, errorMessage, fieldMessages } from '../../api/errors'
 import type { CategoryTree, ManagedPost, PostSaved } from '../../api/types'
 import Editor from '../../components/editor/Editor'
+import TagInput from '../../components/editor/TagInput'
 
 type Visibility = 'PUBLIC' | 'PRIVATE'
 
 /**
  * 글쓰기·수정 (POST-01, POST-02, POST-03, POST-06). /manage/write는 새 글, /manage/posts/{id}/edit는 수정이다.
  * 제목이 비면 발행하지 않고, 실패해도 입력은 그대로 둔다(spec US2 시나리오 2).
- * 임시저장(POST-08)·태그(TAG-01)·이미지(POST-05)·주제(POST-11)는 뒤 스텝에서 더한다.
+ * 태그(TAG-01)와 이미지(POST-05, 에디터 버튼)는 스텝 7에서 더했다. 임시저장(POST-08)·주제(POST-11)는 뒤 스텝이다.
  */
 export default function PostWritePage() {
   const { postId } = useParams()
@@ -20,6 +21,7 @@ export default function PostWritePage() {
   const [contentHtml, setContentHtml] = useState('')
   const [loadedHtml, setLoadedHtml] = useState('')
   const [categoryId, setCategoryId] = useState<string>('')
+  const [tagNames, setTagNames] = useState<string[]>([])
   const [visibility, setVisibility] = useState<Visibility>('PUBLIC')
   const [categories, setCategories] = useState<CategoryTree | null>(null)
   const [blind, setBlind] = useState<ManagedPost['blind']>(null)
@@ -47,6 +49,7 @@ export default function PostWritePage() {
         setLoadedHtml(post.contentHtml)
         setContentHtml(post.contentHtml)
         setCategoryId(post.categoryId === null ? '' : String(post.categoryId))
+        setTagNames(post.tagNames)
         setVisibility(post.visibility === 'PRIVATE' ? 'PRIVATE' : 'PUBLIC')
         setBlind(post.blind)
       })
@@ -69,6 +72,7 @@ export default function PostWritePage() {
       title: title.trim(),
       contentHtml,
       categoryId: categoryId === '' ? null : Number(categoryId),
+      tagNames,
       visibility,
       status: 'PUBLISHED',
     }
@@ -140,6 +144,12 @@ export default function PostWritePage() {
         <div className="field">
           <span className="label">본문</span>
           <Editor initialHtml={loadedHtml} onChange={setContentHtml} />
+        </div>
+
+        <div className="field">
+          <span className="label">태그</span>
+          <TagInput tags={tagNames} onChange={setTagNames} />
+          {errors.tagNames && <p className="err">{errors.tagNames}</p>}
         </div>
 
         <fieldset className="field" style={{ border: 0, padding: 0, margin: 0 }}>

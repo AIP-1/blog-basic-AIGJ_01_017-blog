@@ -122,6 +122,11 @@ function Article({ post, me, onDelete, onCommentCount }: {
         </div>
       )}
       <div className="prose" dangerouslySetInnerHTML={{ __html: sanitizePostHtml(post.contentHtml) }} />
+      {post.tags.length > 0 && (
+        <div className="tag-cloud">
+          {post.tags.map((tag) => <Link key={tag} className="chip" to={`/tag/${encodeURIComponent(tag)}`}>#{tag}</Link>)}
+        </div>
+      )}
       <div className="row small muted"><span>공감 {post.likeCount}</span></div>
       <nav className="row between small" aria-label="이전·다음 글">
         <span>이전 글 {post.prev ? <Link to={`/${post.prev.id}`}>{post.prev.title}</Link> : <span className="muted">없음</span>}</span>
