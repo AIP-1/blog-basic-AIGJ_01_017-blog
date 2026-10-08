@@ -11,4 +11,8 @@ public interface BlogRepository extends JpaRepository<Blog, Long> {
     @Query("select b from Blog b join fetch b.member left join fetch b.movedToBlog where b.address = :address")
     Optional<Blog> findByAddress(@Param("address") String address);
 
+    /** 회원의 대표 블로그(삭제되지 않은 것). */
+    @Query("select b from Blog b where b.member.id = :memberId and b.primary = true and b.deletedAt is null")
+    Optional<Blog> findPrimaryByMemberId(@Param("memberId") Long memberId);
+
 }
