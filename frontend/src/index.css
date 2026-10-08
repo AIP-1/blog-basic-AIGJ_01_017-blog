@@ -140,3 +140,6 @@ select { border: 1px solid var(--line); background: var(--surface); border-radiu
 .tag-cloud a { text-decoration: none; }
 
 .comment.reply { margin-left: 42px; }
+
+.search-box { display: flex; gap: 6px; min-width: 0; flex: 0 1 280px; }
+.search-box input { flex: 1; min-width: 0; border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 6px 10px; font-size: 14px; }

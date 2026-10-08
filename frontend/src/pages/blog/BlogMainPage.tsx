@@ -3,11 +3,11 @@ import { Link, useParams, useSearchParams } from 'react-router'
 import { ApiError, api } from '../../api/client'
 import { errorMessage } from '../../api/errors'
 import type { Blog, CategoryNode, PageResponse, PostSummary, Sidebar as SidebarData } from '../../api/types'
-import { formatDate } from '../../app/format'
 import { useBlog } from '../../app/useBlog'
 import { useMe } from '../../app/useMe'
 import BlogHeader from '../../components/BlogHeader'
 import Pagination from '../../components/Pagination'
+import { PostItem } from '../../components/PostItem'
 import Sidebar from '../../components/Sidebar'
 import NotFoundPage from '../error/NotFoundPage'
 
@@ -122,26 +122,6 @@ function BlogProfile({ blog }: { blog: Blog }) {
   )
 }
 
-function PostItem({ post, owner }: { post: PostSummary; owner: boolean }) {
-  return (
-    <article className={post.thumbnailUrl ? 'post-item has-thumb' : 'post-item'}>
-      <div className="stack" style={{ gap: 2 }}>
-        <div className="row between nowrap">
-          <h3><Link to={`/${post.id}`}>{post.title}</Link></h3>
-          {owner && <Link className="small" to={`/manage/posts/${post.id}/edit`}>수정</Link>}
-        </div>
-        {post.summary && <p>{post.summary}</p>}
-        <div className="meta">
-          <span>{post.category?.name ?? '미분류'}</span>
-          <span>{formatDate(post.publishedAt)}</span>
-          <span>공감 {post.likeCount}</span>
-          <span>댓글 {post.commentCount}</span>
-        </div>
-      </div>
-      {post.thumbnailUrl && <img className="thumb" src={post.thumbnailUrl} alt="" loading="lazy" />}
-    </article>
-  )
-}
 
 function EmptyPosts({ blog }: { blog: Blog }) {
   return (

@@ -8,6 +8,7 @@ import { useBlog } from '../../app/useBlog'
 import { useMe } from '../../app/useMe'
 import BlogHeader from '../../components/BlogHeader'
 import Comments from '../../components/Comments'
+import LikeButton from '../../components/LikeButton'
 import ErrorPage from '../../components/ErrorPage'
 import Sidebar from '../../components/Sidebar'
 
@@ -127,7 +128,8 @@ function Article({ post, me, onDelete, onCommentCount }: {
           {post.tags.map((tag) => <Link key={tag} className="chip" to={`/tag/${encodeURIComponent(tag)}`}>#{tag}</Link>)}
         </div>
       )}
-      <div className="row small muted"><span>공감 {post.likeCount}</span></div>
+      <LikeButton key={post.id} postId={post.id} me={me} initialLiked={post.viewer.liked}
+                  initialCount={post.likeCount} />
       <nav className="row between small" aria-label="이전·다음 글">
         <span>이전 글 {post.prev ? <Link to={`/${post.prev.id}`}>{post.prev.title}</Link> : <span className="muted">없음</span>}</span>
         <span>다음 글 {post.next ? <Link to={`/${post.next.id}`}>{post.next.title}</Link> : <span className="muted">없음</span>}</span>
