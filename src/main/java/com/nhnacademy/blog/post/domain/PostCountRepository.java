@@ -11,4 +11,7 @@ public interface PostCountRepository {
     /** 조건에 맞는 글 수를 카테고리별로. 키 null은 미분류다. */
     Map<Long, Long> countByCategory(Specification<Post> condition);
 
+    /** 조건에 맞는 글 수를 태그 id별로. 글이 하나도 없는 태그는 결과에 없다. */
+    Map<Long, Long> countByTag(Specification<Post> condition);
+
 }

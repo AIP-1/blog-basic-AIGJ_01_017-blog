@@ -71,13 +71,14 @@ class SidebarIntegrationTest extends IntegrationTestSupport {
         sidebar(null)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.modules[*].type",
-                        contains("PROFILE", "CATEGORY", "RECENT_POST", "RECENT_COMMENT")))
+                        contains("PROFILE", "CATEGORY", "TAG", "RECENT_POST", "RECENT_COMMENT")))
                 .andExpect(jsonPath("$.modules[0].data.name").value(blog.getName()))
                 .andExpect(jsonPath("$.modules[1].data.totalCount").value(0))
                 .andExpect(jsonPath("$.modules[1].data.uncategorizedCount").value(0))
                 .andExpect(jsonPath("$.modules[1].data.categories", hasSize(0)))
                 .andExpect(jsonPath("$.modules[2].data", hasSize(0)))
-                .andExpect(jsonPath("$.modules[3].data", hasSize(0)));
+                .andExpect(jsonPath("$.modules[3].data", hasSize(0)))
+                .andExpect(jsonPath("$.modules[4].data", hasSize(0)));
     }
 
     @Test
@@ -126,12 +127,12 @@ class SidebarIntegrationTest extends IntegrationTestSupport {
         }
         Post privatePost = testPosts.published(blog, null, Visibility.PRIVATE, base.plusMinutes(10));
 
-        sidebar(null).andExpect(jsonPath("$.modules[2].data[*].id", contains(
+        sidebar(null).andExpect(jsonPath("$.modules[3].data[*].id", contains(
                 posts[5].getId().intValue(), posts[4].getId().intValue(), posts[3].getId().intValue(),
                 posts[2].getId().intValue(), posts[1].getId().intValue())));
         sidebar(testMembers.loginCookies(owner))
-                .andExpect(jsonPath("$.modules[2].data[0].id").value(privatePost.getId()))
-                .andExpect(jsonPath("$.modules[2].data", hasSize(5)));
+                .andExpect(jsonPath("$.modules[3].data[0].id").value(privatePost.getId()))
+                .andExpect(jsonPath("$.modules[3].data", hasSize(5)));
     }
 
     @Test
@@ -153,20 +154,20 @@ class SidebarIntegrationTest extends IntegrationTestSupport {
 
         // 비공개 글의 댓글은 다른 사람의 사이드바에 나오지 않는다
         sidebar(null)
-                .andExpect(jsonPath("$.modules[3].data[*].id", contains(blinded.getId().intValue(),
+                .andExpect(jsonPath("$.modules[4].data[*].id", contains(blinded.getId().intValue(),
                         secret.getId().intValue(), normal.getId().intValue())))
-                .andExpect(jsonPath("$.modules[3].data[0].state").value("BLINDED"))
-                .andExpect(jsonPath("$.modules[3].data[0].content").value(nullValue()))
-                .andExpect(jsonPath("$.modules[3].data[1].state").value("SECRET"))
-                .andExpect(jsonPath("$.modules[3].data[1].content").value(nullValue()))
-                .andExpect(jsonPath("$.modules[3].data[1].authorNickname").value(nullValue()))
-                .andExpect(jsonPath("$.modules[3].data[2].state").value("NORMAL"))
-                .andExpect(jsonPath("$.modules[3].data[2].content").value("잘 읽었습니다"))
-                .andExpect(jsonPath("$.modules[3].data[2].authorNickname").value(reader.getNickname()))
-                .andExpect(jsonPath("$.modules[3].data[2].postId").value(publicPost.getId()));
+                .andExpect(jsonPath("$.modules[4].data[0].state").value("BLINDED"))
+                .andExpect(jsonPath("$.modules[4].data[0].content").value(nullValue()))
+                .andExpect(jsonPath("$.modules[4].data[1].state").value("SECRET"))
+                .andExpect(jsonPath("$.modules[4].data[1].content").value(nullValue()))
+                .andExpect(jsonPath("$.modules[4].data[1].authorNickname").value(nullValue()))
+                .andExpect(jsonPath("$.modules[4].data[2].state").value("NORMAL"))
+                .andExpect(jsonPath("$.modules[4].data[2].content").value("잘 읽었습니다"))
+                .andExpect(jsonPath("$.modules[4].data[2].authorNickname").value(reader.getNickname()))
+                .andExpect(jsonPath("$.modules[4].data[2].postId").value(publicPost.getId()));
         sidebar(testMembers.loginCookies(owner))
-                .andExpect(jsonPath("$.modules[3].data[0].id").value(onPrivate.getId()))
-                .andExpect(jsonPath("$.modules[3].data", hasSize(4)));
+                .andExpect(jsonPath("$.modules[4].data[0].id").value(onPrivate.getId()))
+                .andExpect(jsonPath("$.modules[4].data", hasSize(4)));
     }
 
     private void writtenMinutesAgo(Comment comment, int minutes) {

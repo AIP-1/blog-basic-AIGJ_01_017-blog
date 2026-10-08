@@ -2,13 +2,14 @@ package com.nhnacademy.blog.blog.application;
 
 import com.nhnacademy.blog.blog.domain.Blog;
 import com.nhnacademy.blog.category.application.CategoryTree;
+import com.nhnacademy.blog.tag.application.TagCount;
 import java.util.List;
 
 /**
- * 사이드바 (BLOG-04). 지금은 기본 구성 순서로 블로그 홈 바로가기(이름·소개), 카테고리, 최근 글, 최근 댓글이다.
- * 태그(TAG-03)는 태그 기능(스텝 7), 순서·표시 설정과 방문자·인기 글·구독 모듈(BLOG-05)은 T086에서 더한다.
+ * 사이드바 (BLOG-04). 지금은 기본 구성 순서로 블로그 홈 바로가기(이름·소개), 카테고리, 태그(TAG-03), 최근 글, 최근 댓글이다.
+ * 순서·표시 설정과 방문자·인기 글·구독 모듈(BLOG-05)은 T086에서 더한다.
  */
-public record Sidebar(Blog blog, CategoryTree categories, List<RecentPost> recentPosts,
+public record Sidebar(Blog blog, CategoryTree categories, List<TagCount> tags, List<RecentPost> recentPosts,
                       List<RecentComment> recentComments) {
 
     public record RecentPost(Long id, String title) {

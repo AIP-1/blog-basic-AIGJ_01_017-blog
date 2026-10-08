@@ -80,9 +80,17 @@ export interface RecentComment {
   state: 'NORMAL' | 'SECRET' | 'BLINDED'
 }
 
+/** 태그 목록 한 줄 (GET /api/tags, 사이드바 TAG). 보는 사람이 볼 수 있는 글 수, 많은 순 */
+export interface TagCount {
+  id: number
+  name: string
+  postCount: number
+}
+
 export type SidebarModule =
   | { type: 'PROFILE'; data: { name: string; description: string | null; profileImageUrl: string | null } }
   | { type: 'CATEGORY'; data: CategoryTree }
+  | { type: 'TAG'; data: TagCount[] }
   | { type: 'RECENT_POST'; data: { id: number; title: string }[] }
   | { type: 'RECENT_COMMENT'; data: RecentComment[] }
 
