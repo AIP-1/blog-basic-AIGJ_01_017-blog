@@ -56,6 +56,11 @@ public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificat
     @Query("update Post p set p.commentCount = p.commentCount + :delta, p.updatedAt = p.updatedAt where p.id = :postId")
     int addCommentCount(@Param("postId") Long postId, @Param("delta") int delta);
 
+    /** 조회수 하나 올리기 (POST-09). 댓글 수와 같은 한 줄 UPDATE이고, 조회는 글을 고친 것이 아니라 updated_at을 그대로 둔다. */
+    @Modifying(clearAutomatically = true)
+    @Query("update Post p set p.viewCount = p.viewCount + 1, p.updatedAt = p.updatedAt where p.id = :postId")
+    int increaseViewCount(@Param("postId") Long postId);
+
     /** 공감 수 늘리기·줄이기 (SOC-01). 댓글 수와 같은 방식이다. */
     @Modifying(clearAutomatically = true)
     @Query("update Post p set p.likeCount = p.likeCount + :delta, p.updatedAt = p.updatedAt where p.id = :postId")

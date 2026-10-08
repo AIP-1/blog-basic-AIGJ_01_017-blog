@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { ApiError, api } from '../../api/client'
 import type { PostDetail, Sidebar as SidebarData } from '../../api/types'
@@ -18,6 +18,7 @@ type PostState = { status: 'loading' } | { status: 'ok'; post: PostDetail } | { 
 /**
  * 글 상세 (POST-04, POST-10). 본문은 서버가 정화해 저장했고, 넣기 전에 DOMPurify로 한 번 더 거른다(이중 정화).
  * 볼 수 없는 글이면 404 화면이다. 주인에게만 수정·삭제 버튼이 보이지만, 권한은 서버가 다시 검사한다.
+ * 본문이 보인 뒤 조회 기록을 남긴다(POST-09). 화면의 조회수는 이번 조회를 세기 전 값이다.
  */
 export default function PostPage() {
   const { postId } = useParams()
@@ -26,6 +27,8 @@ export default function PostPage() {
   const [blogState] = useBlog()
   const [state, setState] = useState<PostState>({ status: 'loading' })
   const [sidebar, setSidebar] = useState<SidebarData | null>(null)
+  // 개발 모드(StrictMode)는 effect를 두 번 부른다. 같은 글에 조회 기록을 두 번 보내지 않게 마지막으로 보낸 글을 기억한다
+  const viewedPostId = useRef<number | null>(null)
 
   useEffect(() => {
     api<SidebarData>('/api/blog/sidebar', { allowAnonymous: true }).then(setSidebar).catch(() => setSidebar(null))
@@ -51,6 +54,16 @@ export default function PostPage() {
       active = false
     }
   }, [postId])
+
+  const shownPostId = state.status === 'ok' ? state.post.id : null
+  useEffect(() => {
+    if (shownPostId === null || viewedPostId.current === shownPostId) {
+      return
+    }
+    viewedPostId.current = shownPostId
+    // 응답은 늘 204다(5분 안에 다시 보면 서버가 세지 않는다). 실패해도 글 읽기에는 지장이 없어 무시한다
+    api(`/api/posts/${shownPostId}/views`, { method: 'POST', allowAnonymous: true }).catch(() => undefined)
+  }, [shownPostId])
 
   if (blogState.status === 'notFound' || state.status === 'notFound') {
     return <ErrorPage status={404} />
@@ -106,6 +119,7 @@ function Article({ post, me, onDelete, onCommentCount }: {
           <span>{post.author.nickname}</span>
           {post.publishedAt && <span>{formatDateTime(post.publishedAt)}</span>}
           {post.updatedAt && <span>수정 {formatDateTime(post.updatedAt)}</span>}
+          <span>조회 {post.viewCount.toLocaleString()}</span>
           {post.viewer.isOwner && post.visibility !== 'PUBLIC' && <span className="chip">비공개</span>}
         </div>
         {post.viewer.isOwner && (
