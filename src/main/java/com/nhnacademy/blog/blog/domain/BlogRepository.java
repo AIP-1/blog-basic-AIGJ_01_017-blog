@@ -1,5 +1,7 @@
 package com.nhnacademy.blog.blog.domain;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -21,5 +23,10 @@ public interface BlogRepository extends JpaRepository<Blog, Long> {
     /** 회원의 대표 블로그(삭제되지 않은 것). */
     @Query("select b from Blog b where b.member.id = :memberId and b.primary = true and b.deletedAt is null")
     Optional<Blog> findPrimaryByMemberId(@Param("memberId") Long memberId);
+
+    /** 여러 회원의 대표 블로그를 한 번에(댓글 작성자 목록 등). 볼 수 있는지 판단하려고 주인을 함께 읽는다. */
+    @Query("select b from Blog b join fetch b.member"
+            + " where b.member.id in :memberIds and b.primary = true and b.deletedAt is null")
+    List<Blog> findPrimaryByMemberIds(@Param("memberIds") Collection<Long> memberIds);
 
 }
