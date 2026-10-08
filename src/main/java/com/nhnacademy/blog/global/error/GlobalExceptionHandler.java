@@ -3,10 +3,14 @@ package com.nhnacademy.blog.global.error;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.BindException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -30,7 +34,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ErrorResponse> handleBusiness(BusinessException e) {
-        return ResponseEntity.status(e.getErrorCode().getStatus()).body(ErrorResponse.of(e));
+        return ResponseEntity.status(e.getErrorCode().getStatus()).contentType(MediaType.APPLICATION_JSON)
+                .body(ErrorResponse.of(e));
     }
 
     /** @Valid 본문, @ModelAttribute 검증 실패. MethodArgumentNotValidException도 여기로 온다. */
@@ -85,9 +90,13 @@ public class GlobalExceptionHandler {
         return error(ErrorCode.UNAUTHORIZED);
     }
 
+    /** 메서드 보안(@PreAuthorize)에 걸림. 비회원이면 로그인 필요(401), 회원이면 권한 없음(403). */
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException e) {
-        return error(ErrorCode.FORBIDDEN);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        boolean anonymous = authentication == null || authentication instanceof AnonymousAuthenticationToken
+                || !authentication.isAuthenticated();
+        return error(anonymous ? ErrorCode.UNAUTHORIZED : ErrorCode.FORBIDDEN);
     }
 
     @ExceptionHandler(Exception.class)
@@ -97,11 +106,14 @@ public class GlobalExceptionHandler {
     }
 
     private ResponseEntity<ErrorResponse> validation(List<FieldErrorDetail> fieldErrors) {
-        return ResponseEntity.status(ErrorCode.VALIDATION_FAILED.getStatus()).body(ErrorResponse.validation(fieldErrors));
+        return ResponseEntity.status(ErrorCode.VALIDATION_FAILED.getStatus()).contentType(MediaType.APPLICATION_JSON)
+                .body(ErrorResponse.validation(fieldErrors));
     }
 
     private ResponseEntity<ErrorResponse> error(ErrorCode errorCode) {
-        return ResponseEntity.status(errorCode.getStatus()).body(ErrorResponse.of(errorCode));
+        // Accept가 text/html이어도(브라우저 주소창) 같은 JSON 본문을 준다
+        return ResponseEntity.status(errorCode.getStatus()).contentType(MediaType.APPLICATION_JSON)
+                .body(ErrorResponse.of(errorCode));
     }
 
 }

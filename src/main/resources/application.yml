@@ -32,3 +32,14 @@ server:
 app:
   upload:
     dir: ${APP_UPLOAD_DIR:./uploads}
+  domain:
+    # 플랫폼 주소. 블로그 주소는 {address}.{platform}
+    platform: blog.com
+  auth:
+    access-token-ttl: 30m
+    refresh-token-ttl: 14d
+    # 로그인 유지를 고르지 않았을 때, 이 시간 동안 아무 요청이 없으면 로그아웃
+    idle-timeout: 30m
+    cookie-secure: true
+  idempotency:
+    ttl: 10m
