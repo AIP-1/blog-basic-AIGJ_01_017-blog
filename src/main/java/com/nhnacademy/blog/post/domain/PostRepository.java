@@ -46,4 +46,12 @@ public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificat
             nativeQuery = true)
     int deleteNotifications(@Param("postId") Long postId);
 
+    /**
+     * 댓글 수 늘리기·줄이기 (CMT-01). 한 줄 UPDATE라 동시에 여러 댓글이 달려도 값이 어긋나지 않는다.
+     * 작성자가 글을 고친 것이 아니라서 updated_at은 그대로 둔다.
+     */
+    @Modifying(clearAutomatically = true)
+    @Query("update Post p set p.commentCount = p.commentCount + :delta, p.updatedAt = p.updatedAt where p.id = :postId")
+    int addCommentCount(@Param("postId") Long postId, @Param("delta") int delta);
+
 }
