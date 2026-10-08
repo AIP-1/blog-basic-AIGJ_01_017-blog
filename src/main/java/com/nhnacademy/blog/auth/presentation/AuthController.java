@@ -8,11 +8,13 @@ import com.nhnacademy.blog.global.auth.AuthCookieManager;
 import com.nhnacademy.blog.member.application.MeService;
 import com.nhnacademy.blog.member.domain.Member;
 import com.nhnacademy.blog.member.presentation.dto.MeResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -51,6 +53,17 @@ public class AuthController {
         Member member = authService.login(request.email(), request.password());
         cookieManager.login(response, member, request.rememberMe());
         return MeResponse.from(meService.me(member.getId()));
+    }
+
+    /**
+     * 로그아웃 (T020, AUTH-02). 토큰을 Redis에서 무효로 만들고 쿠키를 지운다.
+     * 쿠키가 .{플랫폼} 도메인이라 한 번 지우면 모든 블로그 주소에서 로그아웃된다.
+     */
+    @PostMapping("/api/auth/logout")
+    @PreAuthorize("isAuthenticated()")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void logout(HttpServletRequest request, HttpServletResponse response) {
+        cookieManager.logout(request, response);
     }
 
     @GetMapping("/api/auth/nickname-availability")
