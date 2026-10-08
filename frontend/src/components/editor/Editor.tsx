@@ -1,7 +1,11 @@
 import { type Editor as TiptapEditor, EditorContent, Extension, InputRule, useEditor } from '@tiptap/react'
+import Image from '@tiptap/extension-image'
 import { Markdown } from '@tiptap/markdown'
 import StarterKit from '@tiptap/starter-kit'
-import { useEffect, useRef } from 'react'
+import { type ChangeEvent, useEffect, useRef, useState } from 'react'
+import { uploadFile } from '../../api/client'
+import { errorMessage } from '../../api/errors'
+import type { UploadedImage } from '../../api/types'
 import { MARKDOWN_LINK, isSafeLinkUrl, looksLikeMarkdown } from './markdown'
 
 /**
@@ -31,7 +35,7 @@ const MarkdownLinkInput = Extension.create({
 
 /**
  * 글 본문 에디터 (POST-01, Tiptap). 서버 정화 허용 목록(HtmlSanitizer)에 있는 서식만 켠다:
- * 문단 제목, 굵게·기울임, 목록, 인용, 코드 블록, http/https 링크. 이미지는 스텝 7(POST-05).
+ * 문단 제목, 굵게·기울임, 목록, 인용, 코드 블록, http/https 링크, 직접 올린 이미지(/uploads/..., T037).
  * 밑줄·취소선·구분선은 서버가 지우는 태그라 끈다. 저장할 때는 서버가 한 번 더 정화한다.
  *
  * 마크다운 입력 (T035a): 같은 에디터에서 `## `, `**굵게**`, `- `, `> `, ``` 같은 문법을 치면 바로 서식이 되고
@@ -48,6 +52,8 @@ const editorExtensions = [
   }),
   Markdown,
   MarkdownLinkInput,
+  // 서버 허용 목록과 같게 src·alt만 쓴다. base64 이미지(data:)는 서버가 지우므로 받지 않는다
+  Image.configure({ inline: false, allowBase64: false }),
 ]
 
 export default function Editor({ initialHtml, onChange }: {
@@ -103,6 +109,33 @@ export default function Editor({ initialHtml, onChange }: {
 }
 
 function Toolbar({ editor }: { editor: TiptapEditor | null }) {
+  const fileInput = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+
+  /**
+   * 고른 사진을 고른 순서대로 하나씩 올리고, 올라간 것부터 커서 자리에 넣는다 (T037).
+   * 하나가 거절돼도(형식·크기) 본문은 그대로이고 이유를 알린다(spec US2 시나리오 6).
+   */
+  async function insertImages(event: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files ?? [])
+    event.target.value = ''
+    if (!editor || files.length === 0) {
+      return
+    }
+    setUploading(true)
+    setUploadError(null)
+    for (const file of files) {
+      try {
+        const image = await uploadFile<UploadedImage>('/api/images', file)
+        editor.chain().focus().setImage({ src: image.url, alt: file.name }).run()
+      } catch (error) {
+        setUploadError(`${file.name}: ${errorMessage(error)}`)
+      }
+    }
+    setUploading(false)
+  }
+
   if (!editor) {
     return <div className="editor-bar" />
   }
@@ -138,7 +171,13 @@ function Toolbar({ editor }: { editor: TiptapEditor | null }) {
       {button('인용', editor.isActive('blockquote'), () => chain().toggleBlockquote().run())}
       {button('코드', editor.isActive('codeBlock'), () => chain().toggleCodeBlock().run())}
       {button('링크', editor.isActive('link'), toggleLink)}
-      <button type="button" className="btn" disabled title="이미지는 스텝 7에서 넣을 수 있습니다">이미지</button>
+      <button type="button" className="btn" disabled={uploading}
+              onMouseDown={(event) => event.preventDefault()} onClick={() => fileInput.current?.click()}>
+        {uploading ? '올리는 중…' : '이미지'}
+      </button>
+      <input ref={fileInput} type="file" accept="image/jpeg,image/png,image/gif,image/webp" multiple hidden
+             onChange={insertImages} />
+      {uploadError && <span className="err" role="alert">{uploadError}</span>}
     </div>
   )
 }

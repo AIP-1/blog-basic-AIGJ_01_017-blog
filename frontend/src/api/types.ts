@@ -165,3 +165,10 @@ export interface Comment {
 export interface CommentList extends CursorResponse<Comment> {
   totalCount: number
 }
+
+/** 올린 이미지 (POST /api/images) */
+export interface UploadedImage {
+  id: number
+  url: string
+  thumbnailUrl: string
+}

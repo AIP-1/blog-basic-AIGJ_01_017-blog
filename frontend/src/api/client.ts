@@ -113,3 +113,26 @@ export function loginUrl(returnTo: string = window.location.href): string {
 export function redirectToLogin(returnTo?: string): void {
   window.location.assign(loginUrl(returnTo))
 }
+
+/**
+ * 파일 올리기 (multipart/form-data, T037). 본문 이미지 등.
+ * Content-Type은 브라우저가 경계 문자열(boundary)과 함께 정하므로 직접 넣지 않는다.
+ */
+export async function uploadFile<T>(path: string, file: File, field = 'file'): Promise<T> {
+  const form = new FormData()
+  form.append(field, file)
+  const response = await fetch(path, {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+    credentials: 'same-origin',
+    body: form,
+  })
+  if (response.ok) {
+    return (await response.json()) as T
+  }
+  const error = new ApiError(response.status, await readError(response))
+  if (response.status === 401) {
+    redirectToLogin()
+  }
+  throw error
+}
