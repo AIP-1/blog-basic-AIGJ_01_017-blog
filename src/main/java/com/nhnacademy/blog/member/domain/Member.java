@@ -70,6 +70,15 @@ public class Member extends BaseTimeEntity {
         return new Member(null, null, nickname);
     }
 
+    /** 지금 정지 중인가. 정지 종료 시각이 지났으면 정지가 아니다. 종료 시각이 없으면 영구 정지. */
+    public boolean isSuspendedAt(LocalDateTime now) {
+        return status == MemberStatus.SUSPENDED && (suspendedUntil == null || suspendedUntil.isAfter(now));
+    }
+
+    public boolean isWithdrawn() {
+        return status == MemberStatus.WITHDRAWN;
+    }
+
     public Long getId() {
         return id;
     }

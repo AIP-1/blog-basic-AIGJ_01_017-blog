@@ -32,3 +32,12 @@ server:
 app:
   upload:
     dir: ${APP_UPLOAD_DIR:./uploads}
+  domain:
+    # 플랫폼 주소. 블로그 주소는 {address}.{platform}
+    platform: blog.com
+  auth:
+    access-token-ttl: 30m
+    refresh-token-ttl: 14d
+    cookie-secure: true
+  idempotency:
+    ttl: 10m

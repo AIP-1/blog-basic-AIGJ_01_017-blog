@@ -12,3 +12,11 @@ spring:
 app:
   upload:
     dir: /Users/chosun-nhn54/IdeaProjects/blog/uploads
+  domain:
+    # /etc/hosts에 127.0.0.1 blog.test alpha.blog.test ... (quickstart)
+    platform: blog.test
+  auth:
+    # 개발용 서명 키. 운영은 JWT_SECRET 환경 변수
+    jwt-secret: dev-only-jwt-secret-change-me-0123456789abcdef
+    # http://blog.test:8080 에서 쿠키를 받으려면 Secure를 끈다
+    cookie-secure: false

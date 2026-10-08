@@ -6,7 +6,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.BindException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -85,9 +88,13 @@ public class GlobalExceptionHandler {
         return error(ErrorCode.UNAUTHORIZED);
     }
 
+    /** 메서드 보안(@PreAuthorize)에 걸림. 비회원이면 로그인 필요(401), 회원이면 권한 없음(403). */
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException e) {
-        return error(ErrorCode.FORBIDDEN);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        boolean anonymous = authentication == null || authentication instanceof AnonymousAuthenticationToken
+                || !authentication.isAuthenticated();
+        return error(anonymous ? ErrorCode.UNAUTHORIZED : ErrorCode.FORBIDDEN);
     }
 
     @ExceptionHandler(Exception.class)

@@ -13,3 +13,7 @@ spring:
 app:
   upload:
     dir: ${APP_UPLOAD_DIR}
+  domain:
+    platform: ${APP_PLATFORM_DOMAIN:blog.com}
+  auth:
+    jwt-secret: ${JWT_SECRET}
