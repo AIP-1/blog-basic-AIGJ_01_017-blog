@@ -118,3 +118,50 @@ export interface PostSaved {
   status: string
   url: string
 }
+
+export interface CursorResponse<T> {
+  content: T[]
+  nextCursor: string | null
+}
+
+/** 글 상세 (GET /api/posts/{id}) */
+export interface PostDetail {
+  id: number
+  blog: BlogRef
+  title: string
+  contentHtml: string
+  category: { id: number; name: string } | null
+  tags: string[]
+  topic: string | null
+  visibility: 'PUBLIC' | 'PRIVATE' | 'SUBSCRIBERS'
+  publishedAt: string | null
+  updatedAt: string | null
+  viewCount: number
+  likeCount: number
+  commentCount: number
+  commentAllowed: boolean
+  author: MemberSummary
+  viewer: { isOwner: boolean; liked: boolean; bookmarked: boolean }
+  blind: { reason: string; reasonMessage: string } | null
+  prev: { id: number; title: string } | null
+  next: { id: number; title: string } | null
+}
+
+/** 댓글 (contracts Comment) */
+export interface Comment {
+  id: number
+  parentId: number | null
+  author: MemberSummary | null
+  content: string | null
+  secret: boolean
+  state: 'NORMAL' | 'SECRET' | 'DELETED' | 'BLINDED'
+  createdAt: string
+  updatedAt: string | null
+  viewer: { canEdit: boolean; canDelete: boolean }
+  blind: { reason: string; reasonMessage: string } | null
+  replies: Comment[]
+}
+
+export interface CommentList extends CursorResponse<Comment> {
+  totalCount: number
+}
