@@ -132,6 +132,20 @@ class LoginIntegrationTest extends IntegrationTestSupport {
     }
 
     @Test
+    void rememberMeCanBeOmitted() throws Exception {
+        Member member = testMembers.createWithPassword(PASSWORD);
+
+        MvcResult result = mockMvc.perform(post("/api/auth/login")
+                        .header("X-Requested-With", "XMLHttpRequest")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"%s\",\"password\":\"%s\"}".formatted(member.getEmail(), PASSWORD)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        assertThat(result.getResponse().getHeaders(HttpHeaders.SET_COOKIE)).noneMatch(c -> c.contains("Max-Age"));
+    }
+
+    @Test
     void missingFieldsAre400() throws Exception {
         mockMvc.perform(post("/api/auth/login")
                         .header("X-Requested-With", "XMLHttpRequest")

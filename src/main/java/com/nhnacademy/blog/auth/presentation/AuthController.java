@@ -51,7 +51,7 @@ public class AuthController {
     @PostMapping("/api/auth/login")
     public MeResponse login(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
         Member member = authService.login(request.email(), request.password());
-        cookieManager.login(response, member, request.rememberMe());
+        cookieManager.login(response, member, request.keepLoggedIn());
         return MeResponse.from(meService.me(member.getId()));
     }
 
