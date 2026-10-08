@@ -5,7 +5,11 @@ import com.nhnacademy.blog.global.auth.LoginMembers;
 import com.nhnacademy.blog.global.host.CurrentBlog;
 import com.nhnacademy.blog.global.web.PageQuery;
 import com.nhnacademy.blog.global.web.PageResponse;
+import com.nhnacademy.blog.image.application.PostThumbnails;
 import com.nhnacademy.blog.post.application.PostQueryService;
+import com.nhnacademy.blog.post.domain.Post;
+import java.util.Map;
+import org.springframework.data.domain.Page;
 import com.nhnacademy.blog.post.application.PostReadService;
 import com.nhnacademy.blog.post.presentation.dto.PostDetailResponse;
 import com.nhnacademy.blog.post.presentation.dto.PostSummaryResponse;
@@ -23,10 +27,13 @@ public class PostController {
 
     private final PostQueryService postQueryService;
     private final PostReadService postReadService;
+    private final PostThumbnails postThumbnails;
 
-    public PostController(PostQueryService postQueryService, PostReadService postReadService) {
+    public PostController(PostQueryService postQueryService, PostReadService postReadService,
+                          PostThumbnails postThumbnails) {
         this.postQueryService = postQueryService;
         this.postReadService = postReadService;
+        this.postThumbnails = postThumbnails;
     }
 
     @GetMapping("/api/posts")
@@ -36,9 +43,9 @@ public class PostController {
                                                    @RequestParam(required = false) Long categoryId,
                                                    @RequestParam(required = false) String tag) {
         PageQuery pageQuery = PageQuery.of(page, size, PostQueryService.BLOG_PAGE_SIZE);
-        return PageResponse.from(
-                postQueryService.blogPosts(blog, LoginMembers.currentId(), categoryId, tag, pageQuery),
-                post -> PostSummaryResponse.of(post, blog));
+        Page<Post> posts = postQueryService.blogPosts(blog, LoginMembers.currentId(), categoryId, tag, pageQuery);
+        Map<Long, String> thumbnails = postThumbnails.of(posts.getContent());
+        return PageResponse.from(posts, post -> PostSummaryResponse.of(post, blog, thumbnails.get(post.getId())));
     }
 
     /** 글 상세. 볼 수 없으면 404, 구독자 공개 글을 구독 안 한 사람이 열면 403 SUBSCRIBERS_ONLY. */

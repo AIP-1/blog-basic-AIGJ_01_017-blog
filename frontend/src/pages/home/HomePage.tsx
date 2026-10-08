@@ -58,15 +58,19 @@ export default function HomePage() {
           {loaded && posts.length === 0 && <p className="muted">아직 글이 없습니다.</p>}
           <div className="post-list">
             {posts.map((post) => (
-              <article key={post.id} className="post-item">
-                <h3><a href={blogUrl(post.blog.address, `/${post.id}`)}>{post.title}</a></h3>
-                {post.summary && <p>{post.summary}</p>}
-                <div className="meta">
-                  <a href={blogUrl(post.blog.address)}>{post.blog.name}</a>
-                  <span>{formatDateTime(post.publishedAt)}</span>
-                  <span>공감 {post.likeCount}</span>
-                  <span>댓글 {post.commentCount}</span>
+              <article key={post.id} className={post.thumbnailUrl ? 'post-item has-thumb' : 'post-item'}>
+                <div className="stack" style={{ gap: 2 }}>
+                  <h3><a href={blogUrl(post.blog.address, `/${post.id}`)}>{post.title}</a></h3>
+                  {post.summary && <p>{post.summary}</p>}
+                  <div className="meta">
+                    <a href={blogUrl(post.blog.address)}>{post.blog.name}</a>
+                    <span>{formatDateTime(post.publishedAt)}</span>
+                    <span>공감 {post.likeCount}</span>
+                    <span>댓글 {post.commentCount}</span>
+                  </div>
                 </div>
+                {/* 썸네일은 플랫폼 주소에서도 같은 서버의 /uploads라 그대로 연다 */}
+                {post.thumbnailUrl && <img className="thumb" src={post.thumbnailUrl} alt="" loading="lazy" />}
               </article>
             ))}
           </div>

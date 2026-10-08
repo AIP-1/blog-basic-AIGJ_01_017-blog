@@ -6,14 +6,17 @@ import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.matchesPattern;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.jayway.jsonpath.JsonPath;
 import com.nhnacademy.blog.IntegrationTestSupport;
+import com.nhnacademy.blog.blog.domain.Blog;
 import com.nhnacademy.blog.global.config.UploadProperties;
 import com.nhnacademy.blog.member.domain.Member;
+import com.nhnacademy.blog.support.TestBlogs;
 import com.nhnacademy.blog.support.TestMembers;
 import jakarta.servlet.http.Cookie;
 import java.awt.Color;
@@ -24,10 +27,12 @@ import java.io.ByteArrayOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Base64;
+import java.util.UUID;
 import javax.imageio.ImageIO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
@@ -52,6 +57,9 @@ class ImageUploadIntegrationTest extends IntegrationTestSupport {
 
     @Autowired
     JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    TestBlogs testBlogs;
 
     Member member;
     Cookie[] cookies;
@@ -139,6 +147,27 @@ class ImageUploadIntegrationTest extends IntegrationTestSupport {
         upload(file("big.png", "image/png", big))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("IMAGE_TOO_LARGE"));
+    }
+
+    @Test
+    void listShowsThumbnailOfFirstImageInBody() throws Exception {
+        Blog blog = testBlogs.create(member);
+        String uploaded = upload(file("a.jpg", "image/jpeg", image(800, 600, "jpg")))
+                .andReturn().getResponse().getContentAsString();
+        String url = JsonPath.read(uploaded, "$.url");
+        String thumbnailUrl = JsonPath.read(uploaded, "$.thumbnailUrl");
+        mockMvc.perform(post("/api/posts")
+                        .header("Host", TestBlogs.host(blog))
+                        .header("X-Requested-With", "XMLHttpRequest")
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"사진 글\",\"contentHtml\":\"<p>글</p><img src=\\\"" + url
+                                + "\\\" alt=\\\"a\\\">\",\"visibility\":\"PUBLIC\",\"status\":\"PUBLISHED\"}")
+                        .cookie(cookies))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/posts").header("Host", TestBlogs.host(blog)))
+                .andExpect(jsonPath("$.content[0].thumbnailUrl").value(thumbnailUrl));
     }
 
     @Test

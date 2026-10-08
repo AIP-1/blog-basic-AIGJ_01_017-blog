@@ -124,18 +124,21 @@ function BlogProfile({ blog }: { blog: Blog }) {
 
 function PostItem({ post, owner }: { post: PostSummary; owner: boolean }) {
   return (
-    <article className="post-item">
-      <div className="row between nowrap">
-        <h3><Link to={`/${post.id}`}>{post.title}</Link></h3>
-        {owner && <Link className="small" to={`/manage/posts/${post.id}/edit`}>수정</Link>}
+    <article className={post.thumbnailUrl ? 'post-item has-thumb' : 'post-item'}>
+      <div className="stack" style={{ gap: 2 }}>
+        <div className="row between nowrap">
+          <h3><Link to={`/${post.id}`}>{post.title}</Link></h3>
+          {owner && <Link className="small" to={`/manage/posts/${post.id}/edit`}>수정</Link>}
+        </div>
+        {post.summary && <p>{post.summary}</p>}
+        <div className="meta">
+          <span>{post.category?.name ?? '미분류'}</span>
+          <span>{formatDate(post.publishedAt)}</span>
+          <span>공감 {post.likeCount}</span>
+          <span>댓글 {post.commentCount}</span>
+        </div>
       </div>
-      {post.summary && <p>{post.summary}</p>}
-      <div className="meta">
-        <span>{post.category?.name ?? '미분류'}</span>
-        <span>{formatDate(post.publishedAt)}</span>
-        <span>공감 {post.likeCount}</span>
-        <span>댓글 {post.commentCount}</span>
-      </div>
+      {post.thumbnailUrl && <img className="thumb" src={post.thumbnailUrl} alt="" loading="lazy" />}
     </article>
   )
 }
