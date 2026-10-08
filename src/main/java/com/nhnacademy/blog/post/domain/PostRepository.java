@@ -34,4 +34,16 @@ public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificat
     @Query("update Post p set p.category = null, p.updatedAt = p.updatedAt where p.category.id = :categoryId")
     int uncategorize(@Param("categoryId") Long categoryId);
 
+    /** 글을 지우면 그 글의 공감도 지운다 (POST-03). 공감 엔티티는 스텝 7에서 만들므로 SQL로 지운다. */
+    @Modifying
+    @Query(value = "DELETE FROM post_like WHERE post_id = :postId", nativeQuery = true)
+    int deleteLikes(@Param("postId") Long postId);
+
+    /** 글과 그 글의 댓글을 가리키는 알림을 지운다 (POST-03). 알림 기능(SUB-04)보다 먼저 삭제 규칙을 맞춰 둔다. */
+    @Modifying
+    @Query(value = "DELETE FROM notification WHERE (target_type = 'POST' AND target_id = :postId)"
+            + " OR (target_type = 'COMMENT' AND target_id IN (SELECT id FROM comment WHERE post_id = :postId))",
+            nativeQuery = true)
+    int deleteNotifications(@Param("postId") Long postId);
+
 }
