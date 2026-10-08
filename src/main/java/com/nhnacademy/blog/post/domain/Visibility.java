@@ -1,4 +1,4 @@
-package com.nhnacademy.blog.post;
+package com.nhnacademy.blog.post.domain;
 
 public enum Visibility {
     PUBLIC,

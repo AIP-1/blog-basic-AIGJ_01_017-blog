@@ -1,7 +1,7 @@
-package com.nhnacademy.blog.blog;
+package com.nhnacademy.blog.blog.domain;
 
 import com.nhnacademy.blog.global.entity.BaseTimeEntity;
-import com.nhnacademy.blog.member.Member;
+import com.nhnacademy.blog.member.domain.Member;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

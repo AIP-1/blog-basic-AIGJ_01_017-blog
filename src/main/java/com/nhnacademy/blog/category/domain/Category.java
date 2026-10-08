@@ -1,6 +1,6 @@
-package com.nhnacademy.blog.category;
+package com.nhnacademy.blog.category.domain;
 
-import com.nhnacademy.blog.blog.Blog;
+import com.nhnacademy.blog.blog.domain.Blog;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;

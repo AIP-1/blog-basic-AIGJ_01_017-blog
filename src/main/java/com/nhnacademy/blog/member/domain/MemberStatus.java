@@ -1,4 +1,4 @@
-package com.nhnacademy.blog.member;
+package com.nhnacademy.blog.member.domain;
 
 public enum MemberStatus {
     ACTIVE,

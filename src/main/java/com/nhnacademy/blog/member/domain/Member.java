@@ -1,4 +1,4 @@
-package com.nhnacademy.blog.member;
+package com.nhnacademy.blog.member.domain;
 
 import com.nhnacademy.blog.global.entity.BaseTimeEntity;
 import jakarta.persistence.Column;

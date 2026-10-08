@@ -1,4 +1,4 @@
-package com.nhnacademy.blog.blog;
+package com.nhnacademy.blog.blog.domain;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 

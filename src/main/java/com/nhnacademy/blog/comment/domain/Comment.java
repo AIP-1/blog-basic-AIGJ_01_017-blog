@@ -1,8 +1,8 @@
-package com.nhnacademy.blog.comment;
+package com.nhnacademy.blog.comment.domain;
 
 import com.nhnacademy.blog.global.entity.BaseTimeEntity;
-import com.nhnacademy.blog.member.Member;
-import com.nhnacademy.blog.post.Post;
+import com.nhnacademy.blog.member.domain.Member;
+import com.nhnacademy.blog.post.domain.Post;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;

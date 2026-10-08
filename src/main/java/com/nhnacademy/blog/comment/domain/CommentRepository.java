@@ -1,4 +1,4 @@
-package com.nhnacademy.blog.comment;
+package com.nhnacademy.blog.comment.domain;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
