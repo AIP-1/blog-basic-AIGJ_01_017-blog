@@ -15,8 +15,8 @@ import org.springframework.stereotype.Component;
 /**
  * 로그인 쿠키를 주고, 읽고, 지운다 (R-03).
  * 쿠키는 Domain=.{platform}; HttpOnly; SameSite=Lax라 모든 블로그 주소가 같은 로그인 상태를 본다.
- * Access 쿠키는 브라우저를 닫으면 사라진다. Refresh 쿠키는 로그인 유지를 고르면 만료 시각까지 남고,
- * 고르지 않으면 브라우저를 닫을 때 사라진다.
+ * Access 쿠키는 브라우저를 닫으면 사라진다. Refresh 쿠키는 로그인 유지를 고르면 만료 시각(14일)까지 남는다.
+ * 고르지 않으면 브라우저를 닫을 때 사라지고, 그 전에도 무활동 시간(30분)이 지나면 서버에서 끝난다(AUTH-03).
  */
 @Component
 public class AuthCookieManager {
@@ -40,7 +40,7 @@ public class AuthCookieManager {
     /** 로그인·가입 성공 때 부른다. */
     public void login(HttpServletResponse response, Member member, boolean rememberMe) {
         IssuedToken refreshToken = tokenProvider.createRefreshToken(member.getId(), rememberMe);
-        tokenStore.saveRefresh(refreshToken, member.getId());
+        tokenStore.saveRefresh(refreshToken, member.getId(), rememberMe ? null : authProperties.idleTimeout());
         addCookie(response, REFRESH_COOKIE, refreshToken.value(),
                 rememberMe ? authProperties.refreshTokenTtl() : null);
         issueAccess(response, new LoginMember(member.getId(), member.getRole()));

@@ -27,6 +27,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * 로그인 쿠키로 회원을 확인한다 (T007, T008, R-03).
  * <ol>
  *   <li>Access 토큰이 유효하면 그 회원. 만료됐으면 살아 있는 Refresh 토큰으로 Access 토큰을 다시 준다.</li>
+ *   <li>로그인 유지를 고르지 않았으면 요청마다 Refresh 토큰의 무활동 기한(30분)을 다시 센다 (AUTH-03).</li>
  *   <li>요청마다 회원 상태를 DB에서 확인한다. 정지 회원은 API 요청부터 403 MEMBER_SUSPENDED와 쿠키 삭제.</li>
  *   <li>탈퇴했거나 없는 회원, 망가진 토큰이면 쿠키를 지우고 비회원으로 처리한다.
  *       로그인이 필요한 행동이면 뒤에서 401이 된다.</li>
@@ -40,18 +41,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final MemberRepository memberRepository;
     private final ModerationLogRepository moderationLogRepository;
     private final ErrorResponseWriter errorResponseWriter;
+    private final AuthProperties authProperties;
     private final Clock clock;
 
     public JwtAuthenticationFilter(AuthCookieManager cookieManager, JwtTokenProvider tokenProvider,
                                    TokenStore tokenStore, MemberRepository memberRepository,
                                    ModerationLogRepository moderationLogRepository,
-                                   ErrorResponseWriter errorResponseWriter, Clock clock) {
+                                   ErrorResponseWriter errorResponseWriter, AuthProperties authProperties,
+                                   Clock clock) {
         this.cookieManager = cookieManager;
         this.tokenProvider = tokenProvider;
         this.tokenStore = tokenStore;
         this.memberRepository = memberRepository;
         this.moderationLogRepository = moderationLogRepository;
         this.errorResponseWriter = errorResponseWriter;
+        this.authProperties = authProperties;
         this.clock = clock;
     }
 
@@ -69,8 +73,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 .flatMap(token -> tokenProvider.parse(token, TokenType.ACCESS))
                 .filter(claims -> !tokenStore.isAccessBlocked(claims.id()))
                 .map(TokenClaims::memberId);
-        Optional<Long> memberId = accessMemberId.or(() -> refreshCookie
-                .flatMap(token -> tokenProvider.parse(token, TokenType.REFRESH))
+        Optional<TokenClaims> refresh = refreshCookie
+                .flatMap(token -> tokenProvider.parse(token, TokenType.REFRESH));
+        Optional<Long> memberId = accessMemberId.or(() -> refresh
                 .filter(claims -> tokenStore.isRefreshActive(claims.id()))
                 .map(TokenClaims::memberId));
 
@@ -97,6 +102,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (accessMemberId.isEmpty()) {
             cookieManager.issueAccess(response, loginMember);
         }
+        refresh.filter(claims -> !claims.rememberMe())
+                .ifPresent(claims -> tokenStore.extendRefresh(claims.id(), authProperties.idleTimeout()));
         UsernamePasswordAuthenticationToken authentication =
                 UsernamePasswordAuthenticationToken.authenticated(loginMember, null, loginMember.authorities());
         SecurityContextHolder.getContext().setAuthentication(authentication);
