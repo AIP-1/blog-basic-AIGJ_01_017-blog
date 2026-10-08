@@ -1,11 +1,15 @@
 package com.nhnacademy.blog.support;
 
+import com.nhnacademy.blog.blog.domain.Blog;
+import com.nhnacademy.blog.global.auth.BlogOwnerGuard;
 import com.nhnacademy.blog.global.auth.LoginMember;
+import com.nhnacademy.blog.global.host.CurrentBlog;
 import java.util.Map;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -13,6 +17,23 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 public class TestApiController {
+
+    private final BlogOwnerGuard blogOwnerGuard;
+
+    public TestApiController(BlogOwnerGuard blogOwnerGuard) {
+        this.blogOwnerGuard = blogOwnerGuard;
+    }
+
+    @GetMapping("/api/test/blog")
+    public Map<String, String> blog(@CurrentBlog Blog blog) {
+        return Map.of("address", blog.getAddress());
+    }
+
+    @PutMapping("/api/test/blog/settings")
+    public Map<String, String> ownerOnly(@CurrentBlog Blog blog, @AuthenticationPrincipal LoginMember member) {
+        blogOwnerGuard.requireOwner(blog, member);
+        return Map.of("result", "ok");
+    }
 
     @GetMapping("/api/test/me")
     @PreAuthorize("isAuthenticated()")
