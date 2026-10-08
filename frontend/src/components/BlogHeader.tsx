@@ -16,6 +16,7 @@ export default function BlogHeader({ blog, me }: { blog: Blog; me: MeState }) {
       {me.status === 'anonymous' && <a className="btn" href={loginUrl()}>로그인</a>}
       {me.status === 'member' && (
         <div className="row">
+          {blog.viewer.isOwner && <Link className="btn primary" to="/manage/write">글쓰기</Link>}
           {blog.viewer.isOwner && <Link className="btn" to="/manage">관리</Link>}
           <span className="small">{me.me.nickname}</span>
           <LogoutButton />

@@ -96,3 +96,25 @@ export interface SuspensionDetail {
   reasonMessage: string | null
   suspendedUntil: string | null
 }
+
+/** 편집용 글 (GET /api/manage/posts/{id}) */
+export interface ManagedPost {
+  id: number
+  title: string
+  contentHtml: string
+  categoryId: number | null
+  topic: string | null
+  visibility: 'PUBLIC' | 'PRIVATE' | 'SUBSCRIBERS'
+  status: 'DRAFT' | 'PUBLISHED' | 'SCHEDULED'
+  publishedAt: string | null
+  updatedAt: string | null
+  commentAllowed: boolean
+  blind: { reason: string; reasonMessage: string } | null
+}
+
+/** 발행·수정 응답 */
+export interface PostSaved {
+  id: number
+  status: string
+  url: string
+}

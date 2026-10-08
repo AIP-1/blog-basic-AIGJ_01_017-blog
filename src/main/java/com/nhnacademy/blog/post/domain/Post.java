@@ -117,6 +117,30 @@ public class Post extends BaseTimeEntity {
         return post;
     }
 
+    /**
+     * 글 수정 (POST-02). 주소(id), 처음 발행 시각, 수치는 그대로다. 수정 시각(updated_at)은 Auditing이 남긴다.
+     * contentHtml은 정화를 거친 값이어야 한다.
+     */
+    public void edit(Category category, String title, String contentHtml, String summary, Visibility visibility,
+                     Topic topic) {
+        this.category = category;
+        this.title = title;
+        this.contentHtml = contentHtml;
+        this.summary = summary;
+        this.visibility = visibility;
+        this.topic = topic;
+    }
+
+    /** 공개 범위만 바꾼다 (POST-06). */
+    public void changeVisibility(Visibility visibility) {
+        this.visibility = visibility;
+    }
+
+    /** 소프트 삭제 (POST-03). 행은 남고 사용자에게만 사라진다. */
+    public void delete(LocalDateTime now) {
+        this.deletedAt = now;
+    }
+
     public boolean isDeleted() {
         return deletedAt != null;
     }

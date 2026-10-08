@@ -86,7 +86,7 @@ export default function BlogMainPage() {
             {posts && posts.content.length === 0 && <EmptyPosts blog={blog} />}
             {posts && posts.content.length > 0 && (
               <div className="post-list">
-                {posts.content.map((post) => <PostItem key={post.id} post={post} />)}
+                {posts.content.map((post) => <PostItem key={post.id} post={post} owner={blog.viewer.isOwner} />)}
               </div>
             )}
             {posts && (
@@ -117,10 +117,13 @@ function BlogProfile({ blog }: { blog: Blog }) {
   )
 }
 
-function PostItem({ post }: { post: PostSummary }) {
+function PostItem({ post, owner }: { post: PostSummary; owner: boolean }) {
   return (
     <article className="post-item">
-      <h3><Link to={`/${post.id}`}>{post.title}</Link></h3>
+      <div className="row between nowrap">
+        <h3><Link to={`/${post.id}`}>{post.title}</Link></h3>
+        {owner && <Link className="small" to={`/manage/posts/${post.id}/edit`}>수정</Link>}
+      </div>
       {post.summary && <p>{post.summary}</p>}
       <div className="meta">
         <span>{post.category?.name ?? '미분류'}</span>
@@ -136,7 +139,7 @@ function EmptyPosts({ blog }: { blog: Blog }) {
   return (
     <div className="stack" style={{ justifyItems: 'start' }}>
       <p className="muted" style={{ margin: 0 }}>아직 글이 없습니다.</p>
-      {blog.viewer.isOwner && <Link className="btn primary" to="/manage/post/new">첫 글 쓰기</Link>}
+      {blog.viewer.isOwner && <Link className="btn primary" to="/manage/write">첫 글 쓰기</Link>}
     </div>
   )
 }

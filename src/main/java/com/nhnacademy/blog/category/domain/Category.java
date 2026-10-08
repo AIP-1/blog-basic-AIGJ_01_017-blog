@@ -65,6 +65,15 @@ public class Category {
         return new Category(blog, parent, name, sortOrder);
     }
 
+    /** 이 블로그의 카테고리인가. 다른 블로그의 카테고리 번호로 요청하면 없는 것과 같다. */
+    public boolean belongsTo(Blog blog) {
+        return this.blog.getId().equals(blog.getId());
+    }
+
+    public void rename(String name) {
+        this.name = name;
+    }
+
     public Long getId() {
         return id;
     }

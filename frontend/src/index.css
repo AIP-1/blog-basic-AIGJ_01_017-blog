@@ -101,3 +101,18 @@ label.field, div.field { display: grid; gap: 4px; font-size: 14px; }
 .sidebar ul ul { padding-left: 14px; margin-top: 4px; }
 .sidebar a { text-decoration: none; }
 .sidebar a:hover { text-decoration: underline; }
+
+.btn.on { background: var(--brand-soft); border-color: var(--brand); color: var(--brand); }
+select { border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 7px 10px; font-size: 14px; width: 100%; }
+
+/* 에디터 (Tiptap). 본문 서식은 글 상세(스텝 6)와 같게 보이도록 단순하게 둔다 */
+.editor-bar { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px; border: 1px solid var(--line); border-bottom: 0; border-radius: 6px 6px 0 0; background: var(--sunken); }
+.editor-bar .btn { padding: 3px 8px; font-size: 13px; }
+.editor-area .ProseMirror { border: 1px solid var(--line); border-radius: 0 0 6px 6px; min-height: 280px; padding: 14px; outline: none; background: var(--surface); }
+.editor-area .ProseMirror:focus { border-color: var(--brand); }
+.editor-area .ProseMirror > * + * { margin-top: 0.6em; }
+.editor-area .ProseMirror p { margin: 0; }
+.editor-area .ProseMirror blockquote { margin: 0; padding-left: 12px; border-left: 3px solid var(--line); color: var(--ink-2); }
+.editor-area .ProseMirror pre { background: var(--sunken); border-radius: 6px; padding: 10px; overflow-x: auto; font: 13px ui-monospace, Menlo, monospace; }
+.editor-area .ProseMirror a { color: var(--brand); }
+.box.row { display: flex; }
