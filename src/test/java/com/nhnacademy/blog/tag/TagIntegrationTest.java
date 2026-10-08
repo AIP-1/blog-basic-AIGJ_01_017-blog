@@ -74,7 +74,7 @@ class TagIntegrationTest extends IntegrationTestSupport {
     }
 
     @Test
-    void elevenTagsAreRejected() throws Exception {
+    void tooManyTooLongOrSlashedTagsAreRejected() throws Exception {
         StringBuilder names = new StringBuilder("[");
         for (int i = 0; i < 11; i++) {
             names.append(i == 0 ? "" : ",").append("\"t").append(i).append('"');
@@ -84,6 +84,9 @@ class TagIntegrationTest extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.code").value("TOO_MANY_TAGS"));
         send(post("/api/posts").header("Idempotency-Key", UUID.randomUUID().toString()),
                 body("[\"" + "가".repeat(31) + "\"]"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors[0].field").value("tagNames"));
+        send(post("/api/posts").header("Idempotency-Key", UUID.randomUUID().toString()), body("[\"a/b\"]"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fieldErrors[0].field").value("tagNames"));
         assertThat(tagCount()).isZero();

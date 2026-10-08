@@ -16,6 +16,8 @@ export function addTags(tags: string[], rawNames: string[]): { tags: string[]; m
     }
     if (name.length > MAX_LENGTH) {
       message = `태그는 ${MAX_LENGTH}자까지입니다.`
+    } else if (name.includes('/')) {
+      message = '태그에는 /를 쓸 수 없습니다.'
     } else if (result.length >= MAX_TAGS) {
       message = `태그는 ${MAX_TAGS}개까지 달 수 있습니다.`
     } else {

@@ -6,6 +6,10 @@ describe('addTags', () => {
     expect(addTags(['Java'], ['#java', '  여행 ', '', '#'])).toEqual({ tags: ['Java', '여행'], message: null })
   })
 
+  it('/가 든 이름은 빼고 알린다', () => {
+    expect(addTags([], ['a/b', '산'])).toEqual({ tags: ['산'], message: '태그에는 /를 쓸 수 없습니다.' })
+  })
+
   it('악센트만 다른 이름도 하나로 본다', () => {
     expect(addTags(['Café'], ['cafe', '여행'])).toEqual({ tags: ['Café', '여행'], message: null })
   })
