@@ -67,6 +67,9 @@ class SpaForwardIntegrationTest extends IntegrationTestSupport {
                 .andExpect(status().isOk());
         mockMvc.perform(page(TestBlogs.host(blog), "/category/12"))
                 .andExpect(status().isOk());
+        // 태그 이름에는 점이 들어갈 수 있다 (node.js). 확장자로 보고 정적 파일로 넘기면 안 된다
+        mockMvc.perform(page(TestBlogs.host(blog), "/tag/node.js"))
+                .andExpect(status().isOk());
     }
 
     @Test

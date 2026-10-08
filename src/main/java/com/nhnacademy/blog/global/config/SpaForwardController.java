@@ -53,7 +53,9 @@ public class SpaForwardController {
             "/" + FIRST + "/{s2:[^.]+}",
             "/" + FIRST + "/{s2:[^.]+}/{s3:[^.]+}",
             "/" + FIRST + "/{s2:[^.]+}/{s3:[^.]+}/{s4:[^.]+}",
-            "/" + FIRST + "/{s2:[^.]+}/{s3:[^.]+}/{s4:[^.]+}/{s5:[^.]+}"})
+            "/" + FIRST + "/{s2:[^.]+}/{s3:[^.]+}/{s4:[^.]+}/{s5:[^.]+}",
+            // 태그 이름에는 점이 들어갈 수 있다(node.js). 확장자로 보지 않는다 (TAG-02)
+            "/tag/{name:.+}"})
     public ResponseEntity<Resource> page(HttpServletRequest request) {
         return switch (blogHostResolver.resolve(request)) {
             case RequestHost.Platform platform -> app(HttpStatus.OK);
