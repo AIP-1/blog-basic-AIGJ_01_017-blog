@@ -45,7 +45,7 @@ public class PostReadService {
         Post post = readable(blog, postId, viewerId);
         boolean owner = blog.isOwnedBy(viewerId);
         Map<String, String> blind = owner && post.isBlinded() ? postService.blindReason(post) : null;
-        return new PostView(post, owner, primaryBlogAddresses.ofOwner(blog, viewerId), blind,
+        return new PostView(post, post.tagNames(), owner, primaryBlogAddresses.ofOwner(blog, viewerId), blind,
                 neighbor(blog, post, viewerId, false), neighbor(blog, post, viewerId, true));
     }
 

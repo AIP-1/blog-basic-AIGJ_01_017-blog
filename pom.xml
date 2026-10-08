@@ -30,6 +30,8 @@
         <java.version>21</java.version>
         <owasp-html-sanitizer.version>20260924.2</owasp-html-sanitizer.version>
         <jsoup.version>1.23.2</jsoup.version>
+        <thumbnailator.version>0.4.21</thumbnailator.version>
+        <twelvemonkeys.version>3.15.2</twelvemonkeys.version>
     </properties>
     <dependencies>
         <dependency>
@@ -78,6 +80,18 @@
             <groupId>org.jsoup</groupId>
             <artifactId>jsoup</artifactId>
             <version>${jsoup.version}</version>
+        </dependency>
+        <!-- 이미지 리사이즈·썸네일, JPEG EXIF 방향 보정 (T036, research R-15) -->
+        <dependency>
+            <groupId>net.coobird</groupId>
+            <artifactId>thumbnailator</artifactId>
+            <version>${thumbnailator.version}</version>
+        </dependency>
+        <!-- WebP 읽기. ImageIO 플러그인이라 넣기만 하면 ImageIO.read가 WebP를 읽는다 -->
+        <dependency>
+            <groupId>com.twelvemonkeys.imageio</groupId>
+            <artifactId>imageio-webp</artifactId>
+            <version>${twelvemonkeys.version}</version>
         </dependency>
 
         <dependency>

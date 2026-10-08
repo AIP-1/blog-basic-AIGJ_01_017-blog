@@ -8,6 +8,7 @@ import NotFoundPage from '../pages/error/NotFoundPage'
 import HomePage from '../pages/home/HomePage'
 import ManagePage from '../pages/manage/ManagePage'
 import PostPage from '../pages/post/PostPage'
+import BlogSearchPage from '../pages/search/BlogSearchPage'
 
 /** 플랫폼 주소(blog.com)의 화면 */
 export function PlatformRoutes() {
@@ -29,6 +30,8 @@ export function BlogRoutes() {
     <Routes>
       <Route path="/" element={<BlogMainPage />} />
       <Route path="/category/:categoryId" element={<BlogMainPage />} />
+      <Route path="/tag/:tagName" element={<BlogMainPage />} />
+      <Route path="/search" element={<BlogSearchPage />} />
       <Route path="/:postId" element={<PostPage />} />
       <Route path="/manage/*" element={<ManagePage />} />
       <Route path="*" element={<NotFoundPage />} />

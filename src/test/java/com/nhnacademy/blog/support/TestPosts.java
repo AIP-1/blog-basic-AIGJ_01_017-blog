@@ -3,6 +3,7 @@ package com.nhnacademy.blog.support;
 import com.nhnacademy.blog.blog.domain.Blog;
 import com.nhnacademy.blog.category.domain.Category;
 import com.nhnacademy.blog.post.domain.Post;
+import com.nhnacademy.blog.post.domain.PostBody;
 import com.nhnacademy.blog.post.domain.PostRepository;
 import com.nhnacademy.blog.post.domain.Visibility;
 import java.time.LocalDateTime;
@@ -28,12 +29,12 @@ public class TestPosts {
     }
 
     public Post published(Blog blog, Category category, Visibility visibility, LocalDateTime publishedAt) {
-        return postRepository.save(Post.published(blog, category, "제목", "<p>본문</p>", "본문", visibility, null,
+        return postRepository.save(Post.published(blog, category, "제목", new PostBody("<p>본문</p>", "본문", "본문"), visibility, null,
                 publishedAt));
     }
 
     public Post draft(Blog blog) {
-        return postRepository.save(Post.draft(blog, null, "임시", "<p>임시</p>", "임시", Visibility.PUBLIC, null));
+        return postRepository.save(Post.draft(blog, null, "임시", new PostBody("<p>임시</p>", "임시", "임시"), Visibility.PUBLIC, null));
     }
 
     public void blind(Post post) {

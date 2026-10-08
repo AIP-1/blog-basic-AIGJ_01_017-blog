@@ -1,6 +1,7 @@
 package com.nhnacademy.blog.post.application;
 
 import com.nhnacademy.blog.post.domain.Post;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -11,8 +12,8 @@ import java.util.Map;
  * @param prev                     같은 블로그에서 바로 전에 발행한, 보는 사람이 볼 수 있는 글. 없으면 null
  * @param next                     바로 다음에 발행한 글. 없으면 null
  */
-public record PostView(Post post, boolean owner, String authorPrimaryBlogAddress, Map<String, String> blind,
-                       Neighbor prev, Neighbor next) {
+public record PostView(Post post, List<String> tagNames, boolean owner, String authorPrimaryBlogAddress,
+                       Map<String, String> blind, Neighbor prev, Neighbor next) {
 
     public record Neighbor(Long id, String title) {
     }

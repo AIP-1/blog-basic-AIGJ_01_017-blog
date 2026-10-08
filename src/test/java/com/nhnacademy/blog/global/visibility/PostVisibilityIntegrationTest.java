@@ -6,6 +6,7 @@ import com.nhnacademy.blog.IntegrationTestSupport;
 import com.nhnacademy.blog.blog.domain.Blog;
 import com.nhnacademy.blog.member.domain.Member;
 import com.nhnacademy.blog.post.domain.Post;
+import com.nhnacademy.blog.post.domain.PostBody;
 import com.nhnacademy.blog.post.domain.PostRepository;
 import com.nhnacademy.blog.post.domain.Visibility;
 import com.nhnacademy.blog.subscription.domain.Subscription;
@@ -80,7 +81,7 @@ class PostVisibilityIntegrationTest extends IntegrationTestSupport {
 
     @Test
     void draftIsOwnerOnly() {
-        Post post = postRepository.save(Post.draft(blog, null, "임시", "<p>x</p>", "x", Visibility.PUBLIC, null));
+        Post post = postRepository.save(Post.draft(blog, null, "임시", new PostBody("<p>x</p>", "x", "x"), Visibility.PUBLIC, null));
 
         assertThat(policy.decide(post.getId(), blog, other.getId())).isInstanceOf(PostAccess.NotFound.class);
         assertThat(policy.decide(post.getId(), blog, owner.getId())).isInstanceOf(PostAccess.Owner.class);
@@ -153,7 +154,7 @@ class PostVisibilityIntegrationTest extends IntegrationTestSupport {
         Post publicPost = published(Visibility.PUBLIC);
         Post subscribersPost = published(Visibility.SUBSCRIBERS);
         Post privatePost = published(Visibility.PRIVATE);
-        Post draft = postRepository.save(Post.draft(blog, null, "임시", "<p>x</p>", "x", Visibility.PUBLIC, null));
+        Post draft = postRepository.save(Post.draft(blog, null, "임시", new PostBody("<p>x</p>", "x", "x"), Visibility.PUBLIC, null));
         Post blinded = published(Visibility.PUBLIC);
         Post deleted = published(Visibility.PUBLIC);
         sql("UPDATE post SET is_blinded = 1 WHERE id = ?", blinded.getId());
@@ -179,7 +180,7 @@ class PostVisibilityIntegrationTest extends IntegrationTestSupport {
     }
 
     private Post published(Visibility visibility) {
-        return postRepository.save(Post.published(blog, null, "제목", "<p>본문</p>", "본문", visibility, null,
+        return postRepository.save(Post.published(blog, null, "제목", new PostBody("<p>본문</p>", "본문", "본문"), visibility, null,
                 LocalDateTime.now()));
     }
 

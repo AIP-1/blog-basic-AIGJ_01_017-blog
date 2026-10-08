@@ -1,5 +1,6 @@
 package com.nhnacademy.blog.post.domain;
 
+import jakarta.persistence.LockModeType;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -7,6 +8,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -53,5 +55,28 @@ public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificat
     @Modifying(clearAutomatically = true)
     @Query("update Post p set p.commentCount = p.commentCount + :delta, p.updatedAt = p.updatedAt where p.id = :postId")
     int addCommentCount(@Param("postId") Long postId, @Param("delta") int delta);
+
+    /** 공감 수 늘리기·줄이기 (SOC-01). 댓글 수와 같은 방식이다. */
+    @Modifying(clearAutomatically = true)
+    @Query("update Post p set p.likeCount = p.likeCount + :delta, p.updatedAt = p.updatedAt where p.id = :postId")
+    int addLikeCount(@Param("postId") Long postId, @Param("delta") int delta);
+
+    /**
+     * 공감을 켜고 끈 뒤 응답에 넣을 지금 공감 수. 잠그며 읽어야(FOR UPDATE) 다른 트랜잭션이 막 커밋한 값이 보인다.
+     * 평범한 SELECT는 이 트랜잭션이 처음 읽은 때의 스냅샷(REPEATABLE READ)을 보여 줘서, 잠금을 기다린 요청은 옛 수를 돌려준다.
+     * lockById로 이미 잠근 행이라 더 기다리지 않는다.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select p.likeCount from Post p where p.id = :postId")
+    int findLikeCount(@Param("postId") Long postId);
+
+    /**
+     * 글 행을 잠근다(SELECT ... FOR UPDATE). 공감·댓글을 넣고 수를 고치는 트랜잭션이 맨 먼저 부른다.
+     * 공감·댓글 INSERT는 외래 키 확인 때문에 글 행에 공유 잠금을 걸고, 뒤의 수 UPDATE는 배타 잠금이 필요하다.
+     * 두 트랜잭션이 공유 잠금을 쥔 채 서로 배타 잠금을 기다리면 데드락이 난다. 처음부터 배타 잠금을 잡아 차례로 줄 세운다.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select p.id from Post p where p.id = :postId")
+    Optional<Long> lockById(@Param("postId") Long postId);
 
 }

@@ -16,7 +16,7 @@ import java.util.List;
 
 /**
  * 글 저장 본문 (contracts/rest-api.md 글 저장 본문). POST /api/posts, PUT /api/posts/{id}가 같이 쓴다.
- * 스텝 5에서는 발행(PUBLISHED)과 공개·비공개만 된다. 나머지 칸은 기능이 생기는 스텝에서 받고,
+ * 발행(PUBLISHED)과 공개·비공개, 태그(스텝 7)가 된다. 나머지 칸은 기능이 생기는 스텝에서 받고,
  * 그 전에 값을 보내면 조용히 버리지 않고 400으로 알린다(checkSupported).
  */
 public record PostSaveRequest(
@@ -55,9 +55,6 @@ public record PostSaveRequest(
             // 구독(SUB-01)이 생기기 전에는 구독자 공개를 막는다 (contracts 글 저장 본문, review C-7)
             errors.add(new FieldErrorDetail("visibility", "구독자 공개는 아직 고를 수 없습니다."));
         }
-        if (tagNames != null && !tagNames.isEmpty()) {
-            errors.add(new FieldErrorDetail("tagNames", "태그는 아직 달 수 없습니다.")); // 스텝 7 (TAG-01)
-        }
         if (scheduledAt != null) {
             errors.add(new FieldErrorDetail("scheduledAt", "예약 발행은 아직 할 수 없습니다.")); // POST-13
         }
@@ -73,7 +70,7 @@ public record PostSaveRequest(
     }
 
     public PostCommand toCommand() {
-        return new PostCommand(title, contentHtml == null ? "" : contentHtml, categoryId, topic, visibility);
+        return new PostCommand(title, contentHtml == null ? "" : contentHtml, categoryId, topic, visibility, tagNames);
     }
 
 }

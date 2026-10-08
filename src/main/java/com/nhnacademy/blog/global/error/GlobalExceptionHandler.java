@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
@@ -73,6 +74,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({HttpMessageNotReadableException.class, HttpMediaTypeNotSupportedException.class})
     public ResponseEntity<ErrorResponse> handleUnreadable(Exception e) {
         return validation(List.of());
+    }
+
+    /** 업로드 크기 제한(spring.servlet.multipart.max-file-size)을 넘음. 컨트롤러에 오기 전에 난다. */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleTooLarge(MaxUploadSizeExceededException e) {
+        return error(ErrorCode.IMAGE_TOO_LARGE);
     }
 
     @ExceptionHandler({NoResourceFoundException.class, NoHandlerFoundException.class})

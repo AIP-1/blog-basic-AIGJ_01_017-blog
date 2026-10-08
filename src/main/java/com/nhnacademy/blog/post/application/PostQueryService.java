@@ -9,6 +9,8 @@ import com.nhnacademy.blog.global.visibility.PostSpecifications;
 import com.nhnacademy.blog.global.web.PageQuery;
 import com.nhnacademy.blog.post.domain.Post;
 import com.nhnacademy.blog.post.domain.PostRepository;
+import com.nhnacademy.blog.tag.domain.Tag;
+import com.nhnacademy.blog.tag.domain.TagRepository;
 import jakarta.persistence.criteria.JoinType;
 import java.time.Clock;
 import java.time.LocalDateTime;
@@ -33,22 +35,37 @@ public class PostQueryService {
 
     private final PostRepository postRepository;
     private final CategoryRepository categoryRepository;
+    private final TagRepository tagRepository;
     private final Clock clock;
 
-    public PostQueryService(PostRepository postRepository, CategoryRepository categoryRepository, Clock clock) {
+    public PostQueryService(PostRepository postRepository, CategoryRepository categoryRepository,
+                            TagRepository tagRepository, Clock clock) {
         this.postRepository = postRepository;
         this.categoryRepository = categoryRepository;
+        this.tagRepository = tagRepository;
         this.clock = clock;
     }
 
-    /** categoryId: null이면 전체, 0이면 미분류, 그 밖에는 그 카테고리와 하위 카테고리의 글. */
+    /**
+     * categoryId: null이면 전체, 0이면 미분류, 그 밖에는 그 카테고리와 하위 카테고리의 글.
+     * tag: 그 이름의 태그가 달린 글(TAG-02, 대소문자 무시). 블로그에 없는 태그면 404.
+     */
     @Transactional(readOnly = true)
-    public Page<Post> blogPosts(Blog blog, Long viewerId, Long categoryId, PageQuery page) {
+    public Page<Post> blogPosts(Blog blog, Long viewerId, Long categoryId, String tag, PageQuery page) {
         Specification<Post> condition = PostSpecifications.listedIn(blog, viewerId, LocalDateTime.now(clock));
         if (categoryId != null) {
             condition = condition.and(inCategory(blog, viewerId, categoryId));
         }
+        if (tag != null) {
+            condition = condition.and(taggedWith(blog, tag));
+        }
         return postRepository.findAll(condition, page.toPageable(LATEST));
+    }
+
+    private Specification<Post> taggedWith(Blog blog, String name) {
+        Tag tag = tagRepository.findByBlogIdAndName(blog.getId(), name.trim())
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        return (root, query, cb) -> cb.equal(root.join("tags").get("id"), tag.getId());
     }
 
     private Specification<Post> inCategory(Blog blog, Long viewerId, long categoryId) {
