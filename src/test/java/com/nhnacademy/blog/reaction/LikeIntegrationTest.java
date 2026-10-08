@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -93,14 +94,15 @@ class LikeIntegrationTest extends IntegrationTestSupport {
 
     @Test
     void rapidConcurrentClicksCountOnce() throws Exception {
-        List<Callable<Integer>> clicks = new ArrayList<>();
+        List<Callable<MockHttpServletResponse>> clicks = new ArrayList<>();
         for (int i = 0; i < 10; i++) {
-            clicks.add(() -> send(put("/api/posts/" + post.getId() + "/like"), reader)
-                    .andReturn().getResponse().getStatus());
+            clicks.add(() -> send(put("/api/posts/" + post.getId() + "/like"), reader).andReturn().getResponse());
         }
         try (ExecutorService executor = Executors.newFixedThreadPool(10)) {
-            for (Future<Integer> result : executor.invokeAll(clicks)) {
-                assertThat(result.get()).isEqualTo(200);
+            for (Future<MockHttpServletResponse> result : executor.invokeAll(clicks)) {
+                assertThat(result.get().getStatus()).isEqualTo(200);
+                // 늦게 처리된 요청도 앞 요청이 커밋한 수를 돌려줘야 한다(옛 스냅샷의 0이 아니라)
+                assertThat(result.get().getContentAsString()).contains("\"likeCount\":1");
             }
         }
 

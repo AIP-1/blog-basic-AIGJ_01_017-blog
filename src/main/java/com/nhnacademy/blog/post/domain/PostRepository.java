@@ -61,6 +61,12 @@ public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificat
     @Query("update Post p set p.likeCount = p.likeCount + :delta, p.updatedAt = p.updatedAt where p.id = :postId")
     int addLikeCount(@Param("postId") Long postId, @Param("delta") int delta);
 
+    /**
+     * 공감을 켜고 끈 뒤 응답에 넣을 지금 공감 수. 잠그며 읽어야(FOR UPDATE) 다른 트랜잭션이 막 커밋한 값이 보인다.
+     * 평범한 SELECT는 이 트랜잭션이 처음 읽은 때의 스냅샷(REPEATABLE READ)을 보여 줘서, 잠금을 기다린 요청은 옛 수를 돌려준다.
+     * lockById로 이미 잠근 행이라 더 기다리지 않는다.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select p.likeCount from Post p where p.id = :postId")
     int findLikeCount(@Param("postId") Long postId);
 
