@@ -22,6 +22,7 @@ import com.nhnacademy.blog.tag.application.TagService;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.Map;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,13 +42,14 @@ public class PostService {
     private final HtmlSanitizer htmlSanitizer;
     private final SummaryExtractor summaryExtractor;
     private final TagService tagService;
+    private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public PostService(PostRepository postRepository, CategoryRepository categoryRepository,
                        CommentRepository commentRepository, ModerationLogRepository moderationLogRepository,
                        PostVisibilityPolicy postVisibilityPolicy,
                        HtmlSanitizer htmlSanitizer, SummaryExtractor summaryExtractor, TagService tagService,
-                       Clock clock) {
+                       ApplicationEventPublisher events, Clock clock) {
         this.postRepository = postRepository;
         this.categoryRepository = categoryRepository;
         this.commentRepository = commentRepository;
@@ -56,6 +58,7 @@ public class PostService {
         this.htmlSanitizer = htmlSanitizer;
         this.summaryExtractor = summaryExtractor;
         this.tagService = tagService;
+        this.events = events;
         this.clock = clock;
     }
 
@@ -65,7 +68,10 @@ public class PostService {
         Post post = Post.published(blog, category(blog, command.categoryId()), command.title().trim(),
                 body(command.contentHtml()), command.visibility(), command.topic(), LocalDateTime.now(clock));
         post.replaceTags(tagService.resolve(blog, command.tagNames()));
-        return postRepository.save(post);
+        Post saved = postRepository.save(post);
+        // 받는 쪽(추천 임베딩)은 이 트랜잭션이 커밋된 뒤에 움직인다(@TransactionalEventListener)
+        events.publishEvent(new PostContentChangedEvent(saved.getId()));
+        return saved;
     }
 
     /**
@@ -105,6 +111,7 @@ public class PostService {
         post.edit(category(blog, command.categoryId()), command.title().trim(), body(command.contentHtml()),
                 command.visibility(), command.topic());
         post.replaceTags(tagService.resolve(blog, command.tagNames()));
+        events.publishEvent(new PostContentChangedEvent(post.getId()));
         return post;
     }
 
@@ -134,6 +141,7 @@ public class PostService {
         // 댓글 일괄 수정이 영속성 컨텍스트를 비우므로(clearAutomatically) 글은 그 뒤에 다시 읽어 지운다
         commentRepository.softDeleteByPostId(id, now);
         postRepository.findById(id).orElseThrow().delete(now);
+        events.publishEvent(new PostDeletedEvent(id));
     }
 
     /** 숨김 사유는 글 행이 아니라 moderation_log의 최신 BLIND 행에 있다 (ADMIN-03). */
