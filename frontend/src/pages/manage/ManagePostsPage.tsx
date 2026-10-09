@@ -161,6 +161,10 @@ export default function ManagePostsPage() {
         </div>
 
         <div className="row">
+          {/* 휴대폰에서는 표 머리줄(모두 선택 체크박스)이 숨으므로 여기에 둔다 */}
+          <label className="row small mobile-only">
+            <input type="checkbox" checked={allSelected} onChange={() => setSelected(allSelected ? [] : pageIds)} /> 모두
+          </label>
           <span className="small muted">{selected.length}개 선택</span>
           <select value={visibility} style={{ maxWidth: 160 }} aria-label="바꿀 공개 범위"
                   onChange={(event) => setVisibility(event.target.value as 'PRIVATE' | 'PUBLIC')}>
@@ -177,7 +181,7 @@ export default function ManagePostsPage() {
           ? <p className="muted">조건에 맞는 글이 없습니다.</p>
           : (
             <div className="table-wrap">
-              <table>
+              <table className="manage-table">
                 <thead>
                   <tr>
                     <th>
@@ -204,22 +208,22 @@ function PostRow({ post, checked, onToggle }: { post: ManagedPostSummary; checke
   const date = post.status === 'PUBLISHED' && post.publishedAt ? formatDate(post.publishedAt) : formatDate(post.updatedAt)
   return (
     <tr>
-      <td><input type="checkbox" aria-label={`${post.title || '제목 없음'} 선택`} checked={checked} onChange={onToggle} /></td>
-      <td>
+      <td className="pick"><input type="checkbox" aria-label={`${post.title || '제목 없음'} 선택`} checked={checked} onChange={onToggle} /></td>
+      <td className="title">
         {post.status === 'PUBLISHED'
           ? <Link to={`/${post.id}`}>{post.title || '(제목 없음)'}</Link>
           : <Link to={`/manage/posts/${post.id}/edit`}>{post.title || '(제목 없음)'}</Link>}
         {post.blinded && <> <span className="chip danger">숨김: {post.blind?.reasonMessage ?? '관리자 조치'}</span></>}
       </td>
-      <td>
+      <td data-label="상태">
         <span className={post.status === 'PUBLISHED' ? 'chip brand' : post.status === 'SCHEDULED' ? 'chip warn' : 'chip'}>
           {STATUS_LABEL[post.status]}
           {post.status === 'SCHEDULED' && post.scheduledAt && ` ${formatDateTime(post.scheduledAt)}`}
         </span>
       </td>
-      <td>{VISIBILITY_LABEL[post.visibility]}</td>
-      <td>{post.category?.name ?? '미분류'}</td>
-      <td className="num">{date}</td>
+      <td data-label="공개">{VISIBILITY_LABEL[post.visibility]}</td>
+      <td data-label="카테고리">{post.category?.name ?? '미분류'}</td>
+      <td className="num" data-label="날짜">{date}</td>
     </tr>
   )
 }

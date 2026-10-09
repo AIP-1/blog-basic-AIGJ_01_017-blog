@@ -158,6 +158,20 @@ select { border: 1px solid var(--line); background: var(--surface); border-radiu
 .chip.warn { background: var(--warn-soft); color: var(--warn); }
 .chip.danger { background: var(--danger-soft); color: var(--danger); }
 .btn.danger { border-color: var(--danger); color: var(--danger); }
+.manage-table td.title { min-width: 12em; }
+/* 좁은 화면(휴대폰)에서는 표를 글마다 카드로: 체크박스 | 제목, 그 아래 상태·공개·카테고리·날짜 (T071) */
+@media (max-width: 760px) {
+  .manage-table thead { display: none; }
+  .manage-table, .manage-table tbody { display: block; }
+  .manage-table tr { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 4px 8px; padding: 10px; border-bottom: 1px solid var(--line); }
+  .manage-table tr:last-child { border-bottom: 0; }
+  .manage-table td, .table-wrap .manage-table td { display: block; padding: 0; border: 0; min-width: 0; text-align: left; }
+  .manage-table td.pick { grid-row: span 5; }
+  .manage-table td[data-label] { font-size: 13px; color: var(--ink-2); }
+  .manage-table td[data-label]::before { content: attr(data-label) " · "; }
+}
+.mobile-only { display: none; }
+@media (max-width: 760px) { .mobile-only { display: inline-flex; } }
 
 /* 홈 주제별 글 (HOME-03) */
 .tabs { display: flex; gap: 4px; overflow-x: auto; border-bottom: 1px solid var(--line); }
