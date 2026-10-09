@@ -84,6 +84,7 @@ label.field, div.field { display: grid; gap: 4px; font-size: 14px; }
 .box.danger { border-color: var(--danger); background: var(--danger-soft); }
 .avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--brand-soft); border: 1px solid var(--line); flex: none; }
 .avatar.lg { width: 64px; height: 64px; }
+img.avatar { object-fit: cover; }
 
 .post-list { display: grid; }
 .post-item { padding: 12px 0; border-bottom: 1px solid var(--line); display: grid; gap: 2px; }

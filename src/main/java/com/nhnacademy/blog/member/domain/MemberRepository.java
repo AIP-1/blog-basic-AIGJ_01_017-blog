@@ -14,6 +14,9 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 
     boolean existsByNickname(String nickname);
 
+    /** 나 말고 이 닉네임을 쓰는 회원이 있나. 대소문자는 DB 정렬 규칙대로 같게 본다. */
+    boolean existsByNicknameAndIdNot(String nickname, Long id);
+
     Optional<Member> findByEmail(String email);
 
     /**
