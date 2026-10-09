@@ -3,6 +3,7 @@ package com.nhnacademy.blog.auth.application;
 import com.nhnacademy.blog.auth.domain.EmailVerification;
 import com.nhnacademy.blog.auth.domain.EmailVerificationRepository;
 import com.nhnacademy.blog.auth.domain.Emails;
+import com.nhnacademy.blog.global.auth.AttemptLimiter;
 import com.nhnacademy.blog.global.error.BusinessException;
 import com.nhnacademy.blog.global.error.ErrorCode;
 import com.nhnacademy.blog.global.error.RetryAfterDetail;
@@ -35,16 +36,18 @@ public class EmailVerificationService {
     private final EmailSender emailSender;
     private final StringRedisTemplate redis;
     private final Clock clock;
+    private final AttemptLimiter attemptLimiter;
     private final SecureRandom random = new SecureRandom();
 
     public EmailVerificationService(EmailVerificationRepository verificationRepository,
                                     MemberRepository memberRepository, EmailSender emailSender,
-                                    StringRedisTemplate redis, Clock clock) {
+                                    StringRedisTemplate redis, Clock clock, AttemptLimiter attemptLimiter) {
         this.verificationRepository = verificationRepository;
         this.memberRepository = memberRepository;
         this.emailSender = emailSender;
         this.redis = redis;
         this.clock = clock;
+        this.attemptLimiter = attemptLimiter;
     }
 
     @Transactional
@@ -78,15 +81,21 @@ public class EmailVerificationService {
         check(Emails.normalize(rawEmail), code).markVerified(LocalDateTime.now(clock));
     }
 
-    /** 가장 최근 코드만 본다. 틀렸거나 이미 썼으면 INVALID, 맞지만 시간이 지났으면 EXPIRED. */
+    /**
+     * 가장 최근 코드만 본다. 틀렸거나 이미 썼으면 INVALID, 맞지만 시간이 지났으면 EXPIRED.
+     * 같은 이메일로 15분 안에 5번 틀리면(INVALID) 15분 동안 429다(T055a, R-17). 6자리 코드를 계속 넣어 맞히지 못하게 한다.
+     * 코드를 새로 받아도 틀린 횟수는 그대로다(새로 받기로 제한을 풀 수 없게).
+     */
     private EmailVerification check(String email, String code) {
-        EmailVerification latest = verificationRepository.findFirstByEmailOrderByCreatedAtDescIdDesc(email)
-                .filter(verification -> !verification.isUsed() && verification.matches(code))
-                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_VERIFICATION_CODE));
-        if (latest.isExpiredAt(LocalDateTime.now(clock))) {
-            throw new BusinessException(ErrorCode.VERIFICATION_EXPIRED);
-        }
-        return latest;
+        return attemptLimiter.attempt("email-code:" + email, () -> {
+            EmailVerification latest = verificationRepository.findFirstByEmailOrderByCreatedAtDescIdDesc(email)
+                    .filter(verification -> !verification.isUsed() && verification.matches(code))
+                    .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_VERIFICATION_CODE));
+            if (latest.isExpiredAt(LocalDateTime.now(clock))) {
+                throw new BusinessException(ErrorCode.VERIFICATION_EXPIRED);
+            }
+            return latest;
+        }, e -> e.getErrorCode() == ErrorCode.INVALID_VERIFICATION_CODE);
     }
 
 }

@@ -2,6 +2,7 @@ package com.nhnacademy.blog.member.application;
 
 import com.nhnacademy.blog.auth.domain.PasswordRule;
 import com.nhnacademy.blog.blog.domain.BlogRepository;
+import com.nhnacademy.blog.global.auth.AttemptLimiter;
 import com.nhnacademy.blog.global.error.BusinessException;
 import com.nhnacademy.blog.global.error.ErrorCode;
 import com.nhnacademy.blog.image.domain.Image;
@@ -23,13 +24,16 @@ public class MeService {
     private final BlogRepository blogRepository;
     private final ImageRepository imageRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AttemptLimiter attemptLimiter;
 
     public MeService(MemberRepository memberRepository, BlogRepository blogRepository,
-                     ImageRepository imageRepository, PasswordEncoder passwordEncoder) {
+                     ImageRepository imageRepository, PasswordEncoder passwordEncoder,
+                     AttemptLimiter attemptLimiter) {
         this.memberRepository = memberRepository;
         this.blogRepository = blogRepository;
         this.imageRepository = imageRepository;
         this.passwordEncoder = passwordEncoder;
+        this.attemptLimiter = attemptLimiter;
     }
 
     @Transactional(readOnly = true)
@@ -75,6 +79,7 @@ public class MeService {
     /**
      * 비밀번호 바꾸기. 이메일 가입 회원만 된다(소셜 가입은 비밀번호가 없어 403).
      * 지금 비밀번호가 틀리면 400(currentPassword), 새 비밀번호는 가입과 같은 규칙(PasswordRule)이다.
+     * 지금 비밀번호를 15분 안에 5번 틀리면 15분 동안 429다.
      */
     @Transactional
     public void changePassword(Long memberId, String currentPassword, String newPassword) {
@@ -82,9 +87,13 @@ public class MeService {
         if (member.getPasswordHash() == null) {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
-        if (!passwordEncoder.matches(currentPassword, member.getPasswordHash())) {
-            throw BusinessException.invalidField("currentPassword", "지금 비밀번호가 맞지 않습니다.");
-        }
+        // 지금 비밀번호를 15분 안에 5번 틀리면 15분 동안 429 (T055a, R-17)
+        attemptLimiter.attempt("password-change:" + memberId, () -> {
+            if (!passwordEncoder.matches(currentPassword, member.getPasswordHash())) {
+                throw BusinessException.invalidField("currentPassword", "지금 비밀번호가 맞지 않습니다.");
+            }
+            return null;
+        }, e -> true);
         PasswordRule.check("newPassword", newPassword);
         member.changePassword(passwordEncoder.encode(newPassword));
     }
