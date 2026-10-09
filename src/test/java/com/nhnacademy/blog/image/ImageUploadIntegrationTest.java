@@ -140,6 +140,41 @@ class ImageUploadIntegrationTest extends IntegrationTestSupport {
     }
 
     @Test
+    void fileNameExtensionMustBeAllowedAndMatchTheRealFormat() throws Exception {
+        byte[] jpeg = image(20, 20, "jpg");
+        byte[] png = image(20, 20, "png");
+        // 내용은 진짜 이미지여도 이름의 확장자가 허용 목록 밖이거나 없으면 거절 (T036a)
+        for (String name : new String[] {"photo.txt", "photo.html", "photo.svg", "photo", "photo."}) {
+            upload(file(name, "image/jpeg", jpeg))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("UNSUPPORTED_IMAGE"));
+        }
+        // 확장자와 실제 형식이 다르면 거절(PNG 내용인데 .jpg, JPEG 내용인데 .gif)
+        upload(file("photo.jpg", "image/jpeg", png)).andExpect(jsonPath("$.code").value("UNSUPPORTED_IMAGE"));
+        upload(file("photo.gif", "image/gif", jpeg)).andExpect(jsonPath("$.code").value("UNSUPPORTED_IMAGE"));
+        // jpg와 jpeg는 같고, 대소문자는 무시한다. 저장 이름은 서버가 정한다
+        upload(file("PHOTO.JPEG", "image/jpeg", jpeg)).andExpect(status().isCreated())
+                .andExpect(jsonPath("$.url").value(endsWith(".jpg")));
+        upload(file("photo.Png", "image/png", png)).andExpect(status().isCreated());
+    }
+
+    @Test
+    void exifOrientationIsAppliedToTheStoredPixels() throws Exception {
+        // 가로 40 × 세로 20으로 찍혔지만 EXIF가 "시계 방향으로 90도 돌려 보여라"(Orientation=6)인 휴대폰 사진
+        byte[] rotated = withExifOrientation(image(40, 20, "jpg"), 6);
+
+        String body = upload(file("phone.jpg", "image/jpeg", rotated)).andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+
+        // 저장된 원본과 썸네일은 돌린 모양(세로 20 × 40)이라, EXIF를 모르는 프로그램에서도 바로 선다
+        BufferedImage original = read(JsonPath.read(body, "$.url"));
+        assertThat(original.getWidth()).isEqualTo(20);
+        assertThat(original.getHeight()).isEqualTo(40);
+        BufferedImage thumbnail = read(JsonPath.read(body, "$.thumbnailUrl"));
+        assertThat(thumbnail.getWidth()).isLessThan(thumbnail.getHeight());
+    }
+
+    @Test
     void overTenMegabytesIsRejected() throws Exception {
         byte[] big = new byte[10 * 1024 * 1024 + 1];
         System.arraycopy(image(10, 10, "png"), 0, big, 0, 8);
@@ -196,6 +231,25 @@ class ImageUploadIntegrationTest extends IntegrationTestSupport {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         ImageIO.write(image, format, out);
         return out.toByteArray();
+    }
+
+    /**
+     * JPEG의 SOI(FF D8) 바로 뒤에 EXIF(APP1) 조각을 끼운다. 내용은 방향(Orientation, 태그 0x0112) 하나뿐이다.
+     * APP1 = FF E1, 길이, "Exif\0\0", TIFF 머리(MM, 42, 첫 IFD 위치 8), IFD 항목 1개(SHORT 1개 = orientation), 다음 IFD 없음.
+     */
+    private static byte[] withExifOrientation(byte[] jpeg, int orientation) {
+        byte[] app1 = {
+                (byte) 0xFF, (byte) 0xE1, 0x00, 0x22,
+                'E', 'x', 'i', 'f', 0x00, 0x00,
+                'M', 'M', 0x00, 0x2A, 0x00, 0x00, 0x00, 0x08,
+                0x00, 0x01,
+                0x01, 0x12, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01, 0x00, (byte) orientation, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00};
+        byte[] result = new byte[jpeg.length + app1.length];
+        System.arraycopy(jpeg, 0, result, 0, 2);
+        System.arraycopy(app1, 0, result, 2, app1.length);
+        System.arraycopy(jpeg, 2, result, 2 + app1.length, jpeg.length - 2);
+        return result;
     }
 
     private Path stored(String url) {

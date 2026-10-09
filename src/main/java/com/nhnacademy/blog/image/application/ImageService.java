@@ -59,6 +59,10 @@ public class ImageService {
         byte[] bytes = readAll(file);
         ImageType type = ImageType.detect(Arrays.copyOf(bytes, Math.min(bytes.length, 12)))
                 .orElseThrow(() -> new BusinessException(ErrorCode.UNSUPPORTED_IMAGE));
+        // 이름의 확장자도 실제 형식과 같아야 한다(a.html, 확장자 없음, PNG 내용인 a.jpg 모두 거절). 저장 이름은 여전히 서버가 정한다
+        if (!type.matchesFileName(file.getOriginalFilename())) {
+            throw new BusinessException(ErrorCode.UNSUPPORTED_IMAGE);
+        }
         int longestSide = longestSide(bytes);
 
         String name = UUID.randomUUID().toString();

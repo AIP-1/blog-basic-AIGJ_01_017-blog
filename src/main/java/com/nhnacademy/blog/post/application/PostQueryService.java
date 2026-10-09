@@ -65,7 +65,7 @@ public class PostQueryService {
     private Specification<Post> taggedWith(Blog blog, String name) {
         Tag tag = tagRepository.findByBlogIdAndName(blog.getId(), name.trim())
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-        return (root, query, cb) -> cb.equal(root.join("tags").get("id"), tag.getId());
+        return (root, query, cb) -> cb.equal(root.join("postTags").get("tag").get("id"), tag.getId());
     }
 
     /** 비공개 카테고리와, 비공개 상위 아래의 하위 카테고리는 주인이 아니면 없는 것과 같다(사이드바 트리와 같은 규칙). */

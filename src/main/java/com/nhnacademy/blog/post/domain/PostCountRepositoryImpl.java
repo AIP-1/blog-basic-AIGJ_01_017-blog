@@ -1,7 +1,7 @@
 package com.nhnacademy.blog.post.domain;
 
 import com.nhnacademy.blog.category.domain.Category;
-import com.nhnacademy.blog.tag.domain.Tag;
+import com.nhnacademy.blog.tag.domain.PostTag;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Tuple;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -47,10 +47,10 @@ class PostCountRepositoryImpl implements PostCountRepository {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<Tuple> query = cb.createTupleQuery();
         Root<Post> post = query.from(Post.class);
-        Join<Post, Tag> tag = post.join("tags");
-        query.multiselect(tag.get("id"), cb.count(post))
+        Join<Post, PostTag> postTag = post.join("postTags");
+        query.multiselect(postTag.get("tag").get("id"), cb.count(post))
                 .where(condition.toPredicate(post, query, cb))
-                .groupBy(tag.get("id"));
+                .groupBy(postTag.get("tag").get("id"));
 
         Map<Long, Long> counts = new HashMap<>();
         for (Tuple row : entityManager.createQuery(query).getResultList()) {
