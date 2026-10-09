@@ -61,6 +61,25 @@ export interface PostSummary {
   commentCount: number
 }
 
+/** 내 글 관리 목록 한 줄 (GET /api/manage/posts). PostSummary에 주인용 칸이 더 붙는다 */
+export interface ManagedPostSummary {
+  id: number
+  title: string
+  thumbnailUrl: string | null
+  category: { id: number; name: string } | null
+  topic: string | null
+  publishedAt: string | null
+  updatedAt: string
+  likeCount: number
+  commentCount: number
+  viewCount: number
+  status: 'PUBLISHED' | 'DRAFT' | 'SCHEDULED'
+  visibility: 'PUBLIC' | 'PRIVATE' | 'SUBSCRIBERS'
+  scheduledAt: string | null
+  blinded: boolean
+  blind: { reason: string; reasonMessage: string } | null
+}
+
 export interface PageResponse<T> {
   content: T[]
   page: number
