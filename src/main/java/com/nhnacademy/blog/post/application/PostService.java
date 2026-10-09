@@ -14,6 +14,7 @@ import com.nhnacademy.blog.global.security.HtmlSanitizer;
 import com.nhnacademy.blog.global.security.SummaryExtractor;
 import com.nhnacademy.blog.global.visibility.PostAccess;
 import com.nhnacademy.blog.global.visibility.PostVisibilityPolicy;
+import com.nhnacademy.blog.image.application.PostThumbnails;
 import com.nhnacademy.blog.post.domain.Post;
 import com.nhnacademy.blog.post.domain.PostBody;
 import com.nhnacademy.blog.post.domain.PostRepository;
@@ -43,6 +44,7 @@ public class PostService {
     private final HtmlSanitizer htmlSanitizer;
     private final SummaryExtractor summaryExtractor;
     private final TagService tagService;
+    private final PostThumbnails postThumbnails;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
@@ -50,7 +52,7 @@ public class PostService {
                        CommentRepository commentRepository, ModerationLogRepository moderationLogRepository,
                        PostVisibilityPolicy postVisibilityPolicy,
                        HtmlSanitizer htmlSanitizer, SummaryExtractor summaryExtractor, TagService tagService,
-                       ApplicationEventPublisher events, Clock clock) {
+                       PostThumbnails postThumbnails, ApplicationEventPublisher events, Clock clock) {
         this.postRepository = postRepository;
         this.categoryRepository = categoryRepository;
         this.commentRepository = commentRepository;
@@ -59,6 +61,7 @@ public class PostService {
         this.htmlSanitizer = htmlSanitizer;
         this.summaryExtractor = summaryExtractor;
         this.tagService = tagService;
+        this.postThumbnails = postThumbnails;
         this.events = events;
         this.clock = clock;
     }
@@ -66,16 +69,18 @@ public class PostService {
     /**
      * 새 글: 발행 또는 임시저장. 발행이면 지금이 처음 발행 시각이고, 글 번호(id)가 곧 글 주소다.
      * 임시저장 글은 발행 시각이 없고 주인에게만 보인다(가시성 판단이 PUBLISHED만 남에게 보여 준다).
-     * 주인 검사는 컨트롤러가 했다.
+     * 대표 이미지는 본문에 든 이미지여야 한다(아니면 400). 주인 검사는 컨트롤러가 했다.
      */
     @Transactional
     public Post create(Blog blog, PostCommand command) {
         Category category = category(blog, command.categoryId());
         PostBody body = body(command.contentHtml());
+        postThumbnails.requireInBody(command.thumbnailImageId(), body.html());
         Post post = command.status() == PostStatus.DRAFT
                 ? Post.draft(blog, category, command.title(), body, command.visibility(), command.topic())
                 : Post.published(blog, category, command.title(), body, command.visibility(), command.topic(),
                         LocalDateTime.now(clock));
+        post.changeThumbnail(command.thumbnailImageId());
         post.replaceTags(tagService.resolve(blog, command.tagNames()));
         Post saved = postRepository.save(post);
         // 받는 쪽(추천 임베딩)은 이 트랜잭션이 커밋된 뒤에 움직인다(@TransactionalEventListener). 임시저장 글은 건너뛴다
@@ -121,8 +126,11 @@ public class PostService {
         if (command.status() == PostStatus.DRAFT && !post.isDraft()) {
             throw BusinessException.invalidField("status", "발행한 글은 임시저장으로 되돌릴 수 없습니다. 비공개로 바꿔 주세요.");
         }
-        post.edit(category(blog, command.categoryId()), command.title(), body(command.contentHtml()),
-                command.visibility(), command.topic());
+        Category category = category(blog, command.categoryId());
+        PostBody body = body(command.contentHtml());
+        postThumbnails.requireInBody(command.thumbnailImageId(), body.html());
+        post.edit(category, command.title(), body, command.visibility(), command.topic());
+        post.changeThumbnail(command.thumbnailImageId());
         post.replaceTags(tagService.resolve(blog, command.tagNames()));
         if (command.status() == PostStatus.PUBLISHED) {
             post.publish(LocalDateTime.now(clock));
@@ -131,11 +139,12 @@ public class PostService {
         return post;
     }
 
-    /** 편집용 글. 태그 이름과 숨김 사유를 트랜잭션 안에서 꺼내 둔다. */
+    /** 편집용 글. 태그 이름, 숨김 사유, 본문 이미지(대표 이미지 후보)를 트랜잭션 안에서 꺼내 둔다. */
     @Transactional(readOnly = true)
     public ManagedPost managed(Blog blog, Long postId, LoginMember member) {
         Post post = findOwned(blog, postId, member);
-        return new ManagedPost(post, post.tagNames(), post.isBlinded() ? blindReason(post) : null);
+        return new ManagedPost(post, post.tagNames(), post.isBlinded() ? blindReason(post) : null,
+                postThumbnails.bodyImages(post.getContentHtml()));
     }
 
     /** 공개 범위만 바꾼다 (POST-06). */

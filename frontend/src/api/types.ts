@@ -150,6 +150,10 @@ export interface ManagedPost {
   updatedAt: string | null
   commentAllowed: boolean
   blind: { reason: string; reasonMessage: string } | null
+  /** 고른 대표 이미지. null이면 본문 첫 이미지 (POST-07) */
+  thumbnailImageId: number | null
+  /** 본문에 든 이미지(본문 순서). 대표 이미지 후보 */
+  images: UploadedImage[]
 }
 
 /** 발행·수정 응답 */

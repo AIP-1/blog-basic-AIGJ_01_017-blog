@@ -2,10 +2,13 @@ import { type FormEvent, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { ApiError, api, newIdempotencyKey } from '../../api/client'
 import { type FieldMessages, errorMessage, fieldMessages } from '../../api/errors'
-import type { CategoryTree, ManagedPost, ManagedPostSummary, PageResponse, PostSaved, Topic } from '../../api/types'
+import type {
+  CategoryTree, ManagedPost, ManagedPostSummary, PageResponse, PostSaved, Topic, UploadedImage,
+} from '../../api/types'
 import Editor from '../../components/editor/Editor'
 import TagInput from '../../components/editor/TagInput'
 import { AUTO_SAVE_MS, autoSaveNeeded } from '../../components/editor/draft'
+import { effectiveThumbnail, thumbnailChoices } from '../../components/editor/thumbnail'
 
 type Visibility = 'PUBLIC' | 'PRIVATE'
 // LOADING: 고칠 글을 불러오는 중. 불러오기 전에 빈 입력값을 자동 저장해 글을 덮지 않도록 저장하지 않는다
@@ -20,6 +23,9 @@ type PostState = 'NEW' | 'LOADING' | ManagedPost['status']
  * 처음 저장은 POST /api/posts(DRAFT)로 글 번호를 받고, 그 뒤 저장과 발행은 그 번호로 PUT한다.
  * 저장 요청은 한 번에 하나만 보낸다(자동 저장과 발행이 겹치면 발행이 앞 저장을 기다린다).
  * 발행한 글을 고칠 때는 임시저장으로 되돌릴 수 없으므로 자동 저장도 임시저장 버튼도 없다.
+ *
+ * 대표 이미지(POST-07, 스텝 13): 본문에 든 이미지 가운데 고른다. 고르지 않거나 고른 이미지를 본문에서 지우면
+ * 본문 첫 이미지가 대표다. 이미지 번호는 수정 화면을 열 때 서버가 준 목록과 이 화면에서 올린 이미지로 안다.
  */
 export default function PostWritePage() {
   const { postId } = useParams()
@@ -34,6 +40,9 @@ export default function PostWritePage() {
   const [topics, setTopics] = useState<Topic[]>([])
   const [tagNames, setTagNames] = useState<string[]>([])
   const [visibility, setVisibility] = useState<Visibility>('PUBLIC')
+  // 이미지 주소 → 이미지. 대표 이미지 후보의 번호를 찾는 데 쓴다
+  const [knownImages, setKnownImages] = useState<Record<string, UploadedImage>>({})
+  const [thumbnailId, setThumbnailId] = useState<number | null>(null)
   const [categories, setCategories] = useState<CategoryTree | null>(null)
   const [blind, setBlind] = useState<ManagedPost['blind']>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -80,9 +89,12 @@ export default function PostWritePage() {
         setVisibility(post.visibility === 'PRIVATE' ? 'PRIVATE' : 'PUBLIC')
         setBlind(post.blind)
         setPostState(post.status)
+        setKnownImages(Object.fromEntries(post.images.map((image) => [image.url, image])))
+        setThumbnailId(post.thumbnailImageId)
         lastSaved.current = snapshotOf({
           title: post.title, contentHtml: post.contentHtml, categoryId: post.categoryId, tagNames: post.tagNames,
           topic: post.topic, visibility: post.visibility === 'PRIVATE' ? 'PRIVATE' : 'PUBLIC',
+          thumbnailImageId: post.thumbnailImageId,
         })
       })
       .catch((error: unknown) => active && setLoadError(
@@ -123,6 +135,7 @@ export default function PostWritePage() {
       tagNames,
       topic: topic === '' ? null : topic,
       visibility,
+      thumbnailImageId: effectiveThumbnail(thumbnailId, choices),
     }
   }
 
@@ -198,6 +211,8 @@ export default function PostWritePage() {
   }
 
   const drafting = postState === 'NEW' || postState === 'DRAFT'
+  const choices = thumbnailChoices(contentHtml, knownImages)
+  const chosenThumbnail = effectiveThumbnail(thumbnailId, choices)
 
   if (loadError) {
     return <main className="page"><p className="err">{loadError}</p></main>
@@ -271,8 +286,31 @@ export default function PostWritePage() {
 
         <div className="field">
           <span className="label">본문</span>
-          <Editor initialHtml={loadedHtml} onChange={setContentHtml} />
+          <Editor initialHtml={loadedHtml} onChange={setContentHtml}
+                  onImageUploaded={(image) => setKnownImages((previous) => ({ ...previous, [image.url]: image }))} />
         </div>
+
+        {choices.length > 0 && (
+          <div className="field">
+            <span className="label" id="thumbnail-label">대표 이미지</span>
+            <div className="thumb-pick" role="radiogroup" aria-labelledby="thumbnail-label">
+              <button type="button" role="radio" aria-checked={chosenThumbnail === null}
+                      className={chosenThumbnail === null ? 'auto on' : 'auto'} onClick={() => setThumbnailId(null)}>
+                자동<br /><span className="small">첫 이미지</span>
+              </button>
+              {choices.map((image, index) => (
+                <button key={image.id} type="button" role="radio" aria-checked={chosenThumbnail === image.id}
+                        aria-label={`본문 ${index + 1}번째 이미지`}
+                        className={chosenThumbnail === image.id ? 'on' : undefined}
+                        onClick={() => setThumbnailId(image.id)}>
+                  <img src={image.thumbnailUrl} alt="" />
+                </button>
+              ))}
+            </div>
+            <span className="hint">목록과 링크 공유 미리보기에 나오는 사진입니다. 고르지 않으면 본문 첫 이미지입니다.</span>
+            {errors.thumbnailImageId && <p className="err">{errors.thumbnailImageId}</p>}
+          </div>
+        )}
 
         <div className="field">
           <span className="label">태그</span>
@@ -302,8 +340,8 @@ export default function PostWritePage() {
 /** 저장할 입력값을 한 줄로. 마지막 저장과 비교해 바뀐 것이 있는지 본다. */
 function snapshotOf(values: {
   title: string; contentHtml: string; categoryId: number | null; tagNames: string[]; topic: string | null;
-  visibility: Visibility
+  visibility: Visibility; thumbnailImageId: number | null
 }): string {
   return JSON.stringify([values.title.trim(), values.contentHtml, values.categoryId, values.tagNames, values.topic,
-    values.visibility])
+    values.visibility, values.thumbnailImageId])
 }

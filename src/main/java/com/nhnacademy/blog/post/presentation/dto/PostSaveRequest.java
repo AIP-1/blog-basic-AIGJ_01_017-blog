@@ -62,9 +62,6 @@ public record PostSaveRequest(
         if (scheduledAt != null) {
             errors.add(new FieldErrorDetail("scheduledAt", "예약 발행은 아직 할 수 없습니다.")); // POST-13
         }
-        if (thumbnailImageId != null) {
-            errors.add(new FieldErrorDetail("thumbnailImageId", "대표 이미지는 아직 고를 수 없습니다.")); // POST-07
-        }
         if (Boolean.FALSE.equals(commentAllowed)) {
             errors.add(new FieldErrorDetail("commentAllowed", "댓글 막기는 아직 할 수 없습니다.")); // CMT-07
         }
