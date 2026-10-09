@@ -11,6 +11,12 @@ spring:
       password: ${REDIS_PASSWORD:}
 
 app:
+  recommend:
+    datasource:
+      url: ${RECOMMEND_DB_URL}
+      username: ${RECOMMEND_DB_USERNAME}
+      password: ${RECOMMEND_DB_PASSWORD}
+    ollama-url: ${OLLAMA_URL:http://localhost:11434}
   upload:
     dir: ${APP_UPLOAD_DIR}
   domain:

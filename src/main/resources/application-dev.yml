@@ -10,6 +10,13 @@ spring:
       port: 6379
 
 app:
+  recommend:
+    # docker compose의 PostgreSQL(pgvector)과 Ollama (R-02)
+    datasource:
+      url: jdbc:postgresql://localhost:5432/recommend
+      username: blog
+      password: blog
+    ollama-url: http://localhost:11434
   upload:
     dir: /Users/chosun-nhn54/IdeaProjects/blog/uploads
   domain:
