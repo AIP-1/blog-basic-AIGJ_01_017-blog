@@ -28,7 +28,8 @@ import org.springframework.test.web.servlet.MockMvc;
 
 /**
  * 홈 주제별 글 (T064, HOME-03, spec US5 시나리오 7). 인기 점수 순 6개, 모자라면 그 주제의 최신 글로 채운다.
- * 다른 테스트가 쓰지 않는 주제(HEALTH)를 쓰고, 채우는 글은 먼 미래 시각에 두어 늘 가장 최신이 되게 한다.
+ * 다른 테스트가 쓰지 않는 주제(HEALTH)를 쓴다. 채우는 글은 인기 글보다 나중 시각에 둔다.
+ * 먼 미래 시각은 쓰지 않는다(홈 최신 글 테스트가 미래 시각 글을 쓰므로 섞인다).
  */
 class HomeTopicIntegrationTest extends IntegrationTestSupport {
 
@@ -68,10 +69,9 @@ class HomeTopicIntegrationTest extends IntegrationTestSupport {
         Post third = health(now.minusDays(3));
         views(third, 100, now);
 
-        LocalDateTime future = LocalDateTime.of(2099, 1, 1, 0, 0).plusDays(System.nanoTime() % 1000);
         List<Long> latest = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
-            latest.add(0, health(future.plusMinutes(i)).getId());
+            latest.add(0, health(now.minusHours(5).plusMinutes(i)).getId());
         }
 
         // 다른 주제, 주제 없음, 비공개 글은 활동이 많아도 빠진다
@@ -79,7 +79,7 @@ class HomeTopicIntegrationTest extends IntegrationTestSupport {
         topic(travel, "TRAVEL");
         views(travel, 1000, now);
         views(testPosts.published(blog, Visibility.PUBLIC), 1000, now);
-        Post privatePost = health(now);
+        Post privatePost = health(now.minusHours(1));
         jdbcTemplate.update("UPDATE post SET visibility = 'PRIVATE' WHERE id = ?", privatePost.getId());
         views(privatePost, 1000, now);
 
