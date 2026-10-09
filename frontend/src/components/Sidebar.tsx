@@ -42,6 +42,23 @@ function SidebarItem({ module }: { module: SidebarModule }) {
           </ul>
         </div>
       )
+    case 'TAG':
+      return (
+        <div>
+          <h4>태그</h4>
+          {module.data.length === 0
+            ? <p className="small muted">아직 태그가 없습니다.</p>
+            : (
+              <div className="tag-cloud">
+                {module.data.map((tag) => (
+                  <Link key={tag.id} className="chip" to={`/tag/${encodeURIComponent(tag.name)}`}>
+                    {tag.name} <span className="num">{tag.postCount}</span>
+                  </Link>
+                ))}
+              </div>
+            )}
+        </div>
+      )
     case 'RECENT_POST':
       return (
         <div>

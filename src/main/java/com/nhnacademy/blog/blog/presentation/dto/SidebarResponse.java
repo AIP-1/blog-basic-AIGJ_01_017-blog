@@ -3,6 +3,7 @@ package com.nhnacademy.blog.blog.presentation.dto;
 import com.nhnacademy.blog.blog.application.Sidebar;
 import com.nhnacademy.blog.blog.domain.Blog;
 import com.nhnacademy.blog.category.presentation.dto.CategoryTreeResponse;
+import com.nhnacademy.blog.tag.presentation.dto.TagCountResponse;
 import java.util.List;
 
 /**
@@ -27,6 +28,7 @@ public record SidebarResponse(List<Module> modules) {
         return new SidebarResponse(List.of(
                 new Module("PROFILE", new Profile(blog.getName(), blog.getDescription(), null)),
                 new Module("CATEGORY", CategoryTreeResponse.from(sidebar.categories())),
+                new Module("TAG", sidebar.tags().stream().map(TagCountResponse::from).toList()),
                 new Module("RECENT_POST", sidebar.recentPosts().stream()
                         .map(post -> new RecentPost(post.id(), post.title()))
                         .toList()),

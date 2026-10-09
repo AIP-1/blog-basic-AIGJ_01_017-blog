@@ -17,6 +17,8 @@ public interface TagRepository extends JpaRepository<Tag, Long> {
 
     Optional<Tag> findByBlogIdAndName(Long blogId, String name);
 
+    List<Tag> findByBlogId(Long blogId);
+
     /**
      * 없으면 만든다. 같은 이름(DB 정렬 규칙 기준)이 있거나 다른 트랜잭션이 막 만들었으면 아무것도 하지 않는다(0행).
      * 동시에 같은 새 태그를 만들어도 UNIQUE 위반(500)이 나지 않는다.

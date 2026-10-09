@@ -37,6 +37,12 @@ export interface Blog {
   restriction: { reason: string | null; reasonMessage: string | null } | null
 }
 
+/** 홈 인기 글 (GET /api/home/popular). snapshotAt은 순위를 계산한 시각(5분마다) */
+export interface PopularPosts {
+  snapshotAt: string
+  items: { rank: number; post: PostSummary }[]
+}
+
 export interface PostSummary {
   id: number
   title: string
@@ -80,9 +86,17 @@ export interface RecentComment {
   state: 'NORMAL' | 'SECRET' | 'BLINDED'
 }
 
+/** 태그 목록 한 줄 (GET /api/tags, 사이드바 TAG). 보는 사람이 볼 수 있는 글 수, 많은 순 */
+export interface TagCount {
+  id: number
+  name: string
+  postCount: number
+}
+
 export type SidebarModule =
   | { type: 'PROFILE'; data: { name: string; description: string | null; profileImageUrl: string | null } }
   | { type: 'CATEGORY'; data: CategoryTree }
+  | { type: 'TAG'; data: TagCount[] }
   | { type: 'RECENT_POST'; data: { id: number; title: string }[] }
   | { type: 'RECENT_COMMENT'; data: RecentComment[] }
 

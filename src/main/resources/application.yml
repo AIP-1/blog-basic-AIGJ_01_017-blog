@@ -48,3 +48,9 @@ app:
     cookie-secure: true
   idempotency:
     ttl: 10m
+  popular:
+    # 인기 점수 = 최근 window 동안 조회×view-weight + 공감×like-weight + 댓글×comment-weight (R-12, HOME-02)
+    window: 1h
+    view-weight: 1
+    like-weight: 3
+    comment-weight: 5

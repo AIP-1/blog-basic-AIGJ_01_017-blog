@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -148,6 +149,31 @@ class TagIntegrationTest extends IntegrationTestSupport {
                 + "WHERE t.blog_id = ?", Integer.class, blog.getId())).isEqualTo(5);
     }
 
+    @Test
+    void tagListCountsOnlyPostsTheViewerCanSeeMostUsedFirst() throws Exception {
+        publish("[\"spring\", \"jpa\"]");
+        publish("[\"spring\", \"alpha\"]");
+        publishPrivate("[\"spring\", \"secret\"]");
+        long blinded = publish("[\"blind-only\"]");
+        jdbcTemplate.update("UPDATE post SET is_blinded = 1 WHERE id = ?", blinded);
+
+        // 다른 사람: 비공개 글(secret)이나 관리자가 숨긴 글(blind-only)에만 단 태그는 없다. 글 수가 같으면 이름순
+        String anonymous = "[{\"name\":\"spring\",\"postCount\":2},{\"name\":\"alpha\",\"postCount\":1},"
+                + "{\"name\":\"jpa\",\"postCount\":1}]";
+        mockMvc.perform(get("/api/tags").header(HttpHeaders.HOST, TestBlogs.host(blog)))
+                .andExpect(status().isOk())
+                .andExpect(content().json(anonymous));
+        mockMvc.perform(get("/api/blog/sidebar").header(HttpHeaders.HOST, TestBlogs.host(blog)))
+                .andExpect(jsonPath("$.modules[2].type").value("TAG"))
+                .andExpect(jsonPath("$.modules[2].data[*].name", contains("spring", "alpha", "jpa")));
+
+        // 주인: 블로그 화면처럼 비공개·숨긴 글도 센다
+        send(get("/api/tags"), null)
+                .andExpect(jsonPath("$[*].name", contains("spring", "alpha", "blind-only", "jpa", "secret")))
+                .andExpect(jsonPath("$[0].postCount").value(3))
+                .andExpect(jsonPath("$[0].id").isNumber());
+    }
+
     private long publish(String tagNames) throws Exception {
         String response = send(post("/api/posts").header("Idempotency-Key", UUID.randomUUID().toString()),
                 body(tagNames)).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
@@ -156,6 +182,11 @@ class TagIntegrationTest extends IntegrationTestSupport {
 
     private int tagCount() {
         return jdbcTemplate.queryForObject("SELECT COUNT(*) FROM tag WHERE blog_id = ?", Integer.class, blog.getId());
+    }
+
+    private void publishPrivate(String tagNames) throws Exception {
+        send(post("/api/posts").header("Idempotency-Key", UUID.randomUUID().toString()),
+                body(tagNames).replace("\"PUBLIC\"", "\"PRIVATE\"")).andExpect(status().isCreated());
     }
 
     private static String body(String tagNames) {

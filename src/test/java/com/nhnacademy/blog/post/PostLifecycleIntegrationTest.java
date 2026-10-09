@@ -100,7 +100,7 @@ class PostLifecycleIntegrationTest extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.postCount").value(1));
         mockMvc.perform(get("/api/blog/sidebar").header(HttpHeaders.HOST, TestBlogs.host(blog)))
                 .andExpect(jsonPath("$.modules[1].data.totalCount").value(1))
-                .andExpect(jsonPath("$.modules[2].data[*].id", contains((int) kept)));
+                .andExpect(jsonPath("$.modules[3].data[*].id", contains((int) kept)));
         // 주인에게는 그대로 보인다
         mockMvc.perform(get("/api/posts").header(HttpHeaders.HOST, TestBlogs.host(blog)).cookie(ownerCookies))
                 .andExpect(jsonPath("$.totalElements").value(2));

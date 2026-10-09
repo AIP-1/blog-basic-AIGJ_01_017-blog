@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react'
 import { api } from '../../api/client'
 import { errorMessage } from '../../api/errors'
-import type { CursorResponse, PostSummary } from '../../api/types'
-import { formatDateTime } from '../../app/format'
+import type { CursorResponse, PopularPosts, PostSummary } from '../../api/types'
+import { formatDateTime, formatTime } from '../../app/format'
 import { blogUrl } from '../../app/host'
 import { useMe } from '../../app/useMe'
 import PlatformHeader from '../../components/PlatformHeader'
 
 /**
- * 플랫폼 홈 (HOME-01). 모든 블로그의 최신 글을 20개씩 더보기로. 서버가 볼 수 있는 글만 준다.
- * 글은 다른 호스트(블로그 주소)라 링크는 <a href>로 새 페이지를 연다. 인기 글·주제별 글은 스텝 8·9.
+ * 플랫폼 홈. 인기 글(HOME-02) 10개와 모든 블로그의 최신 글(HOME-01) 20개씩 더보기. 서버가 볼 수 있는 글만 준다.
+ * 글은 다른 호스트(블로그 주소)라 링크는 <a href>로 새 페이지를 연다. 주제별 글은 스텝 9.
  */
 export default function HomePage() {
   const me = useMe()
@@ -52,6 +52,7 @@ export default function HomePage() {
     <div className="app">
       <PlatformHeader me={me} />
       <main className="page">
+        <PopularSection />
         <section className="section">
           <h2>최신 글</h2>
           {error && <p className="err">{error}</p>}
@@ -79,5 +80,42 @@ export default function HomePage() {
         </section>
       </main>
     </div>
+  )
+}
+
+/** 인기 글. 최근 1시간 조회·공감·댓글로 매긴 순위이고, 서버가 5분마다 다시 계산한다. 실패하면 영역을 숨긴다. */
+function PopularSection() {
+  const [popular, setPopular] = useState<PopularPosts | null>(null)
+
+  useEffect(() => {
+    let active = true
+    api<PopularPosts>('/api/home/popular', { allowAnonymous: true })
+      .then((result) => active && setPopular(result))
+      .catch(() => undefined)
+    return () => {
+      active = false
+    }
+  }, [])
+
+  if (!popular) {
+    return null
+  }
+  return (
+    <section className="section">
+      <h2>인기 글 <small>최근 1시간 · {formatTime(popular.snapshotAt)} 기준</small></h2>
+      {popular.items.length === 0
+        ? <p className="muted">최근 1시간 동안 읽힌 글이 없습니다.</p>
+        : (
+          <div className="rank-list">
+            {popular.items.map(({ rank, post }) => (
+              <div key={post.id} className="rank">
+                <b>{rank}</b>
+                <a href={blogUrl(post.blog.address, `/${post.id}`)}>{post.title}</a>
+                <a className="small muted" href={blogUrl(post.blog.address)}>{post.blog.name}</a>
+              </div>
+            ))}
+          </div>
+        )}
+    </section>
   )
 }

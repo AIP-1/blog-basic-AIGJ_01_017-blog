@@ -2,18 +2,24 @@ package com.nhnacademy.blog.home.application;
 
 import com.nhnacademy.blog.global.visibility.PostSpecifications;
 import com.nhnacademy.blog.global.web.TimeIdCursor;
+import com.nhnacademy.blog.home.domain.PostScore;
 import com.nhnacademy.blog.post.domain.Post;
 import com.nhnacademy.blog.post.domain.PostRepository;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 홈 최신 글 (T042, HOME-01). 모든 블로그에서 보는 사람이 볼 수 있는 글을 최신순으로 20개씩 더보기.
+ * 홈 최신 글 (T042, HOME-01)과 인기 글 (T063, HOME-02).
+ * 최신 글은 모든 블로그에서 보는 사람이 볼 수 있는 글을 최신순으로 20개씩 더보기.
  * 페이지 번호가 아니라 (처음 발행 시각, id) 커서로 이어 읽어, 더보기 중에 새 글이 올라와도
  * 같은 글이 두 번 나오거나 빠지지 않는다(spec US3 시나리오 2).
  */
@@ -21,14 +27,17 @@ import org.springframework.transaction.annotation.Transactional;
 public class HomeService {
 
     public static final int LATEST_SIZE = 20;
+    public static final int POPULAR_SIZE = 10;
 
     private static final Sort LATEST = Sort.by(Sort.Order.desc("publishedAt"), Sort.Order.desc("id"));
 
     private final PostRepository postRepository;
+    private final PopularRanking popularRanking;
     private final Clock clock;
 
-    public HomeService(PostRepository postRepository, Clock clock) {
+    public HomeService(PostRepository postRepository, PopularRanking popularRanking, Clock clock) {
         this.postRepository = postRepository;
+        this.popularRanking = popularRanking;
         this.clock = clock;
     }
 
@@ -44,6 +53,31 @@ public class HomeService {
         }
         return postRepository.findBy(condition,
                 query -> query.sortBy(LATEST).project("blog", "category").limit(LATEST_SIZE + 1).all());
+    }
+
+    /**
+     * 인기 점수 순 공개 글 10개. 순위(글 번호)는 5분 캐시에서 읽고, 글은 매번 DB에서 읽으며 가시성을 다시 확인한다.
+     * 캐시된 5분 사이에 지워지거나 비공개·숨김이 된 글, 블로그가 이용 제한된 글은 바로 빠지고 다음 순위가 올라온다.
+     * "공개 글" 순위라 로그인 여부와 상관없이 모두에게 같은 목록이다(비회원 기준 visibleTo(null)).
+     */
+    @Transactional(readOnly = true)
+    public PopularPosts popular() {
+        PopularSnapshot snapshot = popularRanking.snapshot();
+        List<Long> rankedIds = snapshot.scores().stream().map(PostScore::postId).toList();
+        if (rankedIds.isEmpty()) {
+            return new PopularPosts(snapshot.snapshotAt(), List.of());
+        }
+        Specification<Post> condition = PostSpecifications.visibleTo(null, LocalDateTime.now(clock))
+                .and((root, query, cb) -> root.get("id").in(rankedIds));
+        Map<Long, Post> visible = postRepository.findBy(condition, query -> query.project("blog", "category").all())
+                .stream()
+                .collect(Collectors.toMap(Post::getId, Function.identity()));
+        List<Post> ranked = rankedIds.stream()
+                .map(visible::get)
+                .filter(Objects::nonNull)
+                .limit(POPULAR_SIZE)
+                .toList();
+        return new PopularPosts(snapshot.snapshotAt(), ranked);
     }
 
     /** 최신순에서 커서 뒤: 더 먼저 발행됐거나, 같은 시각이면 id가 더 작은 글. */

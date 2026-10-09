@@ -300,7 +300,7 @@ class PostWriteIntegrationTest extends IntegrationTestSupport {
                 Integer.class, owner.getId())).isZero();
         listOf(ownerCookies).andExpect(jsonPath("$.totalElements").value(0));
         mockMvc.perform(get("/api/blog/sidebar").header(HttpHeaders.HOST, TestBlogs.host(blog)))
-                .andExpect(jsonPath("$.modules[3].data").isEmpty());
+                .andExpect(jsonPath("$.modules[4].data").isEmpty());
         // 지운 글은 다시 지울 수 없다(없는 글)
         perform(delete("/api/posts/" + post.getId()), ownerCookies, null).andExpect(status().isNotFound());
     }

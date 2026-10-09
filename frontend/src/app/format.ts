@@ -7,3 +7,8 @@ export function formatDate(iso: string | null): string {
 export function formatDateTime(iso: string): string {
   return `${formatDate(iso)} ${iso.slice(11, 16)}`
 }
+
+/** "2026-11-07T13:00:00+09:00" → "13:00" */
+export function formatTime(iso: string): string {
+  return iso.slice(11, 16)
+}
