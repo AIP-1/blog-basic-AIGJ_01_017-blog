@@ -7,6 +7,7 @@ import com.nhnacademy.blog.global.web.LikePatterns;
 import com.nhnacademy.blog.global.web.PageQuery;
 import com.nhnacademy.blog.post.domain.Post;
 import com.nhnacademy.blog.post.domain.PostRepository;
+import com.nhnacademy.blog.tag.domain.PostTag;
 import com.nhnacademy.blog.tag.domain.Tag;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Root;
@@ -47,7 +48,7 @@ public class SearchService {
             // 태그 이름은 글마다 여럿이라, 조인하면 같은 글이 여러 번 나온다. 그래서 EXISTS 부분 쿼리로 본다
             Subquery<Long> tagged = criteria.subquery(Long.class);
             Root<Post> sameRow = tagged.correlate(root);
-            Join<Post, Tag> tag = sameRow.join("tags");
+            Join<PostTag, Tag> tag = sameRow.join("postTags").join("tag");
             tagged.select(tag.get("id")).where(cb.like(tag.get("name"), pattern, LikePatterns.ESCAPE));
             return cb.or(
                     cb.like(root.get("title"), pattern, LikePatterns.ESCAPE),
