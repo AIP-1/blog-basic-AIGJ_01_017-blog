@@ -66,6 +66,11 @@ public class Category {
     }
 
     /** 이 블로그의 카테고리인가. 다른 블로그의 카테고리 번호로 요청하면 없는 것과 같다. */
+    /** 하위 카테고리인가. 2단계까지라 하위의 하위는 없다 (CAT-03). */
+    public boolean isChild() {
+        return parent != null;
+    }
+
     public boolean belongsTo(Blog blog) {
         return this.blog.getId().equals(blog.getId());
     }

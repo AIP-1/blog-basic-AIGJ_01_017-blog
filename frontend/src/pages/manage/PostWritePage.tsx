@@ -140,9 +140,12 @@ export default function PostWritePage() {
           <span className="label">카테고리</span>
           <select value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
             <option value="">미분류</option>
-            {categories?.categories.map((category) => (
-              <option key={category.id} value={category.id}>{category.name}</option>
-            ))}
+            {categories?.categories.flatMap((category) => [
+              <option key={category.id} value={category.id}>{category.name}</option>,
+              ...category.children.map((child) => (
+                <option key={child.id} value={child.id}>{`\u00a0\u00a0└ ${child.name}`}</option>
+              )),
+            ])}
           </select>
           {errors.categoryId && <p className="err">{errors.categoryId}</p>}
         </label>
