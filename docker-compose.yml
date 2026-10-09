@@ -1,4 +1,4 @@
-# 개발용 MySQL 8, Redis. 실행: docker compose up -d
+# 개발용 MySQL 8, Redis, 비슷한 글 추천용 PostgreSQL(pgvector)·Ollama. 실행: docker compose up -d
 services:
   mysql:
     image: mysql:8.4
@@ -33,5 +33,36 @@ services:
       timeout: 3s
       retries: 20
 
+  # 비슷한 글 추천(OWN-06) 전용 두 번째 DB. 글 id와 임베딩만 둔다 (R-02)
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: blog-postgres
+    environment:
+      POSTGRES_DB: recommend
+      POSTGRES_USER: blog
+      POSTGRES_PASSWORD: blog
+      TZ: Asia/Seoul
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "blog", "-d", "recommend"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # 임베딩 모델 서버. bge-m3 모델은 이미 받아 둔 docker 볼륨 ollama에 있다(없으면: docker exec blog-ollama ollama pull bge-m3)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: blog-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama:/root/.ollama
+
 volumes:
   mysql-data:
+  postgres-data:
+  ollama:
+    external: true
