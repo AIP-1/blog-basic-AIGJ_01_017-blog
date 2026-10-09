@@ -1,5 +1,6 @@
 package com.nhnacademy.blog.global.config;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -8,6 +9,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.nhnacademy.blog.IntegrationTestSupport;
 import com.nhnacademy.blog.blog.domain.Blog;
+import com.nhnacademy.blog.image.domain.Image;
+import com.nhnacademy.blog.image.domain.ImageRepository;
 import com.nhnacademy.blog.member.domain.Member;
 import com.nhnacademy.blog.post.domain.Post;
 import com.nhnacademy.blog.post.domain.PostBody;
@@ -38,6 +41,9 @@ class SpaForwardIntegrationTest extends IntegrationTestSupport {
 
     @Autowired
     PostRepository postRepository;
+
+    @Autowired
+    ImageRepository imageRepository;
 
     @Test
     void platformPagesServeTheApp() throws Exception {
@@ -170,6 +176,54 @@ class SpaForwardIntegrationTest extends IntegrationTestSupport {
         mockMvc.perform(page("blog.test", "/api/missing"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("NOT_FOUND"));
+    }
+
+    // ---------- 공유 미리보기 (T072) ----------
+
+    @Test
+    void publicPostPageCarriesEscapedOpenGraphTags() throws Exception {
+        Member owner = testMembers.create();
+        Blog blog = testBlogs.create(owner);
+        imageRepository.save(Image.uploaded(owner.getId(), "/uploads/og-" + blog.getAddress() + ".png",
+                "/uploads/t_og-" + blog.getAddress() + ".png", "og.png", "image/png", 10));
+        Post post = postRepository.save(Post.published(blog, null, "<b>제목\"><script>alert(1)</script>",
+                new PostBody("<p>요약 & 소개</p><img src=\"/uploads/og-" + blog.getAddress() + ".png\">",
+                        "요약 & 소개", "요약 & 소개"), Visibility.PUBLIC, null, LocalDateTime.now()));
+        String host = TestBlogs.host(blog);
+
+        String html = mockMvc.perform(page(host, "/" + post.getId()))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(html)
+                .contains("<meta property=\"og:type\" content=\"article\">")
+                .contains("<meta property=\"og:title\" content=\"&lt;b&gt;제목&quot;&gt;&lt;script&gt;alert(1)&lt;/script&gt;\">")
+                .contains("<meta property=\"og:description\" content=\"요약 &amp; 소개\">")
+                .contains("<meta property=\"og:url\" content=\"http://" + host + "/" + post.getId() + "\">")
+                .contains("<meta property=\"og:image\" content=\"http://" + host + "/uploads/t_og-" + blog.getAddress() + ".png\">")
+                .contains("<meta property=\"og:site_name\" content=\"" + blog.getName() + "\">")
+                .contains("<title>&lt;b&gt;제목")
+                // 사용자가 쓴 글자가 태그로 끼어들지 않는다
+                .doesNotContain("<script>alert(1)");
+    }
+
+    @Test
+    void postsOthersCannotSeeGetNoPreviewEvenForTheOwner() throws Exception {
+        Member owner = testMembers.create();
+        Blog blog = testBlogs.create(owner);
+        Post privatePost = post(blog, Visibility.PRIVATE);
+        Post subscribersOnly = post(blog, Visibility.SUBSCRIBERS);
+
+        String ownerView = mockMvc.perform(page(TestBlogs.host(blog), "/" + privatePost.getId())
+                        .cookie(testMembers.loginCookies(owner)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        assertThat(ownerView).doesNotContain("og:title");
+        assertThat(mockMvc.perform(page(TestBlogs.host(blog), "/" + subscribersOnly.getId()))
+                .andReturn().getResponse().getContentAsString()).doesNotContain("og:title");
+        // 블로그 메인 같은 다른 화면에는 넣지 않는다
+        assertThat(mockMvc.perform(page(TestBlogs.host(blog), "/"))
+                .andReturn().getResponse().getContentAsString()).doesNotContain("og:title");
     }
 
     private MockHttpServletRequestBuilder page(String host, String path) {
