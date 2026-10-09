@@ -6,6 +6,12 @@ export interface BlogRef {
   name: string
 }
 
+/** 고정 주제 (GET /api/topics). code는 글 저장 본문의 topic 값 */
+export interface Topic {
+  code: string
+  name: string
+}
+
 export interface Me {
   id: number
   email: string | null
