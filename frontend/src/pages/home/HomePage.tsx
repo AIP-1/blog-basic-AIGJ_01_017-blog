@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react'
 import { api } from '../../api/client'
 import { errorMessage } from '../../api/errors'
-import type { CursorResponse, PopularPosts, PostSummary } from '../../api/types'
+import type { CursorResponse, PopularPosts, PostSummary, Topic } from '../../api/types'
 import { formatDateTime, formatTime } from '../../app/format'
 import { blogUrl } from '../../app/host'
 import { useMe } from '../../app/useMe'
 import PlatformHeader from '../../components/PlatformHeader'
 
 /**
- * 플랫폼 홈. 인기 글(HOME-02) 10개와 모든 블로그의 최신 글(HOME-01) 20개씩 더보기. 서버가 볼 수 있는 글만 준다.
- * 글은 다른 호스트(블로그 주소)라 링크는 <a href>로 새 페이지를 연다. 주제별 글은 스텝 9.
+ * 플랫폼 홈. 인기 글(HOME-02) 10개, 주제별 글(HOME-03) 6개, 모든 블로그의 최신 글(HOME-01) 20개씩 더보기.
+ * 서버가 볼 수 있는 글만 준다. 글은 다른 호스트(블로그 주소)라 링크는 <a href>로 새 페이지를 연다.
  */
 export default function HomePage() {
   const me = useMe()
@@ -53,6 +53,7 @@ export default function HomePage() {
       <PlatformHeader me={me} />
       <main className="page">
         <PopularSection />
+        <TopicSection />
         <section className="section">
           <h2>최신 글</h2>
           {error && <p className="err">{error}</p>}
@@ -116,6 +117,62 @@ function PopularSection() {
             ))}
           </div>
         )}
+    </section>
+  )
+}
+
+/** 주제별 글. 주제 탭을 고르면 그 주제의 글 6개(인기 순, 모자라면 최신 글). 처음엔 첫 탭. */
+function TopicSection() {
+  const [topics, setTopics] = useState<Topic[]>([])
+  const [selected, setSelected] = useState<string | null>(null)
+  const [posts, setPosts] = useState<PostSummary[] | null>(null)
+
+  useEffect(() => {
+    api<Topic[]>('/api/topics', { allowAnonymous: true })
+      .then((result) => {
+        setTopics(result)
+        setSelected(result[0]?.code ?? null)
+      })
+      .catch(() => undefined)
+  }, [])
+
+  useEffect(() => {
+    if (selected === null) {
+      return
+    }
+    let active = true
+    api<PostSummary[]>(`/api/home/topics/${selected}`, { allowAnonymous: true })
+      .then((result) => active && setPosts(result))
+      .catch(() => active && setPosts([]))
+    return () => {
+      active = false
+    }
+  }, [selected])
+
+  if (topics.length === 0) {
+    return null
+  }
+  return (
+    <section className="section">
+      <h2>주제별 글</h2>
+      <nav className="tabs" aria-label="주제">
+        {topics.map((topic) => (
+          <button key={topic.code} type="button" className={topic.code === selected ? 'on' : undefined}
+                  aria-pressed={topic.code === selected} onClick={() => setSelected(topic.code)}>
+            {topic.name}
+          </button>
+        ))}
+      </nav>
+      {posts !== null && posts.length === 0 && <p className="muted">이 주제의 글이 아직 없습니다.</p>}
+      <div className="grid-cards">
+        {posts?.map((post) => (
+          <a key={post.id} className="card" href={blogUrl(post.blog.address, `/${post.id}`)}>
+            {post.thumbnailUrl ? <img className="thumb" src={post.thumbnailUrl} alt="" loading="lazy" /> : <div className="thumb" />}
+            <h3>{post.title}</h3>
+            <span className="small muted">{post.blog.name} · 공감 {post.likeCount}</span>
+          </a>
+        ))}
+      </div>
     </section>
   )
 }

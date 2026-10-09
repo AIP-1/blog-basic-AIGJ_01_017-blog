@@ -20,6 +20,7 @@ public class PopularScoreRepository {
     /**
      * 글 자체 조건(발행된 공개 글, 삭제·숨김 아님)은 여기서 미리 걸러 후보 자리를 아낀다.
      * 블로그·주인 상태까지 포함한 최종 가시성 판단은 부르는 쪽이 PostSpecifications로 다시 한다.
+     * %s 자리에는 주제별 글(HOME-03)일 때 주제 조건이 들어간다.
      */
     private static final String SQL = """
             SELECT activity.post_id, SUM(activity.weight) AS score
@@ -32,7 +33,7 @@ public class PopularScoreRepository {
                 WHERE created_at >= :since AND deleted_at IS NULL AND is_blinded = 0
             ) activity
             JOIN post p ON p.id = activity.post_id
-            WHERE p.status = 'PUBLISHED' AND p.visibility = 'PUBLIC' AND p.deleted_at IS NULL AND p.is_blinded = 0
+            WHERE p.status = 'PUBLISHED' AND p.visibility = 'PUBLIC' AND p.deleted_at IS NULL AND p.is_blinded = 0%s
             GROUP BY activity.post_id
             ORDER BY score DESC, activity.post_id DESC
             LIMIT :limit
@@ -44,17 +45,34 @@ public class PopularScoreRepository {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    private static final String ALL = SQL.formatted("");
+    private static final String BY_TOPIC = SQL.formatted(" AND p.topic = :topic");
+
     /** since 이후 활동으로 점수가 높은 글 limit개. 점수가 같으면 나중에 쓴 글(id가 큰 글)이 위다. 활동이 없는 글은 없다. */
     public List<PostScore> topScores(LocalDateTime since, int viewWeight, int likeWeight, int commentWeight,
                                      int limit) {
-        MapSqlParameterSource params = new MapSqlParameterSource()
+        return query(ALL, params(since, viewWeight, likeWeight, commentWeight, limit));
+    }
+
+    /** topScores와 같은 점수로, 그 주제(topic 칸의 값, 예: IT_DEV)의 글만. 주제 없는 글은 어느 주제에도 없다. */
+    public List<PostScore> topScoresInTopic(String topic, LocalDateTime since, int viewWeight, int likeWeight,
+                                            int commentWeight, int limit) {
+        return query(BY_TOPIC, params(since, viewWeight, likeWeight, commentWeight, limit).addValue("topic", topic));
+    }
+
+    private List<PostScore> query(String sql, MapSqlParameterSource params) {
+        return jdbcTemplate.query(sql, params,
+                (row, rowNum) -> new PostScore(row.getLong("post_id"), row.getLong("score")));
+    }
+
+    private static MapSqlParameterSource params(LocalDateTime since, int viewWeight, int likeWeight,
+                                                int commentWeight, int limit) {
+        return new MapSqlParameterSource()
                 .addValue("since", since)
                 .addValue("viewWeight", viewWeight)
                 .addValue("likeWeight", likeWeight)
                 .addValue("commentWeight", commentWeight)
                 .addValue("limit", limit);
-        return jdbcTemplate.query(SQL, params,
-                (row, rowNum) -> new PostScore(row.getLong("post_id"), row.getLong("score")));
     }
 
 }
