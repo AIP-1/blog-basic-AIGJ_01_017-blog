@@ -13,10 +13,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.jayway.jsonpath.JsonPath;
+import com.nhnacademy.blog.global.web.TimeIdCursor;
 import com.nhnacademy.blog.support.TestEmails;
 import jakarta.servlet.http.Cookie;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -97,9 +99,7 @@ class QuickstartScenarioIntegrationTest extends IntegrationTestSupport {
 
         // 4. 로그아웃 → 비회원으로 홈 최신 글에 그 글이 보임
         send(post("/api/auth/logout"), PLATFORM, a.cookies(), null).andExpect(status().isNoContent());
-        String latest = send(get("/api/home/latest"), PLATFORM, null, null).andReturn().getResponse()
-                .getContentAsString();
-        assertThat(ids(latest, "$.content[*].id")).contains(postId);
+        assertThat(latestAt(postId)).contains(postId);
 
         // 5. B 가입·로그인 → 글 열람 → 댓글 → 공감, 새로고침해도 1, 다시 눌러도 1
         User b = login(signup("B"));
@@ -156,16 +156,14 @@ class QuickstartScenarioIntegrationTest extends IntegrationTestSupport {
         // A가 비공개로 → B·비회원은 404, 홈·목록·글 수에서 빠짐, 다른 블로그 주소로도 404 (바꾸기 전에는 1)
         send(get("/api/posts"), alphaHost, null, null).andExpect(jsonPath("$.totalElements").value(1));
         send(get("/api/categories"), alphaHost, null, null).andExpect(jsonPath("$.totalCount").value(1));
-        assertThat(ids(send(get("/api/home/latest"), PLATFORM, null, null).andReturn().getResponse()
-                .getContentAsString(), "$.content[*].id")).contains(postId);
+        assertThat(latestAt(postId)).contains(postId);
         send(patch("/api/posts/" + postId + "/visibility"), alphaHost, a.cookies(), "{\"visibility\":\"PRIVATE\"}")
                 .andExpect(status().isNoContent());
         send(get("/api/posts/" + postId), alphaHost, b.cookies(), null).andExpect(status().isNotFound());
         send(get("/api/posts/" + postId), alphaHost, null, null).andExpect(status().isNotFound());
         send(get("/api/posts"), alphaHost, null, null).andExpect(jsonPath("$.totalElements").value(0));
         send(get("/api/categories"), alphaHost, null, null).andExpect(jsonPath("$.totalCount").value(0));
-        assertThat(ids(send(get("/api/home/latest"), PLATFORM, null, null).andReturn().getResponse()
-                .getContentAsString(), "$.content[*].id")).doesNotContain(postId);
+        assertThat(latestAt(postId)).doesNotContain(postId);
         send(get("/" + postId), betaHost, null, null).andExpect(status().isNotFound());
 
         // B가 관리자 API → 403
@@ -189,6 +187,19 @@ class QuickstartScenarioIntegrationTest extends IntegrationTestSupport {
         send(get("/api/posts").param("page", "999"), alphaHost, null, null)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content.length()").value(0));
+    }
+
+    /**
+     * 홈 최신 글을 이 글이 있어야 할 자리부터 읽는다(커서 = 이 글의 발행 시각, 이 글 번호 + 1).
+     * 다른 테스트가 미래 시각 글을 만들어 두어 첫 페이지에 이 글이 없을 수 있어서다(테스트끼리 DB를 같이 씀).
+     */
+    private List<Long> latestAt(long postId) throws Exception {
+        LocalDateTime publishedAt = jdbcTemplate.queryForObject(
+                "SELECT published_at FROM post WHERE id = ?", LocalDateTime.class, postId);
+        String cursor = new TimeIdCursor(publishedAt, postId + 1).encode();
+        String body = send(get("/api/home/latest").param("cursor", cursor), PLATFORM, null, null)
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        return ids(body, "$.content[*].id");
     }
 
     private record User(String email, String password, Cookie[] cookies) {
