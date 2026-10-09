@@ -13,10 +13,17 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     /** 같은 블로그의 최상위 카테고리 중 같은 이름이 있는가. 대소문자는 DB 정렬 규칙(ai_ci)대로 같게 본다. */
     boolean existsByBlogIdAndParentIsNullAndName(Long blogId, String name);
 
+    /** 같은 상위 아래 하위 카테고리 중 같은 이름이 있는가 (CAT-03). */
+    boolean existsByParentIdAndName(Long parentId, String name);
+
     boolean existsByParentId(Long parentId);
 
     /** 새 최상위 카테고리를 맨 아래에 두기 위한 지금 가장 큰 순서. 없으면 -1. */
     @Query("select coalesce(max(c.sortOrder), -1) from Category c where c.blog.id = :blogId and c.parent is null")
     int findMaxRootSortOrder(@Param("blogId") Long blogId);
+
+    /** 새 하위 카테고리를 그 상위의 맨 아래에 두기 위한 지금 가장 큰 순서. 없으면 -1. */
+    @Query("select coalesce(max(c.sortOrder), -1) from Category c where c.parent.id = :parentId")
+    int findMaxChildSortOrder(@Param("parentId") Long parentId);
 
 }

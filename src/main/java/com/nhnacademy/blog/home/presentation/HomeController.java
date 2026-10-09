@@ -1,6 +1,8 @@
 package com.nhnacademy.blog.home.presentation;
 
 import com.nhnacademy.blog.global.auth.LoginMembers;
+import com.nhnacademy.blog.global.error.BusinessException;
+import com.nhnacademy.blog.global.error.ErrorCode;
 import com.nhnacademy.blog.global.web.CursorResponse;
 import com.nhnacademy.blog.global.web.DateTimes;
 import com.nhnacademy.blog.global.web.TimeIdCursor;
@@ -9,16 +11,19 @@ import com.nhnacademy.blog.home.application.PopularPosts;
 import com.nhnacademy.blog.home.presentation.dto.PopularPostsResponse;
 import com.nhnacademy.blog.image.application.PostThumbnails;
 import com.nhnacademy.blog.post.domain.Post;
+import com.nhnacademy.blog.post.domain.Topic;
 import com.nhnacademy.blog.post.presentation.dto.PostSummaryResponse;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.IntStream;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 홈 최신 글 (T042, HOME-01)과 인기 글 (T063, HOME-02). 플랫폼 주소에서 부른다. 주제별 글은 스텝 9에서 더한다.
+ * 홈 최신 글 (T042, HOME-01), 인기 글 (T063, HOME-02), 주제별 글 (T064, HOME-03). 플랫폼 주소에서 부른다.
  */
 @RestController
 public class HomeController {
@@ -53,6 +58,20 @@ public class HomeController {
                 .mapToObj(i -> new PopularPostsResponse.Item(i + 1, PostSummaryResponse.of(posts.get(i),
                         posts.get(i).getBlog(), thumbnails.get(posts.get(i).getId()))))
                 .toList());
+    }
+
+    /** 주제 탭의 글 6개. 주제 code(IT_DEV 등)가 아니면 404. */
+    @GetMapping("/api/home/topics/{topic}")
+    public List<PostSummaryResponse> topicPosts(@PathVariable String topic) {
+        Topic found = Arrays.stream(Topic.values())
+                .filter(value -> value.name().equals(topic))
+                .findFirst()
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        List<Post> posts = homeService.topicPosts(found);
+        Map<Long, String> thumbnails = postThumbnails.of(posts);
+        return posts.stream()
+                .map(post -> PostSummaryResponse.of(post, post.getBlog(), thumbnails.get(post.getId())))
+                .toList();
     }
 
 }

@@ -3,6 +3,7 @@ package com.nhnacademy.blog.search.application;
 import com.nhnacademy.blog.blog.domain.Blog;
 import com.nhnacademy.blog.global.error.BusinessException;
 import com.nhnacademy.blog.global.visibility.PostSpecifications;
+import com.nhnacademy.blog.global.web.LikePatterns;
 import com.nhnacademy.blog.global.web.PageQuery;
 import com.nhnacademy.blog.post.domain.Post;
 import com.nhnacademy.blog.post.domain.PostRepository;
@@ -29,7 +30,6 @@ public class SearchService {
     public static final int MAX_QUERY_LENGTH = 100;
 
     private static final Sort LATEST = Sort.by(Sort.Order.desc("publishedAt"), Sort.Order.desc("id"));
-    private static final char ESCAPE = '\\';
 
     private final PostRepository postRepository;
     private final Clock clock;
@@ -42,16 +42,16 @@ public class SearchService {
     @Transactional(readOnly = true)
     public Page<Post> search(Blog blog, Long viewerId, String rawQuery, PageQuery page) {
         String query = normalize(rawQuery);
-        String pattern = "%" + escapeLike(query) + "%";
+        String pattern = LikePatterns.contains(query);
         Specification<Post> matches = (root, criteria, cb) -> {
             // 태그 이름은 글마다 여럿이라, 조인하면 같은 글이 여러 번 나온다. 그래서 EXISTS 부분 쿼리로 본다
             Subquery<Long> tagged = criteria.subquery(Long.class);
             Root<Post> sameRow = tagged.correlate(root);
             Join<Post, Tag> tag = sameRow.join("tags");
-            tagged.select(tag.get("id")).where(cb.like(tag.get("name"), pattern, ESCAPE));
+            tagged.select(tag.get("id")).where(cb.like(tag.get("name"), pattern, LikePatterns.ESCAPE));
             return cb.or(
-                    cb.like(root.get("title"), pattern, ESCAPE),
-                    cb.like(root.get("contentText"), pattern, ESCAPE),
+                    cb.like(root.get("title"), pattern, LikePatterns.ESCAPE),
+                    cb.like(root.get("contentText"), pattern, LikePatterns.ESCAPE),
                     cb.exists(tagged));
         };
         return postRepository.findAll(
@@ -69,11 +69,6 @@ public class SearchService {
             throw BusinessException.invalidField("q", "검색어는 " + MAX_QUERY_LENGTH + "자까지입니다.");
         }
         return query;
-    }
-
-    /** LIKE의 특수 문자(%, _)를 글자 그대로 찾게 한다. 안 하면 "100%"가 "100"으로 시작하는 모든 글에 걸린다. */
-    static String escapeLike(String query) {
-        return query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 
 }

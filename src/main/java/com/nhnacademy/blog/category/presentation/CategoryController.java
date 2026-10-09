@@ -9,6 +9,7 @@ import com.nhnacademy.blog.category.presentation.dto.CategoryTreeResponse;
 import com.nhnacademy.blog.global.auth.BlogOwnerGuard;
 import com.nhnacademy.blog.global.auth.LoginMember;
 import com.nhnacademy.blog.global.auth.LoginMembers;
+import com.nhnacademy.blog.global.error.BusinessException;
 import com.nhnacademy.blog.global.host.CurrentBlog;
 import com.nhnacademy.blog.global.web.RequestValidator;
 import org.springframework.http.HttpStatus;
@@ -54,7 +55,7 @@ public class CategoryController {
                                           @RequestBody CategoryRequest request) {
         blogOwnerGuard.requireOwner(blog, member);
         requestValidator.validate(request);
-        return CategoryCreatedResponse.from(categoryService.create(blog, request.name()));
+        return CategoryCreatedResponse.from(categoryService.create(blog, request.name(), request.parentId()));
     }
 
     @PatchMapping("/api/categories/{id}")
@@ -64,6 +65,9 @@ public class CategoryController {
         categoryService.find(blog, id);
         blogOwnerGuard.requireOwner(blog, member);
         requestValidator.validate(request);
+        if (request.parentId() != null) {
+            throw BusinessException.invalidField("parentId", "상위 카테고리는 이름 변경에서 바꿀 수 없습니다.");
+        }
         categoryService.rename(blog, id, request.name());
     }
 

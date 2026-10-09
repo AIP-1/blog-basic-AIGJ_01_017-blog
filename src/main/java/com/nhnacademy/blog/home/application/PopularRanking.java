@@ -1,6 +1,7 @@
 package com.nhnacademy.blog.home.application;
 
 import com.nhnacademy.blog.home.domain.PopularScoreRepository;
+import com.nhnacademy.blog.post.domain.Topic;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import org.springframework.cache.annotation.Cacheable;
@@ -17,12 +18,16 @@ import org.springframework.stereotype.Component;
 public class PopularRanking {
 
     public static final String CACHE = "popularPosts";
+    public static final String TOPIC_CACHE = "topicPosts";
 
     /**
      * 순위 후보 수. 읽을 때 블로그 이용 제한 등으로 빠지는 글이 있어도 10개를 채울 수 있게 넉넉히 둔다.
      * 랭킹 전체보기(HOME-05, 100위까지)가 생기면 같은 값을 쓴다.
      */
     static final int CANDIDATES = 100;
+
+    /** 주제별 글은 6개만 보이므로 후보도 적게 둔다. 모자라면 최신 글로 채운다(HomeService). */
+    static final int TOPIC_CANDIDATES = 30;
 
     private final PopularScoreRepository popularScoreRepository;
     private final PopularProperties properties;
@@ -43,6 +48,18 @@ public class PopularRanking {
         LocalDateTime now = LocalDateTime.now(clock);
         return new PopularSnapshot(now, popularScoreRepository.topScores(now.minus(properties.window()),
                 properties.viewWeight(), properties.likeWeight(), properties.commentWeight(), CANDIDATES));
+    }
+
+    /**
+     * 주제별 인기 순위 (T064, HOME-03). 홈 인기 글과 같은 점수, 같은 5분 캐시이고 주제마다 키가 따로다
+     * (Redis 키 blog:topicPosts::IT_DEV 등).
+     */
+    @Cacheable(cacheNames = TOPIC_CACHE, key = "#topic.name()", sync = true)
+    public PopularSnapshot topicSnapshot(Topic topic) {
+        LocalDateTime now = LocalDateTime.now(clock);
+        return new PopularSnapshot(now, popularScoreRepository.topScoresInTopic(topic.name(),
+                now.minus(properties.window()), properties.viewWeight(), properties.likeWeight(),
+                properties.commentWeight(), TOPIC_CANDIDATES));
     }
 
 }

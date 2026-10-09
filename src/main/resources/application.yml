@@ -48,6 +48,12 @@ app:
     cookie-secure: true
   idempotency:
     ttl: 10m
+  attempt-limit:
+    # 로그인 비밀번호·인증 코드·비밀번호 변경: window 안에 max-failures번 틀리면 마지막으로 틀린 때부터 window 동안 막음 (R-17)
+    max-failures: 5
+    # 같은 IP는 셋을 합쳐 ip-max-failures번. 여러 사람이 한 IP를 쓰는 경우를 생각해 넉넉히
+    ip-max-failures: 20
+    window: 15m
   popular:
     # 인기 점수 = 최근 window 동안 조회×view-weight + 공감×like-weight + 댓글×comment-weight (R-12, HOME-02)
     window: 1h

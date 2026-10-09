@@ -194,6 +194,6 @@ function signupErrors(error: unknown): FieldMessages {
     case 'VALIDATION_FAILED':
       return fieldMessages(error)
     default:
-      return { form: error.message }
+      return { form: errorMessage(error) }
   }
 }

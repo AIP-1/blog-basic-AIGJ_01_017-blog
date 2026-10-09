@@ -2,6 +2,7 @@ package com.nhnacademy.blog.auth.application;
 
 import com.nhnacademy.blog.auth.domain.Emails;
 import com.nhnacademy.blog.auth.domain.PasswordRule;
+import com.nhnacademy.blog.global.auth.AttemptLimiter;
 import com.nhnacademy.blog.global.auth.SuspensionDetails;
 import com.nhnacademy.blog.global.error.BusinessException;
 import com.nhnacademy.blog.global.error.ErrorCode;
@@ -26,17 +27,20 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final SuspensionDetails suspensionDetails;
     private final Clock clock;
+    private final AttemptLimiter attemptLimiter;
     /** 없는 이메일로 로그인할 때도 비밀번호를 비교해, 응답 시간으로 가입 여부를 알 수 없게 한다. */
     private final String dummyPasswordHash;
 
     public AuthService(MemberRepository memberRepository, EmailVerificationService emailVerificationService,
-                       PasswordEncoder passwordEncoder, SuspensionDetails suspensionDetails, Clock clock) {
+                       PasswordEncoder passwordEncoder, SuspensionDetails suspensionDetails, Clock clock,
+                       AttemptLimiter attemptLimiter) {
         this.memberRepository = memberRepository;
         this.emailVerificationService = emailVerificationService;
         this.passwordEncoder = passwordEncoder;
         this.suspensionDetails = suspensionDetails;
         this.clock = clock;
         this.dummyPasswordHash = passwordEncoder.encode("dummy-password-for-timing-1");
+        this.attemptLimiter = attemptLimiter;
     }
 
     /**
@@ -66,16 +70,21 @@ public class AuthService {
     /**
      * 이메일 로그인. 없는 이메일, 틀린 비밀번호, 탈퇴 회원, 소셜 가입 회원은 모두 같은 401 LOGIN_FAILED다.
      * 비밀번호가 맞은 뒤에만 정지 여부를 알려 준다(403 MEMBER_SUSPENDED, 사유·기한).
+     * 같은 이메일로 15분 안에 5번 틀리면 15분 동안 429다(T055a, R-17). 가입하지 않은 이메일도 똑같이 세서
+     * 막히는지로 가입 여부를 알 수 없다.
      */
     @Transactional(readOnly = true)
     public Member login(String rawEmail, String password) {
-        Optional<Member> found = memberRepository.findByEmail(Emails.normalize(rawEmail));
-        String hash = found.map(Member::getPasswordHash).orElse(null);
-        boolean matches = passwordEncoder.matches(password, hash == null ? dummyPasswordHash : hash);
-        if (hash == null || !matches || found.get().isWithdrawn()) {
-            throw new BusinessException(ErrorCode.LOGIN_FAILED);
-        }
-        Member member = found.get();
+        String email = Emails.normalize(rawEmail);
+        Member member = attemptLimiter.attempt("login:" + email, () -> {
+            Optional<Member> found = memberRepository.findByEmail(email);
+            String hash = found.map(Member::getPasswordHash).orElse(null);
+            boolean matches = passwordEncoder.matches(password, hash == null ? dummyPasswordHash : hash);
+            if (hash == null || !matches || found.get().isWithdrawn()) {
+                throw new BusinessException(ErrorCode.LOGIN_FAILED);
+            }
+            return found.get();
+        }, e -> e.getErrorCode() == ErrorCode.LOGIN_FAILED);
         if (member.isSuspendedAt(LocalDateTime.now(clock))) {
             throw new BusinessException(ErrorCode.MEMBER_SUSPENDED, suspensionDetails.of(member));
         }

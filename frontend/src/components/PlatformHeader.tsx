@@ -21,7 +21,7 @@ export default function PlatformHeader({ me }: { me: MeState }) {
           {me.me.primaryBlog
             ? <a className="btn primary" href={blogUrl(me.me.primaryBlog.address)}>내 블로그</a>
             : <Link className="btn primary" to="/blogs/new">블로그 만들기</Link>}
-          <span className="small">{me.me.nickname}</span>
+          <Link className="small" to="/me">{me.me.nickname}</Link>
           <LogoutButton />
         </div>
       )}

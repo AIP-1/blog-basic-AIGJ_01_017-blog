@@ -68,6 +68,11 @@ public class PostQueryService {
         return (root, query, cb) -> cb.equal(root.join("tags").get("id"), tag.getId());
     }
 
+    /** 비공개 카테고리와, 비공개 상위 아래의 하위 카테고리는 주인이 아니면 없는 것과 같다(사이드바 트리와 같은 규칙). */
+    private static boolean hiddenCategory(Category category) {
+        return category.isPrivateCategory() || (category.isChild() && category.getParent().isPrivateCategory());
+    }
+
     private Specification<Post> inCategory(Blog blog, Long viewerId, long categoryId) {
         if (categoryId == UNCATEGORIZED) {
             return (root, query, cb) -> cb.isNull(root.get("category"));
@@ -75,7 +80,7 @@ public class PostQueryService {
         // 다른 블로그의 카테고리, 주인이 아닌 사람에게 비공개 카테고리는 없는 것과 같다
         Category category = categoryRepository.findById(categoryId)
                 .filter(found -> found.getBlog().getId().equals(blog.getId()))
-                .filter(found -> !found.isPrivateCategory() || blog.isOwnedBy(viewerId))
+                .filter(found -> blog.isOwnedBy(viewerId) || !hiddenCategory(found))
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         return (root, query, cb) -> {
             var postCategory = root.join("category", JoinType.LEFT);

@@ -100,15 +100,87 @@ class CategoryIntegrationTest extends IntegrationTestSupport {
     }
 
     @Test
-    void nameMustBe1To30AndNoParentYet() throws Exception {
+    void nameMustBe1To30() throws Exception {
         create(ownerCookies, "{\"name\":\"   \"}")
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fieldErrors[0].field").value("name"));
         create(ownerCookies, "{\"name\":\"" + "가".repeat(31) + "\"}").andExpect(status().isBadRequest());
         create(ownerCookies, "{\"name\":\"" + "가".repeat(30) + "\"}").andExpect(status().isCreated());
-        create(ownerCookies, "{\"name\":\"하위\",\"parentId\":1}")
+    }
+
+    // ---------- 하위 카테고리 (T060, CAT-03) ----------
+
+    @Test
+    void subcategoriesGoUnderTheirParentInOrder() throws Exception {
+        long parent = id(create(ownerCookies, "{\"name\":\"개발\"}").andExpect(status().isCreated()));
+        create(ownerCookies, "{\"name\":\"여행\"}");
+        create(ownerCookies, "{\"name\":\"Spring\",\"parentId\":" + parent + "}")
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.parentId").value(parent))
+                .andExpect(jsonPath("$.sortOrder").value(0));
+        create(ownerCookies, "{\"name\":\"JPA\",\"parentId\":" + parent + "}")
+                .andExpect(jsonPath("$.sortOrder").value(1));
+        // 상위와 같은 이름의 하위는 된다(자리가 다르다)
+        create(ownerCookies, "{\"name\":\"개발\",\"parentId\":" + parent + "}").andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/categories").header(HttpHeaders.HOST, TestBlogs.host(blog)))
+                .andExpect(jsonPath("$.categories[*].name", contains("개발", "여행")))
+                .andExpect(jsonPath("$.categories[0].children[*].name", contains("Spring", "JPA", "개발")))
+                .andExpect(jsonPath("$.categories[1].children").isEmpty());
+    }
+
+    @Test
+    void subcategoryRulesDepthNamesAndParentOwnership() throws Exception {
+        long parent = id(create(ownerCookies, "{\"name\":\"개발\"}"));
+        long child = id(create(ownerCookies, "{\"name\":\"Spring\",\"parentId\":" + parent + "}"));
+
+        create(ownerCookies, "{\"name\":\"Boot\",\"parentId\":" + child + "}")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CATEGORY_DEPTH"));
+        create(ownerCookies, "{\"name\":\"spring\",\"parentId\":" + parent + "}")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("NAME_TAKEN"));
+        // 다른 상위 아래에는 같은 이름이 된다
+        long other = id(create(ownerCookies, "{\"name\":\"여행\"}"));
+        create(ownerCookies, "{\"name\":\"Spring\",\"parentId\":" + other + "}").andExpect(status().isCreated());
+        // 하위끼리 이름 바꾸기도 같은 자리에서만 겹치면 안 된다
+        long jpa = id(create(ownerCookies, "{\"name\":\"JPA\",\"parentId\":" + parent + "}"));
+        perform(patch("/api/categories/" + jpa), ownerCookies, "{\"name\":\"SPRING\"}")
+                .andExpect(status().isConflict());
+        perform(patch("/api/categories/" + jpa), ownerCookies, "{\"name\":\"여행\"}")
+                .andExpect(status().isNoContent());
+        perform(patch("/api/categories/" + jpa), ownerCookies, "{\"name\":\"JPA\",\"parentId\":" + other + "}")
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fieldErrors[0].field").value("parentId"));
+
+        Blog otherBlog = testBlogs.create(testMembers.create());
+        Category foreign = categoryRepository.save(Category.create(otherBlog, null, "남의 것", 0));
+        create(ownerCookies, "{\"name\":\"하위\",\"parentId\":" + foreign.getId() + "}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors[0].field").value("parentId"));
+    }
+
+    @Test
+    void parentListAndCountIncludeSubcategoryPosts() throws Exception {
+        Category parent = categoryRepository.save(Category.create(blog, null, "개발", 0));
+        Category child = categoryRepository.save(Category.create(blog, parent, "Spring", 0));
+        testPosts.published(blog, parent, Visibility.PUBLIC, LocalDateTime.now());
+        testPosts.published(blog, child, Visibility.PUBLIC, LocalDateTime.now());
+        testPosts.published(blog, child, Visibility.PRIVATE, LocalDateTime.now());
+
+        mockMvc.perform(get("/api/posts").param("categoryId", parent.getId().toString())
+                        .header(HttpHeaders.HOST, TestBlogs.host(blog)))
+                .andExpect(jsonPath("$.totalElements").value(2));
+        mockMvc.perform(get("/api/posts").param("categoryId", child.getId().toString())
+                        .header(HttpHeaders.HOST, TestBlogs.host(blog)))
+                .andExpect(jsonPath("$.totalElements").value(1));
+        mockMvc.perform(get("/api/categories").header(HttpHeaders.HOST, TestBlogs.host(blog)))
+                .andExpect(jsonPath("$.categories[0].postCount").value(2))
+                .andExpect(jsonPath("$.categories[0].children[0].postCount").value(1));
+    }
+
+    private static long id(ResultActions created) throws Exception {
+        return ((Number) JsonPath.read(created.andReturn().getResponse().getContentAsString(), "$.id")).longValue();
     }
 
     @Test

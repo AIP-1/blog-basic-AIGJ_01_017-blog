@@ -31,7 +31,8 @@ import org.springframework.test.web.servlet.ResultActions;
 
 /**
  * 홈 인기 글 (T063, HOME-02, spec US5 시나리오 6). 최근 1시간 조회×1 + 공감×3 + 댓글×5 순 공개 글 10개, 5분 캐시.
- * 다른 테스트의 활동보다 늘 위에 오도록 큰 점수를 준다. 활동 행은 SQL로 바로 넣는다.
+ * 활동 행은 SQL로 바로 넣는다. 테스트끼리 DB를 같이 쓰므로 다른 테스트의 글이 순위에 섞일 수 있어,
+ * 몇 위인지가 아니라 서로의 앞뒤와 빠졌는지를 본다.
  */
 class HomePopularIntegrationTest extends IntegrationTestSupport {
 
@@ -87,16 +88,16 @@ class HomePopularIntegrationTest extends IntegrationTestSupport {
 
         String body = popular()
                 .andExpect(jsonPath("$.snapshotAt").isString())
-                .andExpect(jsonPath("$.items[0].rank").value(1))
-                .andExpect(jsonPath("$.items[0].post.id").value(engaged.getId()))
-                .andExpect(jsonPath("$.items[0].post.blog.address").value(blog.getAddress()))
-                .andExpect(jsonPath("$.items[1].rank").value(2))
-                .andExpect(jsonPath("$.items[1].post.id").value(viewsOnly.getId()))
                 .andReturn().getResponse().getContentAsString();
-        List<Number> ids = JsonPath.read(body, "$.items[*].post.id");
+        List<Long> ids = ids(body);
         assertThat(ids).hasSizeLessThanOrEqualTo(10)
-                .map(Number::longValue)
+                .contains(engaged.getId(), viewsOnly.getId())
                 .doesNotContain(old.getId(), privatePost.getId(), restrictedPost.getId(), deletedComments.getId());
+        assertThat(ids.indexOf(engaged.getId())).isLessThan(ids.indexOf(viewsOnly.getId()));
+        int engagedIndex = ids.indexOf(engaged.getId());
+        assertThat((Integer) JsonPath.read(body, "$.items[" + engagedIndex + "].rank")).isEqualTo(engagedIndex + 1);
+        assertThat((String) JsonPath.read(body, "$.items[" + engagedIndex + "].post.blog.address"))
+                .isEqualTo(blog.getAddress());
     }
 
     @Test
@@ -107,29 +108,35 @@ class HomePopularIntegrationTest extends IntegrationTestSupport {
         Post second = testPosts.published(blog, Visibility.PUBLIC);
         views(second, 450, now);
 
-        String before = popular().andExpect(jsonPath("$.items[0].post.id").value(first.getId()))
-                .andReturn().getResponse().getContentAsString();
+        String before = popular().andReturn().getResponse().getContentAsString();
+        List<Long> beforeIds = ids(before);
+        int firstIndex = beforeIds.indexOf(first.getId());
+        assertThat(firstIndex).isNotNegative().isLessThan(beforeIds.indexOf(second.getId()));
 
         // 5분 안에는 점수가 바뀌어도 같은 순위·같은 기준 시각이다
         views(second, 100, now);
-        String cached = popular().andExpect(jsonPath("$.items[0].post.id").value(first.getId()))
-                .andExpect(jsonPath("$.items[1].post.id").value(second.getId()))
-                .andReturn().getResponse().getContentAsString();
+        String cached = popular().andReturn().getResponse().getContentAsString();
+        assertThat(ids(cached)).isEqualTo(beforeIds);
         assertThat((String) JsonPath.read(cached, "$.snapshotAt")).isEqualTo(JsonPath.read(before, "$.snapshotAt"));
 
-        // 캐시 안의 글이라도 비공개가 되면 바로 빠지고 다음 글이 1위가 된다
+        // 캐시 안의 글이라도 비공개가 되면 바로 빠지고, 다음 글이 그 자리로 올라온다(순위 번호도 이어진다)
         jdbcTemplate.update("UPDATE post SET visibility = 'PRIVATE' WHERE id = ?", first.getId());
-        String afterHidden = popular().andExpect(jsonPath("$.items[0].rank").value(1))
-                .andExpect(jsonPath("$.items[0].post.id").value(second.getId()))
-                .andReturn().getResponse().getContentAsString();
-        List<Number> ids = JsonPath.read(afterHidden, "$.items[*].post.id");
-        assertThat(ids).map(Number::longValue).doesNotContain(first.getId());
+        String afterHidden = popular().andReturn().getResponse().getContentAsString();
+        List<Long> hiddenIds = ids(afterHidden);
+        assertThat(hiddenIds).doesNotContain(first.getId());
+        assertThat(hiddenIds.indexOf(second.getId())).isEqualTo(firstIndex);
+        assertThat((Integer) JsonPath.read(afterHidden, "$.items[" + firstIndex + "].rank")).isEqualTo(firstIndex + 1);
 
         // 캐시가 비면(5분이 지나면) 새로 계산한다
         jdbcTemplate.update("UPDATE post SET visibility = 'PUBLIC' WHERE id = ?", first.getId());
         Objects.requireNonNull(cacheManager.getCache(PopularRanking.CACHE)).clear();
-        popular().andExpect(jsonPath("$.items[0].post.id").value(second.getId()))
-                .andExpect(jsonPath("$.items[1].post.id").value(first.getId()));
+        List<Long> recomputed = ids(popular().andReturn().getResponse().getContentAsString());
+        assertThat(recomputed.indexOf(second.getId())).isLessThan(recomputed.indexOf(first.getId()));
+    }
+
+    private static List<Long> ids(String body) {
+        List<Number> ids = JsonPath.read(body, "$.items[*].post.id");
+        return ids.stream().map(Number::longValue).toList();
     }
 
     private ResultActions popular() throws Exception {

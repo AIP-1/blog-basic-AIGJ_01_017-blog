@@ -22,7 +22,7 @@ public class Member extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** image.id. 이미지 엔티티는 스텝 7에서 만든다. */
+    /** image.id. 본인이 올린 이미지만 들어간다(MeService가 확인). */
     @Column(name = "profile_image_id")
     private Long profileImageId;
 
@@ -73,6 +73,20 @@ public class Member extends BaseTimeEntity {
     /** 지금 정지 중인가. 정지 종료 시각이 지났으면 정지가 아니다. 종료 시각이 없으면 영구 정지. */
     public boolean isSuspendedAt(LocalDateTime now) {
         return status == MemberStatus.SUSPENDED && (suspendedUntil == null || suspendedUntil.isAfter(now));
+    }
+
+    /** 회원정보 수정 (AUTH-05). 중복 검사는 MeService가 하고, 마지막 판단은 DB UNIQUE가 한다. */
+    public void changeNickname(String nickname) {
+        this.nickname = nickname;
+    }
+
+    public void changeProfileImage(Long profileImageId) {
+        this.profileImageId = profileImageId;
+    }
+
+    /** 이메일 가입 회원의 비밀번호 바꾸기. bcrypt 해시를 받는다. */
+    public void changePassword(String passwordHash) {
+        this.passwordHash = passwordHash;
     }
 
     public boolean isWithdrawn() {

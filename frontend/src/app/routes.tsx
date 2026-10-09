@@ -5,6 +5,7 @@ import SignupPage from '../pages/auth/SignupPage'
 import BlogCreatePage from '../pages/blog/BlogCreatePage'
 import BlogMainPage from '../pages/blog/BlogMainPage'
 import NotFoundPage from '../pages/error/NotFoundPage'
+import MyPage from '../pages/me/MyPage'
 import HomePage from '../pages/home/HomePage'
 import ManagePage from '../pages/manage/ManagePage'
 import PostPage from '../pages/post/PostPage'
@@ -18,6 +19,7 @@ export function PlatformRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/blogs/new" element={<BlogCreatePage />} />
+      <Route path="/me" element={<MyPage />} />
       <Route path="/admin/*" element={<AdminPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
