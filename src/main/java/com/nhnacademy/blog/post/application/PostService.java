@@ -17,6 +17,7 @@ import com.nhnacademy.blog.global.visibility.PostVisibilityPolicy;
 import com.nhnacademy.blog.post.domain.Post;
 import com.nhnacademy.blog.post.domain.PostBody;
 import com.nhnacademy.blog.post.domain.PostRepository;
+import com.nhnacademy.blog.post.domain.PostStatus;
 import com.nhnacademy.blog.post.domain.Visibility;
 import com.nhnacademy.blog.tag.application.TagService;
 import java.time.Clock;
@@ -27,7 +28,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 글 발행·수정·삭제·공개 범위 변경 (T031~T034, POST-01·02·03·06).
+ * 글 발행·임시저장·수정·삭제·공개 범위 변경 (T031~T034, T059, POST-01·02·03·06·08).
  * 본문은 저장하기 전에 서버가 허용 목록으로 정화하고, 요약은 정화된 본문에서 만든다(R-05).
  * 화면을 거치지 않은 요청도 같은 길을 지난다.
  */
@@ -62,14 +63,22 @@ public class PostService {
         this.clock = clock;
     }
 
-    /** 발행. 지금이 처음 발행 시각이고, 글 번호(id)가 곧 글 주소다. 주인 검사는 컨트롤러가 했다. */
+    /**
+     * 새 글: 발행 또는 임시저장. 발행이면 지금이 처음 발행 시각이고, 글 번호(id)가 곧 글 주소다.
+     * 임시저장 글은 발행 시각이 없고 주인에게만 보인다(가시성 판단이 PUBLISHED만 남에게 보여 준다).
+     * 주인 검사는 컨트롤러가 했다.
+     */
     @Transactional
-    public Post publish(Blog blog, PostCommand command) {
-        Post post = Post.published(blog, category(blog, command.categoryId()), command.title().trim(),
-                body(command.contentHtml()), command.visibility(), command.topic(), LocalDateTime.now(clock));
+    public Post create(Blog blog, PostCommand command) {
+        Category category = category(blog, command.categoryId());
+        PostBody body = body(command.contentHtml());
+        Post post = command.status() == PostStatus.DRAFT
+                ? Post.draft(blog, category, command.title(), body, command.visibility(), command.topic())
+                : Post.published(blog, category, command.title(), body, command.visibility(), command.topic(),
+                        LocalDateTime.now(clock));
         post.replaceTags(tagService.resolve(blog, command.tagNames()));
         Post saved = postRepository.save(post);
-        // 받는 쪽(추천 임베딩)은 이 트랜잭션이 커밋된 뒤에 움직인다(@TransactionalEventListener)
+        // 받는 쪽(추천 임베딩)은 이 트랜잭션이 커밋된 뒤에 움직인다(@TransactionalEventListener). 임시저장 글은 건너뛴다
         events.publishEvent(new PostContentChangedEvent(saved.getId()));
         return saved;
     }
@@ -102,15 +111,22 @@ public class PostService {
     }
 
     /**
-     * 수정 (POST-02). 숨긴 글은 고칠 수 없다.
+     * 수정 (POST-02)과 임시저장 글 다시 저장·발행 (POST-08). 숨긴 글은 고칠 수 없다.
+     * 임시저장 글을 PUBLISHED로 저장하면 이때가 처음 발행 시각이다. 발행한 글은 임시저장으로 되돌릴 수 없다(400).
      * findEditable이 이 트랜잭션 안에서 읽은 글이라, 바꾼 값은 트랜잭션이 끝날 때 저장된다(변경 감지).
      */
     @Transactional
     public Post edit(Blog blog, Long postId, LoginMember member, PostCommand command) {
         Post post = findEditable(blog, postId, member);
-        post.edit(category(blog, command.categoryId()), command.title().trim(), body(command.contentHtml()),
+        if (command.status() == PostStatus.DRAFT && !post.isDraft()) {
+            throw BusinessException.invalidField("status", "발행한 글은 임시저장으로 되돌릴 수 없습니다. 비공개로 바꿔 주세요.");
+        }
+        post.edit(category(blog, command.categoryId()), command.title(), body(command.contentHtml()),
                 command.visibility(), command.topic());
         post.replaceTags(tagService.resolve(blog, command.tagNames()));
+        if (command.status() == PostStatus.PUBLISHED) {
+            post.publish(LocalDateTime.now(clock));
+        }
         events.publishEvent(new PostContentChangedEvent(post.getId()));
         return post;
     }

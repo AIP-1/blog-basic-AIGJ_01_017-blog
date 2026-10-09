@@ -48,16 +48,19 @@ public class PostManageController {
         this.blogHostResolver = blogHostResolver;
     }
 
-    /** 발행 (T031). Idempotency-Key가 필수이고, 같은 키로 두 번 오면 처음 응답을 그대로 준다(SC-004). */
+    /**
+     * 새 글 발행·임시저장 (T031, T059). Idempotency-Key가 필수이고, 같은 키로 두 번 오면 처음 응답을 그대로 준다(SC-004).
+     * 임시저장도 처음 한 번은 이 경로이고, 그 뒤 저장(자동 저장 포함)은 PUT이다.
+     */
     @Idempotent
     @PostMapping("/api/posts")
-    public ResponseEntity<PostSavedResponse> publish(@CurrentBlog Blog blog,
+    public ResponseEntity<PostSavedResponse> create(@CurrentBlog Blog blog,
                                                      @AuthenticationPrincipal LoginMember member,
                                                      @RequestBody PostSaveRequest request,
                                                      HttpServletRequest httpRequest) {
         blogOwnerGuard.requireOwner(blog, member);
         requestValidator.validate(request).checkSupported();
-        Post post = postService.publish(blog, request.toCommand());
+        Post post = postService.create(blog, request.toCommand());
         String url = postUrl(httpRequest, blog, post);
         return ResponseEntity.created(URI.create(url)).body(PostSavedResponse.of(post, url));
     }

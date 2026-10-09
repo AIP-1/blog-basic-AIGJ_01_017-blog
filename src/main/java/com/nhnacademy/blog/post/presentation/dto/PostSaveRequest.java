@@ -7,7 +7,6 @@ import com.nhnacademy.blog.post.application.PostCommand;
 import com.nhnacademy.blog.post.domain.PostStatus;
 import com.nhnacademy.blog.post.domain.Topic;
 import com.nhnacademy.blog.post.domain.Visibility;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDateTime;
@@ -16,11 +15,11 @@ import java.util.List;
 
 /**
  * 글 저장 본문 (contracts/rest-api.md 글 저장 본문). POST /api/posts, PUT /api/posts/{id}가 같이 쓴다.
- * 발행(PUBLISHED)과 공개·비공개, 태그(스텝 7)가 된다. 나머지 칸은 기능이 생기는 스텝에서 받고,
- * 그 전에 값을 보내면 조용히 버리지 않고 400으로 알린다(checkSupported).
+ * 발행(PUBLISHED)·임시저장(DRAFT, 스텝 13)과 공개·비공개, 태그(스텝 7), 대표 이미지(스텝 13)가 된다.
+ * 나머지 칸은 기능이 생기는 스텝에서 받고, 그 전에 값을 보내면 조용히 버리지 않고 400으로 알린다(checkSupported).
+ * 제목은 발행할 때만 필수다. 임시저장은 제목이 비어도 된다(contracts 글 저장 본문 status 표).
  */
 public record PostSaveRequest(
-        @NotBlank(message = "제목을 입력해 주세요.")
         @Size(max = 200, message = "제목은 200자까지입니다.")
         String title,
 
@@ -44,12 +43,17 @@ public record PostSaveRequest(
 
         Boolean commentAllowed) {
 
-    /** 아직 없는 기능의 값이 오면 400. 각 칸이 언제 열리는지는 메시지 옆 주석. */
+    /**
+     * 칸 형식 검사(Bean Validation) 뒤에 부른다. 발행인데 제목이 비었거나, 아직 없는 기능의 값이 오면 400.
+     * 각 칸이 언제 열리는지는 메시지 옆 주석.
+     */
     public void checkSupported() {
         List<FieldErrorDetail> errors = new ArrayList<>();
-        if (status != PostStatus.PUBLISHED) {
-            // 임시저장(POST-08), 예약 발행(POST-13)은 백로그
-            errors.add(new FieldErrorDetail("status", "지금은 바로 발행만 할 수 있습니다."));
+        if (status == PostStatus.PUBLISHED && (title == null || title.isBlank())) {
+            errors.add(new FieldErrorDetail("title", "제목을 입력해 주세요."));
+        }
+        if (status == PostStatus.SCHEDULED) {
+            errors.add(new FieldErrorDetail("status", "예약 발행은 아직 할 수 없습니다.")); // POST-13
         }
         if (visibility == Visibility.SUBSCRIBERS) {
             // 구독(SUB-01)이 생기기 전에는 구독자 공개를 막는다 (contracts 글 저장 본문, review C-7)
@@ -70,7 +74,8 @@ public record PostSaveRequest(
     }
 
     public PostCommand toCommand() {
-        return new PostCommand(title, contentHtml == null ? "" : contentHtml, categoryId, topic, visibility, tagNames);
+        return new PostCommand(title == null ? "" : title.trim(), contentHtml == null ? "" : contentHtml, categoryId,
+                topic, visibility, tagNames, status, thumbnailImageId);
     }
 
 }

@@ -154,6 +154,21 @@ public class Post extends BaseTimeEntity {
     }
 
     /**
+     * 임시저장 글을 발행한다 (POST-08). 지금이 처음 발행 시각이다. 이미 발행한 글이면 아무것도 바꾸지 않는다.
+     */
+    public void publish(LocalDateTime now) {
+        if (status == PostStatus.PUBLISHED) {
+            return;
+        }
+        this.status = PostStatus.PUBLISHED;
+        this.publishedAt = now;
+    }
+
+    public boolean isDraft() {
+        return status == PostStatus.DRAFT;
+    }
+
+    /**
      * 태그를 이 목록으로 바꾼다. 빠진 태그의 연결 행만 지우고 새 태그의 연결 행만 넣는다(그대로인 태그는 건드리지 않음).
      * 빠진 태그도 블로그 태그(tag 행)는 남는다.
      */
