@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 가입·로그인·로그아웃 (AUTH-01, AUTH-02). 성공하면 로그인 쿠키를 함께 준다.
+ * 가입·로그인·로그아웃·토큰 재발급 (AUTH-01, AUTH-02, AUTH-03). 성공하면 로그인 쿠키를 함께 준다.
  */
 @RestController
 public class AuthController {
@@ -64,6 +64,17 @@ public class AuthController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void logout(HttpServletRequest request, HttpServletResponse response) {
         cookieManager.logout(request, response);
+    }
+
+    /**
+     * Access 쿠키 재발급 (AUTH-03). Access 토큰이 끝났고 Refresh 토큰이 살아 있으면 앞단 필터가 이미 새 Access 쿠키를 줬다.
+     * 여기까지 로그인 상태로 왔으면 204, Refresh 토큰도 없거나 끝났으면(탈퇴 포함) 401이다.
+     * 정지 회원은 다른 API와 같이 필터가 403 MEMBER_SUSPENDED로 막는다.
+     */
+    @PostMapping("/api/auth/token/refresh")
+    @PreAuthorize("isAuthenticated()")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void refresh() {
     }
 
     @GetMapping("/api/auth/nickname-availability")
