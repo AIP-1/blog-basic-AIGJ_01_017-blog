@@ -27,6 +27,7 @@ import org.springframework.test.web.servlet.ResultActions;
 
 /**
  * 비밀번호·인증 코드 시도 제한 (T055a, R-17). 15분 안에 5번 틀리면 다섯 번째로 틀린 때부터 15분 동안 429.
+ * 같은 IP는 셋을 합쳐 15분 안에 20번. 다른 테스트의 요청은 요청마다 다른 IP다(TestWebConfiguration).
  */
 class AttemptLimitIntegrationTest extends IntegrationTestSupport {
 
@@ -126,6 +127,41 @@ class AttemptLimitIntegrationTest extends IntegrationTestSupport {
         // 다른 회원은 상관없다
         Member other = testMembers.createWithPassword("right1234");
         changePassword(testMembers.loginCookies(other), "right1234").andExpect(status().isNoContent());
+    }
+
+    @Test
+    void sameIpIsLockedAfterTwentyFailuresAcrossDifferentEmails() throws Exception {
+        String ip = "192.0.2." + (1 + (int) (Math.random() * 250));
+        Member member = testMembers.createWithPassword("right1234");
+        // 비밀번호 하나를 이메일 20개에 돌려 본다(이메일마다 1번이라 이메일별 제한에는 안 걸림)
+        for (int i = 0; i < 19; i++) {
+            login(TestEmails.unique(), "wrong1234", ip).andExpect(status().isUnauthorized());
+        }
+        // 맞혀도 IP 횟수는 지우지 않는다
+        login(member.getEmail(), "right1234", ip).andExpect(status().isOk());
+        login(TestEmails.unique(), "wrong1234", ip).andExpect(status().isUnauthorized());
+
+        String body = login(TestEmails.unique(), "wrong1234", ip)
+                .andExpect(status().isTooManyRequests())
+                .andReturn().getResponse().getContentAsString();
+        assertThat(((Number) JsonPath.read(body, "$.detail.retryAfterSeconds")).longValue()).isBetween(890L, 900L);
+        // 같은 IP는 맞는 비밀번호도 막힌다. 막혀서 확인하지 않은 시도는 그 이메일의 횟수에 들어가지 않는다
+        login(member.getEmail(), "right1234", ip).andExpect(status().isTooManyRequests());
+        assertThat(redis.opsForValue().get("attempt:login:" + member.getEmail())).isEqualTo("0");
+        // 다른 IP는 상관없다
+        login(member.getEmail(), "right1234", "198.51.100.7").andExpect(status().isOk());
+        redis.delete("attempt:ip:" + ip);
+    }
+
+    private ResultActions login(String email, String password, String ip) throws Exception {
+        return mockMvc.perform(post("/api/auth/login")
+                .with(request -> {
+                    request.setRemoteAddr(ip);
+                    return request;
+                })
+                .header("X-Requested-With", "XMLHttpRequest")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"%s\",\"password\":\"%s\"}".formatted(email, password)));
     }
 
     private ResultActions login(String email, String password) throws Exception {
