@@ -68,6 +68,11 @@ export default function LoginPage() {
             <input type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} />
             로그인 상태 유지
           </label>
+          <span className="hint" style={{ marginTop: -8 }}>
+            {rememberMe
+              ? '브라우저를 닫아도 14일 동안 로그인이 유지됩니다. 여럿이 쓰는 컴퓨터에서는 고르지 마세요.'
+              : '고르지 않으면 브라우저를 닫거나 30분 동안 아무것도 하지 않을 때 로그아웃됩니다.'}
+          </span>
           {error && <p className="err">{error}</p>}
           {suspension && (
             <div className="box danger" role="alert">

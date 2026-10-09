@@ -1,9 +1,11 @@
 import { type FormEvent, useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router'
 import { ApiError, api, redirectToLogin } from '../../api/client'
 import { type FieldMessages, errorMessage, fieldMessages } from '../../api/errors'
 import type { Blog } from '../../api/types'
 import { PLATFORM_DOMAIN, blogUrl } from '../../app/host'
 import { useMe } from '../../app/useMe'
+import { FROM_WRITE } from '../../app/writeLink'
 import PlatformHeader from '../../components/PlatformHeader'
 
 const REASON_MESSAGES: Record<string, string> = {
@@ -15,9 +17,12 @@ const REASON_MESSAGES: Record<string, string> = {
 /**
  * 블로그 개설 (BLOG-01). 주소와 이름을 따로 받고, 주소는 나중에 바꿀 수 없다고 미리 알린다.
  * 만들면 새 블로그의 관리 화면으로 간다.
+ * 블로그가 없는 회원이 글쓰기를 눌러 왔으면(?from=write) 먼저 블로그가 필요하다고 안내하고, 만든 뒤 바로 글쓰기로 보낸다 (AUTH-04).
  */
 export default function BlogCreatePage() {
   const me = useMe()
+  const [params] = useSearchParams()
+  const fromWrite = params.get('from') === FROM_WRITE
   const [address, setAddress] = useState('')
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -58,7 +63,7 @@ export default function BlogCreatePage() {
         method: 'POST',
         body: { address, name: name.trim(), description: description.trim() || null },
       })
-      window.location.assign(blogUrl(blog.address, '/manage'))
+      window.location.assign(blogUrl(blog.address, fromWrite ? '/manage/write' : '/manage'))
     } catch (error) {
       setErrors(createErrors(error))
       setSubmitting(false)
@@ -73,6 +78,12 @@ export default function BlogCreatePage() {
       <PlatformHeader me={me} />
       <main className="page narrow">
         <h2 style={{ fontSize: 22 }}>블로그 만들기</h2>
+        {fromWrite && (
+          <div className="box" role="status">
+            <b>글을 쓰려면 먼저 블로그가 필요합니다</b>
+            <span className="small">블로그를 만들면 바로 글쓰기 화면으로 이어집니다.</span>
+          </div>
+        )}
         <form className="stack" style={{ gap: 14 }} onSubmit={submit} noValidate>
           <div className="field">
             <label className="label" htmlFor="address">블로그 주소</label>
