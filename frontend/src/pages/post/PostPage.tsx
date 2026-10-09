@@ -11,6 +11,7 @@ import Comments from '../../components/Comments'
 import LikeButton from '../../components/LikeButton'
 import ErrorPage from '../../components/ErrorPage'
 import Sidebar from '../../components/Sidebar'
+import SimilarPosts from '../../components/SimilarPosts'
 
 type PostState = { status: 'loading' } | { status: 'ok'; post: PostDetail } | { status: 'notFound' }
   | { status: 'subscribersOnly'; blogName: string } | { status: 'error' }
@@ -19,6 +20,7 @@ type PostState = { status: 'loading' } | { status: 'ok'; post: PostDetail } | { 
  * 글 상세 (POST-04, POST-10). 본문은 서버가 정화해 저장했고, 넣기 전에 DOMPurify로 한 번 더 거른다(이중 정화).
  * 볼 수 없는 글이면 404 화면이다. 주인에게만 수정·삭제 버튼이 보이지만, 권한은 서버가 다시 검사한다.
  * 본문이 보인 뒤 조회 기록을 남긴다(POST-09). 화면의 조회수는 이번 조회를 세기 전 값이다.
+ * 이전·다음 글 아래에 비슷한 글(OWN-06)을 보여 준다.
  */
 export default function PostPage() {
   const { postId } = useParams()
@@ -148,6 +150,7 @@ function Article({ post, me, onDelete, onCommentCount }: {
         <span>이전 글 {post.prev ? <Link to={`/${post.prev.id}`}>{post.prev.title}</Link> : <span className="muted">없음</span>}</span>
         <span>다음 글 {post.next ? <Link to={`/${post.next.id}`}>{post.next.title}</Link> : <span className="muted">없음</span>}</span>
       </nav>
+      <SimilarPosts key={`similar-${post.id}`} postId={post.id} />
       <Comments key={`comments-${post.id}`} postId={post.id} me={me} commentAllowed={post.commentAllowed}
                 onCountChange={onCommentCount} />
     </article>
