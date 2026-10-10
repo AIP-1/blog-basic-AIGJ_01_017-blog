@@ -6,6 +6,7 @@ import { formatDateTime } from '../../app/format'
 import { sanitizePostHtml } from '../../app/sanitize'
 import { useBlog } from '../../app/useBlog'
 import { useMe } from '../../app/useMe'
+import AuthorName from '../../components/AuthorName'
 import BlogHeader from '../../components/BlogHeader'
 import Comments from '../../components/Comments'
 import LikeButton from '../../components/LikeButton'
@@ -118,7 +119,7 @@ function Article({ post, me, onDelete, onCommentCount }: {
         <div className="small muted">{post.category?.name ?? '미분류'}</div>
         <h1>{post.title}</h1>
         <div className="row small muted num">
-          <span>{post.author.nickname}</span>
+          <AuthorName author={post.author} />
           {post.publishedAt && <span>{formatDateTime(post.publishedAt)}</span>}
           {post.updatedAt && <span>수정 {formatDateTime(post.updatedAt)}</span>}
           <span>조회 {post.viewCount.toLocaleString()}</span>

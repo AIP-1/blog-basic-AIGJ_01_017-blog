@@ -4,6 +4,7 @@ import { errorMessage, fieldMessages } from '../api/errors'
 import type { Comment, CommentList } from '../api/types'
 import { formatDateTime } from '../app/format'
 import type { MeState } from '../app/useMe'
+import AuthorName from './AuthorName'
 import { afterDelete } from './commentList'
 
 const MAX_LENGTH = 1000
@@ -198,7 +199,7 @@ function CommentItem({ comment, onDelete, onReply, isReply = false }: {
           : (
             <>
               <div className="row small">
-                <b>{comment.author?.nickname}</b>
+                {comment.author && <AuthorName author={comment.author} bold />}
                 <span className="muted num">{formatDateTime(comment.createdAt)}</span>
               </div>
               {comment.blind && <p className="err">관리자가 숨긴 댓글입니다. 사유: {comment.blind.reasonMessage}</p>}

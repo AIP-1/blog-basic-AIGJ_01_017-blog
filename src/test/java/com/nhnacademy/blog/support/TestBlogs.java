@@ -26,6 +26,12 @@ public class TestBlogs {
         return blogRepository.save(Blog.open(owner, address, "블로그 " + address, false));
     }
 
+    /** 회원의 대표 블로그. 대표는 회원마다 하나라(UNIQUE primary_owner_id) 대표가 없는 회원에게만 쓴다. */
+    public Blog createPrimary(Member owner) {
+        String address = "t" + UUID.randomUUID().toString().replace("-", "").substring(0, 10);
+        return blogRepository.save(Blog.open(owner, address, "블로그 " + address, true));
+    }
+
     public void delete(Blog blog) {
         jdbcTemplate.update("UPDATE blog SET deleted_at = NOW() WHERE id = ?", blog.getId());
     }

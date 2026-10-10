@@ -88,6 +88,23 @@ class CommentIntegrationTest extends IntegrationTestSupport {
     }
 
     @Test
+    void commentAuthorLinksToTheirPrimaryBlogOnlyWhenTheyHaveOne() throws Exception {
+        Blog readerBlog = testBlogs.createPrimary(reader);
+        Member noBlog = testMembers.create();
+        write(reader, post, "{\"content\":\"블로그 있는 사람\"}", UUID.randomUUID().toString());
+        write(noBlog, post, "{\"content\":\"블로그 없는 사람\"}", UUID.randomUUID().toString());
+
+        // 화면은 이 주소로 닉네임 링크를 만든다(BLOG-08). 블로그가 없으면 링크 없이 닉네임만
+        list(post, null, null)
+                .andExpect(jsonPath("$.content[0].author.primaryBlogAddress").value(readerBlog.getAddress()))
+                .andExpect(jsonPath("$.content[1].author.nickname").value(noBlog.getNickname()))
+                .andExpect(jsonPath("$.content[1].author.primaryBlogAddress").doesNotExist());
+        // 대표 블로그가 이용 제한되면 볼 수 없는 블로그라 링크도 없다
+        testBlogs.restrict(readerBlog);
+        list(post, null, null).andExpect(jsonPath("$.content[0].author.primaryBlogAddress").doesNotExist());
+    }
+
+    @Test
     void doubleClickMakesOneComment() throws Exception {
         String key = UUID.randomUUID().toString();
 
