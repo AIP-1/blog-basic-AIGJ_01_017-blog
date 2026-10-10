@@ -148,9 +148,9 @@ class PostWriteIntegrationTest extends IntegrationTestSupport {
 
     @Test
     void unsupportedOptionsAreRejectedNotIgnored() throws Exception {
+        // 구독자 공개는 스텝 16부터 된다(POST-12)
         publish(ownerCookies, body("x", "SUBSCRIBERS"), UUID.randomUUID().toString())
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.fieldErrors[0].field").value("visibility"));
+                .andExpect(status().isCreated());
         publish(ownerCookies, """
                 {"title":"x","contentHtml":"","visibility":"PUBLIC","status":"SCHEDULED","scheduledAt":"2026-12-01T09:00:00"}
                 """, UUID.randomUUID().toString())
@@ -270,7 +270,9 @@ class PostWriteIntegrationTest extends IntegrationTestSupport {
         listOf(ownerCookies).andExpect(jsonPath("$.totalElements").value(1));
         perform(patch("/api/posts/" + post.getId() + "/visibility"), ownerCookies,
                 "{\"visibility\":\"SUBSCRIBERS\"}")
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isNoContent());
+        // 구독자 공개 글은 구독하지 않은 사람의 목록에서 빠진다(POST-12)
+        listOf(null).andExpect(jsonPath("$.totalElements").value(0));
     }
 
     // ---------- 삭제 (T033) ----------

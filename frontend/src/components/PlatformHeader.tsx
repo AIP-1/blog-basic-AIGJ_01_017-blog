@@ -1,7 +1,9 @@
 import { type FormEvent, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { blogUrl } from '../app/host'
+import { notificationLabel } from '../app/notifications'
 import type { MeState } from '../app/useMe'
+import { useUnreadCount } from '../app/useUnreadCount'
 import { writeUrl } from '../app/writeLink'
 import LogoutButton from './LogoutButton'
 import SuspensionNotice from './SuspensionNotice'
@@ -16,6 +18,7 @@ import SuspensionNotice from './SuspensionNotice'
 export default function PlatformHeader({ me }: { me: MeState }) {
   const navigate = useNavigate()
   const [q, setQ] = useState('')
+  const unread = useUnreadCount(me)
 
   function search(event: FormEvent) {
     event.preventDefault()
@@ -29,7 +32,10 @@ export default function PlatformHeader({ me }: { me: MeState }) {
     <>
     <header className="site-head">
       <Link className="logo" to="/">blog</Link>
-      <nav className="nav-links"><Link to="/">홈</Link></nav>
+      <nav className="nav-links">
+        <Link to="/">홈</Link>
+        {me.status === 'member' && <Link to="/feed">구독 피드</Link>}
+      </nav>
       <span className="grow" />
       <form className="search-box" role="search" onSubmit={search}>
         <input type="search" value={q} maxLength={100} placeholder="글·블로그 검색" aria-label="전체 검색"
@@ -48,6 +54,7 @@ export default function PlatformHeader({ me }: { me: MeState }) {
           {me.me.primaryBlog
             ? <a className="btn" href={blogUrl(me.me.primaryBlog.address)}>내 블로그</a>
             : <Link className="btn" to="/blogs/new">블로그 만들기</Link>}
+          <Link className="btn" to="/me/notifications">{notificationLabel(unread)}</Link>
           <Link className="btn" to="/me" title={me.me.nickname}>마이페이지</Link>
           {me.me.role === 'ADMIN' && <Link className="btn" to="/admin">서비스 관리</Link>}
           <LogoutButton />

@@ -160,10 +160,12 @@ class ManagePostIntegrationTest extends IntegrationTestSupport {
         mockMvc.perform(get("/api/posts").header(HttpHeaders.HOST, TestBlogs.host(blog)))
                 .andExpect(jsonPath("$.totalElements").value(0));
 
+        // 구독자 공개도 일괄로 바꿀 수 있다(스텝 16, POST-12)
         send(patch("/api/manage/posts"), ownerCookies, "{\"postIds\":[%d],\"visibility\":\"SUBSCRIBERS\"}"
                 .formatted(first.getId()))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.fieldErrors[0].field").value("visibility"));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.updatedCount").value(1));
+        assertThat(visibility(first)).isEqualTo("SUBSCRIBERS");
         send(patch("/api/manage/posts"), ownerCookies, "{\"postIds\":[],\"visibility\":\"PUBLIC\"}")
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fieldErrors[0].field").value("postIds"));

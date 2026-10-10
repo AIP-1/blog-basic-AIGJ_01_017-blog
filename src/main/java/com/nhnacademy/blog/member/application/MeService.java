@@ -9,6 +9,7 @@ import com.nhnacademy.blog.image.domain.Image;
 import com.nhnacademy.blog.image.domain.ImageRepository;
 import com.nhnacademy.blog.member.domain.Member;
 import com.nhnacademy.blog.member.domain.MemberRepository;
+import com.nhnacademy.blog.notification.domain.NotificationRepository;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -23,15 +24,17 @@ public class MeService {
     private final MemberRepository memberRepository;
     private final BlogRepository blogRepository;
     private final ImageRepository imageRepository;
+    private final NotificationRepository notificationRepository;
     private final PasswordEncoder passwordEncoder;
     private final AttemptLimiter attemptLimiter;
 
     public MeService(MemberRepository memberRepository, BlogRepository blogRepository,
-                     ImageRepository imageRepository, PasswordEncoder passwordEncoder,
-                     AttemptLimiter attemptLimiter) {
+                     ImageRepository imageRepository, NotificationRepository notificationRepository,
+                     PasswordEncoder passwordEncoder, AttemptLimiter attemptLimiter) {
         this.memberRepository = memberRepository;
         this.blogRepository = blogRepository;
         this.imageRepository = imageRepository;
+        this.notificationRepository = notificationRepository;
         this.passwordEncoder = passwordEncoder;
         this.attemptLimiter = attemptLimiter;
     }
@@ -41,7 +44,8 @@ public class MeService {
         Member member = member(memberId);
         String profileImageUrl = member.getProfileImageId() == null ? null
                 : imageRepository.findById(member.getProfileImageId()).map(Image::getThumbnailPath).orElse(null);
-        return new MeResult(member, blogRepository.findPrimaryByMemberId(memberId).orElse(null), profileImageUrl);
+        return new MeResult(member, blogRepository.findPrimaryByMemberId(memberId).orElse(null), profileImageUrl,
+                notificationRepository.countByReceiverIdAndReadAtIsNull(memberId));
     }
 
     /**

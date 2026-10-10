@@ -28,7 +28,7 @@ public record MeResponse(Long id, String email, String nickname, String profileI
         Member member = result.member();
         return new MeResponse(member.getId(), member.getEmail(), member.getNickname(), result.profileImageUrl(),
                 member.getRole().name(), member.getPasswordHash() != null, BlogRef.from(result.primaryBlog()),
-                List.of(), 0);
+                List.of(), result.unreadNotificationCount());
     }
 
 }

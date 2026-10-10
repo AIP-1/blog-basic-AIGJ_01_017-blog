@@ -3,8 +3,10 @@ import { Link, NavLink, Route, Routes } from 'react-router'
 import { redirectToLogin } from '../../api/client'
 import type { Blog } from '../../api/types'
 import { blogUrl, platformUrl } from '../../app/host'
+import { notificationLabel } from '../../app/notifications'
 import { useBlog } from '../../app/useBlog'
 import { shouldRedirectToLogin, useMe } from '../../app/useMe'
+import { useUnreadCount } from '../../app/useUnreadCount'
 import LogoutButton from '../../components/LogoutButton'
 import ErrorPage from '../../components/ErrorPage'
 import SuspensionNotice from '../../components/SuspensionNotice'
@@ -23,6 +25,7 @@ import PostWritePage from './PostWritePage'
 export default function ManagePage() {
   const me = useMe()
   const [blogState, setBlog] = useBlog()
+  const unread = useUnreadCount(me)
 
   useEffect(() => {
     if (shouldRedirectToLogin(me)) {
@@ -57,6 +60,7 @@ export default function ManagePage() {
         <Link className="btn" to="/">블로그 보기</Link>
         {me.me.primaryBlog && me.me.primaryBlog.address !== blog.address
           && <a className="btn" href={blogUrl(me.me.primaryBlog.address)}>내 블로그</a>}
+        <a className="btn" href={platformUrl('/me/notifications')}>{notificationLabel(unread)}</a>
         <a className="btn" href={platformUrl('/me')} title={me.me.nickname}>마이페이지</a>
         {me.me.role === 'ADMIN' && <a className="btn" href={platformUrl('/admin')}>서비스 관리</a>}
         <LogoutButton />

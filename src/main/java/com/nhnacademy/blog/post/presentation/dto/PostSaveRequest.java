@@ -55,10 +55,6 @@ public record PostSaveRequest(
         if (status == PostStatus.SCHEDULED) {
             errors.add(new FieldErrorDetail("status", "예약 발행은 아직 할 수 없습니다.")); // POST-13
         }
-        if (visibility == Visibility.SUBSCRIBERS) {
-            // 구독(SUB-01)이 생기기 전에는 구독자 공개를 막는다 (contracts 글 저장 본문, review C-7)
-            errors.add(new FieldErrorDetail("visibility", "구독자 공개는 아직 고를 수 없습니다."));
-        }
         if (scheduledAt != null) {
             errors.add(new FieldErrorDetail("scheduledAt", "예약 발행은 아직 할 수 없습니다.")); // POST-13
         }

@@ -75,9 +75,6 @@ public class ManagePostController {
                                                @RequestBody BulkVisibilityRequest request) {
         blogOwnerGuard.requireOwner(blog, member);
         requestValidator.validate(request);
-        if (request.visibility() == Visibility.SUBSCRIBERS) {
-            throw BusinessException.invalidField("visibility", "구독자 공개는 아직 고를 수 없습니다.");
-        }
         return new BulkResult.Updated(managePostService.changeVisibility(blog, request.postIds(),
                 request.visibility()));
     }

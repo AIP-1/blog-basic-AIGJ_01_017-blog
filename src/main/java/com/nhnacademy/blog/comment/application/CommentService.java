@@ -9,6 +9,7 @@ import com.nhnacademy.blog.global.error.ErrorCode;
 import com.nhnacademy.blog.global.web.TimeIdCursor;
 import com.nhnacademy.blog.member.domain.Member;
 import com.nhnacademy.blog.member.domain.MemberRepository;
+import com.nhnacademy.blog.notification.application.NotificationService;
 import com.nhnacademy.blog.post.application.PostReadService;
 import com.nhnacademy.blog.post.domain.Post;
 import com.nhnacademy.blog.post.domain.PostRepository;
@@ -40,16 +41,19 @@ public class CommentService {
     private final MemberRepository memberRepository;
     private final PostReadService postReadService;
     private final CommentViews commentViews;
+    private final NotificationService notificationService;
     private final Clock clock;
 
     public CommentService(CommentRepository commentRepository, PostRepository postRepository,
                           MemberRepository memberRepository,
-                          PostReadService postReadService, CommentViews commentViews, Clock clock) {
+                          PostReadService postReadService, CommentViews commentViews,
+                          NotificationService notificationService, Clock clock) {
         this.commentRepository = commentRepository;
         this.postRepository = postRepository;
         this.memberRepository = memberRepository;
         this.postReadService = postReadService;
         this.commentViews = commentViews;
+        this.notificationService = notificationService;
         this.clock = clock;
     }
 
@@ -119,6 +123,7 @@ public class CommentService {
         Comment saved = commentRepository.findBy(
                 (root, query, cb) -> cb.equal(root.get("id"), comment.getId()),
                 query -> query.project("member").first()).orElseThrow();
+        notificationService.commented(saved);
         return commentViews.one(saved, blog, member.id());
     }
 

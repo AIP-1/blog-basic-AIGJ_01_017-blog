@@ -12,8 +12,10 @@ import BlogHeader from '../../components/BlogHeader'
 import Comments from '../../components/Comments'
 import LikeButton from '../../components/LikeButton'
 import ErrorPage from '../../components/ErrorPage'
+import ShareButtons from '../../components/ShareButtons'
 import Sidebar from '../../components/Sidebar'
 import SimilarPosts from '../../components/SimilarPosts'
+import SubscribeButton from '../../components/SubscribeButton'
 
 type PostState = { status: 'loading' } | { status: 'ok'; post: PostDetail } | { status: 'notFound' }
   | { status: 'subscribersOnly'; blogName: string } | { status: 'error' }
@@ -28,7 +30,9 @@ export default function PostPage() {
   const { postId } = useParams()
   const navigate = useNavigate()
   const me = useMe()
-  const [blogState] = useBlog()
+  const [blogState, setBlog] = useBlog()
+  /** 구독자 공개 글에서 구독하면 글을 다시 받는다 */
+  const [reloadKey, setReloadKey] = useState(0)
   const [state, setState] = useState<PostState>({ status: 'loading' })
   const [sidebar, setSidebar] = useState<SidebarData | null>(null)
   /** 주인의 공개 범위 바꾸기·삭제가 실패했을 때 글 머리에 보일 문장 */
@@ -59,7 +63,7 @@ export default function PostPage() {
     return () => {
       active = false
     }
-  }, [postId])
+  }, [postId, reloadKey])
 
   const shownPostId = state.status === 'ok' ? state.post.id : null
   useEffect(() => {
@@ -114,7 +118,15 @@ export default function PostPage() {
             ? (
               <div className="box" style={{ justifyItems: 'start' }}>
                 <b>구독자 공개 글입니다</b>
-                <span className="muted">{state.blogName}을(를) 구독하면 읽을 수 있어요. (구독은 뒤 스텝에서 만듭니다)</span>
+                <span className="muted">{state.blogName}을(를) 구독하면 읽을 수 있어요.</span>
+                <SubscribeButton blogId={blogState.blog.id} me={me} subscribed={blogState.blog.viewer.subscribed}
+                                 onChange={(subscribed, subscriberCount) => {
+                                   setBlog({ ...blogState.blog, subscriberCount,
+                                     viewer: { ...blogState.blog.viewer, subscribed } })
+                                   if (subscribed) {
+                                     setReloadKey((key) => key + 1)
+                                   }
+                                 }} />
               </div>
             )
             : <Article post={state.post} me={me} onDelete={remove} actionError={actionError}
@@ -147,7 +159,9 @@ function Article({ post, me, onDelete, onVisibilityChange, actionError, onCommen
           {post.publishedAt && <span>{formatDateTime(post.publishedAt)}</span>}
           {post.updatedAt && <span>수정 {formatDateTime(post.updatedAt)}</span>}
           <span>조회 {post.viewCount.toLocaleString()}</span>
-          {post.viewer.isOwner && post.visibility !== 'PUBLIC' && <span className="chip">비공개</span>}
+          {post.viewer.isOwner && post.visibility !== 'PUBLIC' && (
+            <span className="chip">{post.visibility === 'PRIVATE' ? '비공개' : '구독자 공개'}</span>
+          )}
         </div>
         {post.viewer.isOwner && (
           <div className="row">
@@ -155,8 +169,7 @@ function Article({ post, me, onDelete, onVisibilityChange, actionError, onCommen
                     onChange={(event) => onVisibilityChange(event.target.value as PostDetail['visibility'])}>
               <option value="PUBLIC">공개</option>
               <option value="PRIVATE">비공개</option>
-              {/* 구독자 공개는 구독(SUB-01)이 생기면 고를 수 있다. 그 전에 만들어진 글만 그대로 보여 준다 */}
-              {post.visibility === 'SUBSCRIBERS' && <option value="SUBSCRIBERS" disabled>구독자 공개</option>}
+              <option value="SUBSCRIBERS">구독자 공개</option>
             </select>
             <Link className="btn" to={`/manage/posts/${post.id}/edit`}>수정</Link>
             <button className="btn" type="button" onClick={() => onDelete(post)}>삭제</button>
@@ -177,8 +190,11 @@ function Article({ post, me, onDelete, onVisibilityChange, actionError, onCommen
           {post.tags.map((tag) => <Link key={tag} className="chip" to={`/tag/${encodeURIComponent(tag)}`}>#{tag}</Link>)}
         </div>
       )}
-      <LikeButton key={`like-${post.id}`} postId={post.id} me={me} initialLiked={post.viewer.liked}
-                  initialCount={post.likeCount} />
+      <div className="row">
+        <LikeButton key={`like-${post.id}`} postId={post.id} me={me} initialLiked={post.viewer.liked}
+                    initialCount={post.likeCount} />
+        <ShareButtons postId={post.id} title={post.title} />
+      </div>
       <nav className="row between small" aria-label="이전·다음 글">
         <span>이전 글 {post.prev ? <Link to={`/${post.prev.id}`}>{post.prev.title}</Link> : <span className="muted">없음</span>}</span>
         <span>다음 글 {post.next ? <Link to={`/${post.next.id}`}>{post.next.title}</Link> : <span className="muted">없음</span>}</span>
