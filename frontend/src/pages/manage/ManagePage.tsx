@@ -80,7 +80,7 @@ export default function ManagePage() {
         <Routes>
           <Route index element={<ManageHomePage blog={blog} />} />
           <Route path="write" element={<PostWritePage key="new" />} />
-          <Route path="posts" element={<ManagePostsPage />} />
+          <Route path="posts" element={<ManagePostsPage blogId={blog.id} />} />
           <Route path="comments" element={<ManageCommentsPage />} />
           <Route path="posts/:postId/edit" element={<PostWritePage key="edit" />} />
           <Route path="categories" element={<CategoriesPage />} />

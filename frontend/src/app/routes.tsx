@@ -9,6 +9,7 @@ import NotFoundPage from '../pages/error/NotFoundPage'
 import FeedPage from '../pages/feed/FeedPage'
 import MyPage from '../pages/me/MyPage'
 import NotificationsPage from '../pages/me/NotificationsPage'
+import WithdrawPage from '../pages/me/WithdrawPage'
 import NoticePage from '../pages/notice/NoticePage'
 import NoticesPage from '../pages/notice/NoticesPage'
 import HomePage from '../pages/home/HomePage'
@@ -27,6 +28,7 @@ export function PlatformRoutes() {
       <Route path="/blogs/new" element={<BlogCreatePage />} />
       <Route path="/me" element={<MyPage />} />
       <Route path="/me/notifications" element={<NotificationsPage />} />
+      <Route path="/me/withdraw" element={<WithdrawPage />} />
       <Route path="/feed" element={<FeedPage />} />
       <Route path="/search" element={<GlobalSearchPage />} />
       <Route path="/notices" element={<NoticesPage />} />

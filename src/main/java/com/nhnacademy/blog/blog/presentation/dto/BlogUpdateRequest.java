@@ -16,5 +16,10 @@ public record BlogUpdateRequest(
         @Size(max = 500, message = "소개는 500자까지입니다.")
         String description,
 
-        Long profileImageId) {
+        Long profileImageId,
+
+        /** 꾸미기 (BLOG-05). 값 검사는 BlogService가 한다(모르는 값이면 그 칸 400). */
+        String skin,
+        String listLayout,
+        String accentColor) {
 }

@@ -26,7 +26,7 @@ public record BlogResponse(Long id, String address, String name, String descript
         return new BlogResponse(blog.getId(), blog.getAddress(), blog.getName(), blog.getDescription(),
                 detail.profileImageUrl(),
                 MemberSummaryResponse.of(blog.getMember(), detail.ownerPrimaryBlogAddress(),
-                        detail.ownerProfileImageUrl()), blog.getSkin(),
+                        detail.ownerProfileImageUrl()), blog.getSkin().name(),
                 blog.getListLayout().name(), blog.getAccentColor().name(), detail.postCount(),
                 detail.subscriberCount(), new Viewer(detail.owner(), detail.subscribed()), restriction);
     }

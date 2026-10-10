@@ -192,3 +192,14 @@ select { border: 1px solid var(--line); background: var(--surface); border-radiu
 
 .search-box { display: flex; gap: 6px; min-width: 0; flex: 0 1 280px; }
 .search-box input { flex: 1; min-width: 0; border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 6px 10px; font-size: 14px; }
+
+/* 블로그 꾸미기 (BLOG-05). 포인트 색은 --brand 변수 하나로(app/blogTheme.ts), 스킨은 html[data-skin]으로 */
+.post-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+.card .thumb.placeholder { display: grid; place-items: center; font-size: 32px; color: var(--brand); background: var(--brand-soft); }
+[data-skin="MAGAZINE"] .post-head h1 { font-family: Georgia, "Noto Serif KR", serif; font-size: 34px; letter-spacing: -0.01em; }
+[data-skin="MAGAZINE"] .post-item h3, [data-skin="MAGAZINE"] .card h3 { font-family: Georgia, "Noto Serif KR", serif; font-size: 19px; }
+[data-skin="MAGAZINE"] .post-list { gap: 28px; }
+[data-skin="MAGAZINE"] .site-head .blog-name { font-family: Georgia, "Noto Serif KR", serif; font-size: 22px; }
+[data-skin="NOTE"] body { background-image: repeating-linear-gradient(var(--paper) 0 27px, var(--line) 27px 28px); }
+[data-skin="NOTE"] .page { max-width: 860px; }
+[data-skin="NOTE"] .post-head h1, [data-skin="NOTE"] .post-item h3 { font-weight: 600; text-decoration: underline; text-decoration-color: var(--brand); text-underline-offset: 6px; }

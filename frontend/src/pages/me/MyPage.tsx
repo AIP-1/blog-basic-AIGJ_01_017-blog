@@ -40,6 +40,11 @@ export default function MyPage() {
             {me.hasPassword
               ? <PasswordSection />
               : <p className="small muted">소셜 계정으로 가입해 비밀번호가 없습니다.</p>}
+            <section className="section">
+              <h2>회원 탈퇴</h2>
+              <p className="small muted" style={{ margin: 0 }}>블로그·글·댓글이 모두 삭제되고 되돌릴 수 없습니다.</p>
+              <Link className="btn danger" to="/me/withdraw" style={{ justifySelf: 'start' }}>회원 탈퇴</Link>
+            </section>
           </div>
         )}
       </main>

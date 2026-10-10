@@ -2,7 +2,7 @@ import { type FormEvent, useCallback, useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { api } from '../../api/client'
 import { errorMessage } from '../../api/errors'
-import type { CategoryTree, ManagedPostSummary, PageResponse } from '../../api/types'
+import type { CategoryTree, ManagedPostSummary, MyBlog, PageResponse } from '../../api/types'
 import { formatDate, formatDateTime } from '../../app/format'
 import Pagination from '../../components/Pagination'
 
@@ -23,7 +23,7 @@ const VISIBILITY_LABEL: Record<ManagedPostSummary['visibility'], string> = {
  * 거르기 조건과 페이지는 주소(?status=&categoryId=&q=&page=)에 둔다. 새로고침해도, 링크를 공유해도 같은 목록이다.
  * 다른 블로그로 옮기기(BLOG-06)는 뒤 스텝이다.
  */
-export default function ManagePostsPage() {
+export default function ManagePostsPage({ blogId }: { blogId: number }) {
   const [params, setParams] = useSearchParams()
   const status = params.get('status') ?? ''
   const categoryId = params.get('categoryId') ?? ''
@@ -33,10 +33,20 @@ export default function ManagePostsPage() {
   const [posts, setPosts] = useState<PageResponse<ManagedPostSummary> | null>(null)
   const [categories, setCategories] = useState<CategoryTree | null>(null)
   const [selected, setSelected] = useState<number[]>([])
+  /** 글을 옮길 수 있는 내 다른 블로그 (BLOG-06). 이 블로그는 뺀다 */
+  const [myBlogs, setMyBlogs] = useState<MyBlog[]>([])
+  const [moveTarget, setMoveTarget] = useState('')
   const [visibility, setVisibility] = useState<'PRIVATE' | 'PUBLIC' | 'SUBSCRIBERS'>('PRIVATE')
   const [query, setQuery] = useState(q)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
+
+  useEffect(() => {
+    // 옮길 수 있는 블로그가 없으면(블로그가 하나뿐이면) 옮기기 칸을 그리지 않는다
+    api<MyBlog[]>('/api/me/blogs')
+      .then((blogs) => setMyBlogs(blogs.filter((blog) => blog.id !== blogId)))
+      .catch(() => setMyBlogs([]))
+  }, [blogId])
 
   const load = useCallback(() => {
     const search = new URLSearchParams()
@@ -113,6 +123,21 @@ export default function ManagePostsPage() {
     }
   }
 
+  async function moveToBlog() {
+    const target = myBlogs.find((blog) => String(blog.id) === moveTarget)
+    if (!target || !window.confirm(`선택한 글 ${selected.length}개를 "${target.name}"(으)로 옮길까요? 카테고리는 미분류가 되고, 옛 주소는 새 블로그로 이어집니다.`)) {
+      return
+    }
+    try {
+      const result = await api<{ movedCount: number }>('/api/blog/move-posts', {
+        method: 'POST', body: { postIds: selected, targetBlogId: target.id },
+      })
+      await reload(`글 ${result.movedCount}개를 ${target.name}(으)로 옮겼습니다.`)
+    } catch (caught) {
+      setError(errorMessage(caught))
+    }
+  }
+
   async function remove() {
     if (!window.confirm(`선택한 글 ${selected.length}개를 삭제할까요? 댓글과 공감도 함께 사라집니다.`)) {
       return
@@ -174,6 +199,18 @@ export default function ManagePostsPage() {
           </select>
           <button className="btn" type="button" disabled={selected.length === 0} onClick={applyVisibility}>적용</button>
           <button className="btn danger" type="button" disabled={selected.length === 0} onClick={remove}>삭제</button>
+          {myBlogs.length > 0 && (
+            <>
+              <select value={moveTarget} style={{ maxWidth: 200 }} aria-label="옮길 블로그"
+                      onChange={(event) => setMoveTarget(event.target.value)}>
+                <option value="">다른 블로그로 옮기기</option>
+                {myBlogs.map((blog) => <option key={blog.id} value={blog.id}>{blog.name} ({blog.address})</option>)}
+              </select>
+              <button className="btn" type="button" disabled={selected.length === 0 || !moveTarget} onClick={moveToBlog}>
+                옮기기
+              </button>
+            </>
+          )}
         </div>
         {error && <p className="err" role="alert">{error}</p>}
         {message && <p className="small" role="status">{message}</p>}
