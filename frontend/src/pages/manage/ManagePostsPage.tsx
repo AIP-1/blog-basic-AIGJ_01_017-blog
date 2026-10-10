@@ -140,6 +140,7 @@ export default function ManagePostsPage() {
             <option value="">전체 상태</option>
             <option value="PUBLISHED">발행</option>
             <option value="DRAFT">임시저장</option>
+            <option value="SCHEDULED">예약</option>
           </select>
           <select value={categoryId} style={{ maxWidth: 160 }} aria-label="카테고리"
                   onChange={(event) => filter('categoryId', event.target.value)}>

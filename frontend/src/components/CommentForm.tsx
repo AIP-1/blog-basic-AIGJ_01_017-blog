@@ -8,13 +8,15 @@ const MAX_LENGTH = 1000
 /**
  * 댓글·방명록·답글 쓰기 칸. path로 보낼 곳을 정한다(/api/posts/{id}/comments 또는 /api/guestbook).
  * 등록 한 번에 연타 방지 키 하나, 실패해 다시 누르면 같은 키, 성공하면 새 키.
- * allowSecret이면 "비밀글" 칸이 보인다(방명록, CMT-04. 댓글의 비밀댓글 CMT-06은 백로그).
+ * allowSecret이면 비밀 칸이 보인다(방명록 CMT-04 "비밀글", 댓글 CMT-06 "비밀댓글", 스텝 17).
  */
-export default function CommentForm({ path, parentId, placeholder, allowSecret = false, onCreated, onError }: {
+export default function CommentForm({ path, parentId, placeholder, allowSecret = false, secretLabel = '비밀글',
+  onCreated, onError }: {
   path: string
   parentId: number | null
   placeholder: string
   allowSecret?: boolean
+  secretLabel?: string
   onCreated: (comment: Comment) => void
   onError: (message: string | null) => void
 }) {
@@ -62,7 +64,7 @@ export default function CommentForm({ path, parentId, placeholder, allowSecret =
           {allowSecret && (
             <label className="row small">
               <input type="checkbox" checked={secret} onChange={(event) => setSecret(event.target.checked)} />
-              비밀글
+              {secretLabel}
             </label>
           )}
           <button className="btn primary" type="submit" disabled={submitting || !content.trim()}>등록</button>

@@ -154,6 +154,8 @@ export interface ManagedPost {
   thumbnailImageId: number | null
   /** 본문에 든 이미지(본문 순서). 대표 이미지 후보 */
   images: UploadedImage[]
+  /** 예약 발행 시각 (POST-13). 예약 글이 아니면 null */
+  scheduledAt: string | null
 }
 
 /** 발행·수정 응답 */
