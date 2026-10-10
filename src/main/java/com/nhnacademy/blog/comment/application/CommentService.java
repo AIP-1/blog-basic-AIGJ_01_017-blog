@@ -1,9 +1,5 @@
 package com.nhnacademy.blog.comment.application;
 
-import com.nhnacademy.blog.admin.domain.ModerationAction;
-import com.nhnacademy.blog.admin.domain.ModerationLogRepository;
-import com.nhnacademy.blog.admin.domain.ModerationTargetType;
-import com.nhnacademy.blog.blog.application.PrimaryBlogAddresses;
 import com.nhnacademy.blog.blog.domain.Blog;
 import com.nhnacademy.blog.comment.domain.Comment;
 import com.nhnacademy.blog.comment.domain.CommentRepository;
@@ -11,7 +7,6 @@ import com.nhnacademy.blog.global.auth.LoginMember;
 import com.nhnacademy.blog.global.error.BusinessException;
 import com.nhnacademy.blog.global.error.ErrorCode;
 import com.nhnacademy.blog.global.web.TimeIdCursor;
-import com.nhnacademy.blog.image.application.ProfileImages;
 import com.nhnacademy.blog.member.domain.Member;
 import com.nhnacademy.blog.member.domain.MemberRepository;
 import com.nhnacademy.blog.post.application.PostReadService;
@@ -19,11 +14,7 @@ import com.nhnacademy.blog.post.domain.Post;
 import com.nhnacademy.blog.post.domain.PostRepository;
 import java.time.Clock;
 import java.time.LocalDateTime;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
 import org.springframework.data.domain.Sort;
@@ -34,7 +25,8 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * 댓글 보기·쓰기·지우기 (T044, CMT-01, CMT-02).
  * 댓글은 글에 딸려 있어서, 글을 볼 수 없는 사람에게는 댓글도 없다(글과 같은 404·403 판단, PostReadService.readable).
- * 답글은 한 단계(CMT-05, 스텝 7). 비밀댓글 쓰기(CMT-06)·수정(CMT-03)은 뒤 스텝이다.
+ * 답글은 한 단계(CMT-05, 스텝 7), 본인 댓글 고치기(CMT-03, 스텝 14). 비밀댓글 쓰기(CMT-06)는 백로그다.
+ * 보는 사람 기준의 모양(비밀·삭제된 자리·숨김)은 방명록과 같은 CommentViews가 정한다.
  */
 @Service
 public class CommentService {
@@ -46,23 +38,18 @@ public class CommentService {
     private final CommentRepository commentRepository;
     private final PostRepository postRepository;
     private final MemberRepository memberRepository;
-    private final ModerationLogRepository moderationLogRepository;
     private final PostReadService postReadService;
-    private final PrimaryBlogAddresses primaryBlogAddresses;
-    private final ProfileImages profileImages;
+    private final CommentViews commentViews;
     private final Clock clock;
 
     public CommentService(CommentRepository commentRepository, PostRepository postRepository,
-                          MemberRepository memberRepository, ModerationLogRepository moderationLogRepository,
-                          PostReadService postReadService, PrimaryBlogAddresses primaryBlogAddresses,
-                          ProfileImages profileImages, Clock clock) {
+                          MemberRepository memberRepository,
+                          PostReadService postReadService, CommentViews commentViews, Clock clock) {
         this.commentRepository = commentRepository;
         this.postRepository = postRepository;
         this.memberRepository = memberRepository;
-        this.moderationLogRepository = moderationLogRepository;
         this.postReadService = postReadService;
-        this.primaryBlogAddresses = primaryBlogAddresses;
-        this.profileImages = profileImages;
+        this.commentViews = commentViews;
         this.clock = clock;
     }
 
@@ -98,21 +85,7 @@ public class CommentService {
                         cb.isNull(root.get("deletedAt"))),
                 query -> query.sortBy(WRITTEN_ORDER).project("member").all());
 
-        List<Member> authors = Stream.concat(parents.stream(), replies.stream())
-                .map(Comment::getMember).distinct().toList();
-        Map<Long, String> addresses = primaryBlogAddresses.of(authors.stream().map(Member::getId).toList(), viewerId);
-        Map<Long, String> photos = profileImages.thumbnailUrls(
-                authors.stream().map(Member::getProfileImageId).toList());
-        Map<Long, List<CommentView>> repliesByParent = replies.stream().collect(Collectors.groupingBy(
-                reply -> reply.getParent().getId(), LinkedHashMap::new,
-                Collectors.mapping(reply -> view(reply, blog, viewerId, addresses.get(reply.getMember().getId()),
-                        photos.get(reply.getMember().getProfileImageId())),
-                        Collectors.toList())));
-        List<CommentView> views = parents.stream()
-                .map(parent -> view(parent, blog, viewerId, addresses.get(parent.getMember().getId()),
-                        photos.get(parent.getMember().getProfileImageId()))
-                        .withReplies(repliesByParent.getOrDefault(parent.getId(), List.of())))
-                .toList();
+        List<CommentView> views = commentViews.threads(parents, replies, blog, viewerId);
         return new CommentPage(views, commentRepository.countByPostIdAndDeletedAtIsNull(post.getId()));
     }
 
@@ -146,8 +119,7 @@ public class CommentService {
         Comment saved = commentRepository.findBy(
                 (root, query, cb) -> cb.equal(root.get("id"), comment.getId()),
                 query -> query.project("member").first()).orElseThrow();
-        return view(saved, blog, member.id(), primaryBlogAddresses.of(List.of(member.id()), member.id())
-                .get(member.id()), profileImages.thumbnailUrl(saved.getMember().getProfileImageId()));
+        return commentViews.one(saved, blog, member.id());
     }
 
     /**
@@ -169,15 +141,8 @@ public class CommentService {
      */
     @Transactional
     public void delete(Blog blog, Long commentId, LoginMember member) {
-        Long viewerId = member == null ? null : member.id();
-        Comment comment = commentRepository.findWithPostById(commentId)
-                .filter(found -> !found.isDeleted())
-                .filter(found -> found.getPost().getBlog().getId().equals(blog.getId()))
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-        postReadService.readable(blog, comment.getPost().getId(), viewerId);
-        if (member == null) {
-            throw new BusinessException(ErrorCode.UNAUTHORIZED);
-        }
+        Comment comment = visibleComment(blog, commentId, member);
+        Long viewerId = member.id();
         if (!comment.isWrittenBy(viewerId) && !blog.isOwnedBy(viewerId)) {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
@@ -188,33 +153,45 @@ public class CommentService {
         postRepository.addCommentCount(comment.getPost().getId(), -1);
     }
 
-    private CommentView view(Comment comment, Blog blog, Long viewerId, String authorAddress, String authorPhoto) {
-        boolean author = comment.isWrittenBy(viewerId);
-        boolean blogOwner = blog.isOwnedBy(viewerId);
-        if (comment.isDeleted()) {
-            // 답글이 남아 자리만 있는 부모. 누구에게나 내용·작성자 없이, 다시 지울 것도 없다
-            return new CommentView(comment, CommentView.State.DELETED, null, null, false, null, List.of());
-        }
-        CommentView.State state;
-        Map<String, String> blind = null;
-        if (comment.isBlinded()) {
-            // 작성자 본인에게는 내용과 숨김 사유를 보여 주고, 다른 사람에게는 자리만 (ADMIN-03)
-            state = author ? CommentView.State.NORMAL : CommentView.State.BLINDED;
-            blind = author ? blindReason(comment) : null;
-        } else if (comment.isSecret() && !author && !blogOwner) {
-            state = CommentView.State.SECRET;   // 글 주인과 작성자만 본다 (CMT-06)
-        } else {
-            state = CommentView.State.NORMAL;
-        }
-        return new CommentView(comment, state, authorAddress, authorPhoto, author || blogOwner, blind, List.of());
+    /**
+     * 고칠 댓글 (CMT-03). 상태 코드 순서는 지우기와 같다: 없음·볼 수 없음 404 → 비회원 401 → 본인이 아님 403.
+     * 관리자가 숨긴 댓글은 본인도 고칠 수 없다(403, ADMIN-03 "작성자는 수정할 수 없고 삭제는 할 수 있다").
+     * 입력 검증(400)은 이 다음에 컨트롤러가 한다.
+     */
+    @Transactional(readOnly = true)
+    public void checkEditable(Blog blog, Long commentId, LoginMember member) {
+        editable(blog, commentId, member);
     }
 
-    private Map<String, String> blindReason(Comment comment) {
-        return moderationLogRepository
-                .findFirstByTargetTypeAndTargetIdAndActionOrderByCreatedAtDescIdDesc(
-                        ModerationTargetType.COMMENT, comment.getId(), ModerationAction.BLIND)
-                .map(log -> Map.of("reason", log.getReason().name(), "reasonMessage", log.getReason().getMessage()))
-                .orElse(Map.of());
+    /** 내용 고치기 (CMT-03). 글의 수정 시각이나 댓글 수는 바뀌지 않는다. 고친 시각은 댓글의 updatedAt으로 보인다. */
+    @Transactional
+    public CommentView edit(Blog blog, Long commentId, LoginMember member, String content) {
+        Comment comment = editable(blog, commentId, member);
+        comment.edit(content.trim());
+        // updatedAt(@LastModifiedDate)이 응답에 들어가도록 UPDATE를 먼저 보낸다
+        commentRepository.flush();
+        return commentViews.one(comment, blog, member.id());
+    }
+
+    private Comment editable(Blog blog, Long commentId, LoginMember member) {
+        Comment comment = visibleComment(blog, commentId, member);
+        if (!comment.isWrittenBy(member.id()) || comment.isBlinded()) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+        return comment;
+    }
+
+    /** 이 블로그 글의, 지우지 않은, 글을 볼 수 있는 댓글. 그다음 로그인했는지 본다(404 → 401 순서). */
+    private Comment visibleComment(Blog blog, Long commentId, LoginMember member) {
+        Comment comment = commentRepository.findWithPostById(commentId)
+                .filter(found -> !found.isDeleted())
+                .filter(found -> found.getPost().getBlog().getId().equals(blog.getId()))
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        postReadService.readable(blog, comment.getPost().getId(), member == null ? null : member.id());
+        if (member == null) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+        }
+        return comment;
     }
 
 }

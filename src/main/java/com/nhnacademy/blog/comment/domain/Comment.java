@@ -16,10 +16,11 @@ import java.time.LocalDateTime;
 
 /**
  * 댓글. 답글은 1단계까지다. 답글이 있는 댓글을 지우면 '삭제된 댓글입니다'로 보인다.
+ * 방명록(Guestbook)과 같은 규칙으로 보이도록 CommentEntry를 따른다.
  */
 @Entity
 @Table(name = "comment")
-public class Comment extends BaseTimeEntity {
+public class Comment extends BaseTimeEntity implements CommentEntry {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -74,8 +75,9 @@ public class Comment extends BaseTimeEntity {
         this.deletedAt = now;
     }
 
-    public boolean isWrittenBy(Long memberId) {
-        return memberId != null && memberId.equals(member.getId());
+    /** 내용 고치기 (CMT-03). 본인인지, 숨긴 댓글이 아닌지는 CommentService가 먼저 본다. */
+    public void edit(String content) {
+        this.content = content;
     }
 
     public boolean isDeleted() {
@@ -88,6 +90,11 @@ public class Comment extends BaseTimeEntity {
 
     public Comment getParent() {
         return parent;
+    }
+
+    @Override
+    public Long getParentId() {
+        return parent == null ? null : parent.getId();
     }
 
     public Post getPost() {
