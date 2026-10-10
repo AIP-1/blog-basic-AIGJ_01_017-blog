@@ -4,6 +4,7 @@ import { errorMessage } from '../../api/errors'
 import type { CursorResponse } from '../../api/types'
 import { formatDateTime } from '../../app/format'
 import { shouldRedirectToLogin, useMe } from '../../app/useMe'
+import { NOTIFICATIONS_CHANGED } from '../../app/useUnreadCount'
 import PlatformHeader from '../../components/PlatformHeader'
 
 /** 알림 하나 (GET /api/me/notifications). link는 갈 화면의 전체 주소다(블로그 주소는 호스트가 달라서) */
@@ -75,6 +76,8 @@ export default function NotificationsPage() {
     try {
       await api('/api/me/notifications/read-all', { method: 'PUT' })
       setItems((previous) => previous.map((item) => ({ ...item, read: true })))
+      // 머리글의 "알림 n"이 새로고침 없이 바뀌도록 알린다
+      window.dispatchEvent(new Event(NOTIFICATIONS_CHANGED))
     } catch (caught) {
       setError(errorMessage(caught))
     }

@@ -5,6 +5,7 @@ import type { Blog } from '../api/types'
 import { blogUrl, platformUrl } from '../app/host'
 import { notificationLabel } from '../app/notifications'
 import type { MeState } from '../app/useMe'
+import { useUnreadCount } from '../app/useUnreadCount'
 import { writeUrl } from '../app/writeLink'
 import LogoutButton from './LogoutButton'
 import SuspensionNotice from './SuspensionNotice'
@@ -19,6 +20,7 @@ export default function BlogHeader({ blog, me }: { blog: Blog; me: MeState }) {
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const [q, setQ] = useState(params.get('q') ?? '')
+  const unread = useUnreadCount(me)
 
   function search(event: FormEvent) {
     event.preventDefault()
@@ -49,7 +51,7 @@ export default function BlogHeader({ blog, me }: { blog: Blog; me: MeState }) {
           {blog.viewer.isOwner && <Link className="btn" to="/manage">관리</Link>}
           {primaryBlog && primaryBlog.address !== blog.address
             && <a className="btn" href={blogUrl(primaryBlog.address)}>내 블로그</a>}
-          <a className="btn" href={platformUrl('/me/notifications')}>{notificationLabel(me.me.unreadNotificationCount)}</a>
+          <a className="btn" href={platformUrl('/me/notifications')}>{notificationLabel(unread)}</a>
           <a className="btn" href={platformUrl('/me')} title={me.me.nickname}>마이페이지</a>
           {me.me.role === 'ADMIN' && <a className="btn" href={platformUrl('/admin')}>서비스 관리</a>}
           <LogoutButton />
