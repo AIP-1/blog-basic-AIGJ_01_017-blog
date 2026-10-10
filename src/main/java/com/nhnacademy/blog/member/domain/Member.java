@@ -75,6 +75,25 @@ public class Member extends BaseTimeEntity {
         return status == MemberStatus.SUSPENDED && (suspendedUntil == null || suspendedUntil.isAfter(now));
     }
 
+    /**
+     * 정지 (ADMIN-02). until이 null이면 영구 정지다. 기간이 지나면 isSuspendedAt이 false라 따로 풀지 않아도 풀린다.
+     * 사유는 moderation_log의 최신 SUSPEND 행에 있다.
+     */
+    public void suspend(LocalDateTime until) {
+        this.status = MemberStatus.SUSPENDED;
+        this.suspendedUntil = until;
+    }
+
+    /** 정지 해제 (ADMIN-02). */
+    public void unsuspend() {
+        this.status = MemberStatus.ACTIVE;
+        this.suspendedUntil = null;
+    }
+
+    public boolean isAdmin() {
+        return role == Role.ADMIN;
+    }
+
     /** 회원정보 수정 (AUTH-05). 중복 검사는 MeService가 하고, 마지막 판단은 DB UNIQUE가 한다. */
     public void changeNickname(String nickname) {
         this.nickname = nickname;

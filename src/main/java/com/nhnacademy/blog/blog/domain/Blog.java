@@ -122,6 +122,11 @@ public class Blog extends BaseTimeEntity {
         this.primary = primary;
     }
 
+    /** 관리자 이용 제한·해제 (ADMIN-05). 회원은 두고 이 블로그만 숨긴다. 사유는 moderation_log의 최신 RESTRICT_BLOG 행. */
+    public void changeRestricted(boolean restricted) {
+        this.restricted = restricted;
+    }
+
     public boolean isDeleted() {
         return deletedAt != null;
     }

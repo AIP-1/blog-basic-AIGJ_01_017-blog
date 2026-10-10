@@ -22,6 +22,11 @@ public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificat
     @Query("select p from Post p join fetch p.blog b join fetch b.member left join fetch p.category where p.id = :id")
     Optional<Post> findWithBlogById(@Param("id") Long id);
 
+    /** 이 시각 뒤에 발행된 글 수(지운 글 빼고, 관리자 대시보드). */
+    @Query("select count(p) from Post p where p.status = com.nhnacademy.blog.post.domain.PostStatus.PUBLISHED"
+            + " and p.publishedAt >= :since and p.deletedAt is null")
+    long countPublishedSince(@Param("since") java.time.LocalDateTime since);
+
     /**
      * 글 목록(페이지). 목록 한 줄에 카테고리 이름이 나가므로 카테고리를 함께 읽는다(N+1 방지).
      * 개수 쿼리에는 이 fetch가 붙지 않는다.
