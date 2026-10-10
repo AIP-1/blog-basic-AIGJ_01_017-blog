@@ -2,14 +2,17 @@ import { type FormEvent, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { loginUrl } from '../api/client'
 import type { Blog } from '../api/types'
-import { platformUrl } from '../app/host'
+import { blogUrl, platformUrl } from '../app/host'
 import type { MeState } from '../app/useMe'
 import { writeUrl } from '../app/writeLink'
 import LogoutButton from './LogoutButton'
+import SuspensionNotice from './SuspensionNotice'
 
 /**
  * 블로그 주소({address}.blog.com)의 머리글. 주인에게는 이 블로그의 글쓰기·관리 버튼이 보인다.
  * 남의 블로그에서 누르는 글쓰기는 내 대표 블로그의 글쓰기로, 블로그가 없으면 개설 안내로 간다 (AUTH-04).
+ * 내 대표 블로그가 아닌 곳에서는 '내 블로그'(대표 블로그, BLOG-08), 서비스 관리자에게는 서비스 관리(ADMIN-01).
+ * 로그인한 채로 정지된 회원이면 머리글 아래에 정지 사유를 띄운다(ADMIN-02).
  */
 export default function BlogHeader({ blog, me }: { blog: Blog; me: MeState }) {
   const navigate = useNavigate()
@@ -23,7 +26,9 @@ export default function BlogHeader({ blog, me }: { blog: Blog; me: MeState }) {
     }
   }
 
+  const primaryBlog = me.status === 'member' ? me.me.primaryBlog : null
   return (
+    <>
     <header className="site-head">
       <a className="logo" href={platformUrl('/')} title="플랫폼 홈">blog</a>
       <Link className="blog-name" to="/">{blog.name}</Link>
@@ -41,10 +46,17 @@ export default function BlogHeader({ blog, me }: { blog: Blog; me: MeState }) {
             ? <Link className="btn primary" to="/manage/write">글쓰기</Link>
             : <a className="btn primary" href={writeUrl(me.me)}>글쓰기</a>}
           {blog.viewer.isOwner && <Link className="btn" to="/manage">관리</Link>}
+          {primaryBlog && primaryBlog.address !== blog.address
+            && <a className="btn" href={blogUrl(primaryBlog.address)}>내 블로그</a>}
           <a className="btn" href={platformUrl('/me')} title={me.me.nickname}>마이페이지</a>
+          {me.me.role === 'ADMIN' && <a className="btn" href={platformUrl('/admin')}>서비스 관리</a>}
           <LogoutButton />
         </div>
       )}
     </header>
+    {me.status === 'anonymous' && me.suspension && (
+      <div className="page"><SuspensionNotice suspension={me.suspension} /></div>
+    )}
+    </>
   )
 }
