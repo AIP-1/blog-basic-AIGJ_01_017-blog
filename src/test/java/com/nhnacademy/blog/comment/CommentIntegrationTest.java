@@ -165,8 +165,10 @@ class CommentIntegrationTest extends IntegrationTestSupport {
                 .andExpect(status().isBadRequest());
         write(reader, post, "{\"content\":\"답글\",\"parentId\":1}", UUID.randomUUID().toString())
                 .andExpect(jsonPath("$.fieldErrors[0].field").value("parentId"));
+        // 비밀댓글은 스텝 17부터 된다(CMT-06)
         write(reader, post, "{\"content\":\"비밀\",\"secret\":true}", UUID.randomUUID().toString())
-                .andExpect(jsonPath("$.fieldErrors[0].field").value("secret"));
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.secret").value(true));
         write(reader, post, "{\"content\":\"" + "가".repeat(1000) + "\"}", UUID.randomUUID().toString())
                 .andExpect(status().isCreated());
     }

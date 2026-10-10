@@ -2,22 +2,24 @@ package com.nhnacademy.blog.post.presentation;
 
 import com.nhnacademy.blog.blog.domain.Blog;
 import com.nhnacademy.blog.global.auth.LoginMembers;
+import com.nhnacademy.blog.global.error.BusinessException;
 import com.nhnacademy.blog.global.host.CurrentBlog;
 import com.nhnacademy.blog.global.web.PageQuery;
 import com.nhnacademy.blog.global.web.PageResponse;
 import com.nhnacademy.blog.global.web.VisitorKeys;
 import com.nhnacademy.blog.image.application.PostThumbnails;
 import com.nhnacademy.blog.post.application.PostQueryService;
-import com.nhnacademy.blog.post.domain.Post;
-import java.util.Map;
-import org.springframework.data.domain.Page;
 import com.nhnacademy.blog.post.application.PostReadService;
 import com.nhnacademy.blog.post.application.ViewService;
+import com.nhnacademy.blog.post.domain.Post;
 import com.nhnacademy.blog.post.presentation.dto.PostDetailResponse;
-import com.nhnacademy.blog.reaction.application.LikeService;
 import com.nhnacademy.blog.post.presentation.dto.PostSummaryResponse;
+import com.nhnacademy.blog.reaction.application.LikeService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.util.List;
+import java.util.Map;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -64,6 +66,23 @@ public class PostController {
     }
 
     /** 글 상세. 볼 수 없으면 404, 구독자 공개 글을 구독 안 한 사람이 열면 403 SUBSCRIBERS_ONLY. */
+    /**
+     * 같은 카테고리의 다른 글 (T104, OWN-05). size는 1~10, 없으면 5. 글을 볼 수 없으면 글 상세와 같이 404·403.
+     */
+    @GetMapping("/api/posts/{id}/same-category")
+    public List<PostSummaryResponse> sameCategory(@CurrentBlog Blog blog, @PathVariable Long id,
+                                                  @RequestParam(required = false) Integer size) {
+        int count = size == null ? 5 : size;
+        if (count < 1 || count > 10) {
+            throw BusinessException.invalidField("size", "1~10개까지 볼 수 있습니다.");
+        }
+        Long viewerId = LoginMembers.currentId();
+        Post post = postReadService.readable(blog, id, viewerId);
+        List<Post> posts = postQueryService.sameCategory(blog, post, viewerId, count);
+        Map<Long, String> thumbnails = postThumbnails.of(posts);
+        return posts.stream().map(found -> PostSummaryResponse.of(found, blog, thumbnails.get(found.getId()))).toList();
+    }
+
     @GetMapping("/api/posts/{id}")
     public PostDetailResponse post(@CurrentBlog Blog blog, @PathVariable Long id) {
         Long viewerId = LoginMembers.currentId();
