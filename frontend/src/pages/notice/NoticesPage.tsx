@@ -25,7 +25,7 @@ export default function NoticesPage() {
   return (
     <div className="app">
       <PlatformHeader me={me} />
-      <main className="page narrow stack">
+      <main className="page" style={{ maxWidth: 760, margin: '0 auto', width: '100%' }}>
         <h1 style={{ fontSize: 22 }}>공지</h1>
         {error && <p className="err" role="alert">{error}</p>}
         {result && result.content.length === 0 && <p className="muted">공지가 없습니다.</p>}
