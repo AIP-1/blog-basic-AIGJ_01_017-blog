@@ -1,6 +1,7 @@
 package com.nhnacademy.blog.post.domain;
 
 import jakarta.persistence.LockModeType;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
@@ -61,6 +62,15 @@ public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificat
     @Modifying(clearAutomatically = true)
     @Query("update Post p set p.viewCount = p.viewCount + 1, p.updatedAt = p.updatedAt where p.id = :postId")
     int increaseViewCount(@Param("postId") Long postId);
+
+    /**
+     * 블로그별 지우지 않은 발행 글 수 [블로그 id, 글 수] (마이페이지 내 블로그, BLOG-08).
+     * 주인이 자기 블로그 화면에서 보는 글 수와 같은 조건이다(비공개·숨김 포함, 임시저장 제외).
+     */
+    @Query("select p.blog.id, count(p) from Post p where p.blog.id in :blogIds"
+            + " and p.status = com.nhnacademy.blog.post.domain.PostStatus.PUBLISHED and p.deletedAt is null"
+            + " group by p.blog.id")
+    List<Object[]> countPublishedByBlogIds(@Param("blogIds") Collection<Long> blogIds);
 
     /** 지우지 않은 발행 글 번호 전부. 추천 임베딩을 서버가 뜰 때 채우는 데 쓴다 (T069b). */
     @Query("select p.id from Post p where p.status = com.nhnacademy.blog.post.domain.PostStatus.PUBLISHED"

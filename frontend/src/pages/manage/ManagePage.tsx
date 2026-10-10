@@ -50,7 +50,7 @@ export default function ManagePage() {
         <span className="chip">관리</span>
         <span className="grow" />
         <Link className="btn" to="/">블로그 보기</Link>
-        <span className="small">{me.me.nickname}</span>
+        <a className="btn" href={platformUrl('/me')} title={me.me.nickname}>마이페이지</a>
         <LogoutButton />
       </header>
       {blog.restriction && <RestrictionNotice blog={blog} />}

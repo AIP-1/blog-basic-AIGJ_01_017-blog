@@ -152,7 +152,7 @@ class PostWriteIntegrationTest extends IntegrationTestSupport {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fieldErrors[0].field").value("visibility"));
         publish(ownerCookies, """
-                {"title":"x","contentHtml":"","visibility":"PUBLIC","status":"DRAFT","scheduledAt":"2026-12-01T09:00:00"}
+                {"title":"x","contentHtml":"","visibility":"PUBLIC","status":"SCHEDULED","scheduledAt":"2026-12-01T09:00:00"}
                 """, UUID.randomUUID().toString())
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fieldErrors[0].field").value("status"))

@@ -109,6 +109,14 @@ public class Blog extends BaseTimeEntity {
         }
     }
 
+    /**
+     * 대표 블로그 표시를 켜고 끈다 (BLOG-08). 회원마다 대표는 하나라 DB가 UNIQUE(primary_owner_id)로 지킨다.
+     * 바꿀 때는 옛 대표를 먼저 끄고 DB에 반영(flush)한 뒤 새 대표를 켜야 제약에 걸리지 않는다(MyBlogService).
+     */
+    public void markPrimary(boolean primary) {
+        this.primary = primary;
+    }
+
     public boolean isDeleted() {
         return deletedAt != null;
     }

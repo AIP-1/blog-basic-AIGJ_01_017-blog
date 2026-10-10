@@ -1,15 +1,20 @@
 import { type ChangeEvent, type FormEvent, useEffect, useState } from 'react'
+import { Link } from 'react-router'
 import { ApiError, api, redirectToLogin, uploadFile } from '../../api/client'
 import { type FieldMessages, errorMessage, fieldMessages } from '../../api/errors'
-import type { Me } from '../../api/types'
+import type { Me, MyBlog } from '../../api/types'
+import { PLATFORM_DOMAIN, blogUrl } from '../../app/host'
 import { useMe } from '../../app/useMe'
 import PlatformHeader from '../../components/PlatformHeader'
 
 const PASSWORD_RULE = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/
+/** 한 회원의 활성 블로그 한도 (BLOG-01, 서버 Blog.MAX_ACTIVE_PER_MEMBER와 같은 값) */
+const MAX_BLOGS = 5
 
 /**
- * 마이페이지 (AUTH-05). 플랫폼 주소의 /me에서 프로필 사진·닉네임·비밀번호를 바꾼다.
- * 소셜 연동(OWN-03), 내 블로그 목록·대표 블로그(BLOG-08), 탈퇴(AUTH-06)는 뒤 스텝이다.
+ * 마이페이지 (AUTH-05, BLOG-08). 플랫폼 주소의 /me에서 프로필 사진·닉네임·비밀번호를 바꾸고,
+ * 내 블로그 목록과 대표 블로그, 새 블로그 만들기(활성 5개까지, BLOG-01)로 가는 입구를 둔다(스텝 13 보완).
+ * 소셜 연동(OWN-03), 탈퇴(AUTH-06)는 뒤 스텝이다.
  */
 export default function MyPage() {
   const meState = useMe()
@@ -31,6 +36,7 @@ export default function MyPage() {
           <div className="stack" style={{ gap: 24, maxWidth: 520 }}>
             <h2>내 정보</h2>
             <ProfileSection me={me} onSaved={setMe} />
+            <MyBlogsSection onPrimaryChanged={setMe} />
             {me.hasPassword
               ? <PasswordSection />
               : <p className="small muted">소셜 계정으로 가입해 비밀번호가 없습니다.</p>}
@@ -38,6 +44,72 @@ export default function MyPage() {
         )}
       </main>
     </div>
+  )
+}
+
+/**
+ * 내 블로그 (BLOG-08). 만든 순서로 보여 주고, 대표 블로그를 바꾸고, 5개가 안 되면 새 블로그를 만들러 간다.
+ * 대표를 바꾸면 내 정보(primaryBlog)를 다시 받아 머리글의 내 블로그·글쓰기 버튼(AUTH-04)도 새 대표로 가게 한다.
+ */
+function MyBlogsSection({ onPrimaryChanged }: { onPrimaryChanged: (me: Me) => void }) {
+  const [blogs, setBlogs] = useState<MyBlog[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [changing, setChanging] = useState(false)
+
+  useEffect(() => {
+    api<MyBlog[]>('/api/me/blogs').then(setBlogs).catch((caught: unknown) => setError(errorMessage(caught)))
+  }, [])
+
+  async function makePrimary(blog: MyBlog) {
+    setChanging(true)
+    setError(null)
+    try {
+      await api('/api/me/primary-blog', { method: 'PUT', body: { blogId: blog.id } })
+      setBlogs((previous) => previous?.map((item) => ({ ...item, isPrimary: item.id === blog.id })) ?? null)
+      onPrimaryChanged(await api<Me>('/api/me'))
+    } catch (caught) {
+      setError(errorMessage(caught))
+    } finally {
+      setChanging(false)
+    }
+  }
+
+  const full = blogs !== null && blogs.length >= MAX_BLOGS
+  return (
+    <section className="section">
+      <h3>내 블로그</h3>
+      {error && <p className="err" role="alert">{error}</p>}
+      {blogs !== null && blogs.length === 0 && <p className="muted">아직 블로그가 없습니다.</p>}
+      {blogs !== null && blogs.length > 0 && (
+        <ul className="my-blogs">
+          {blogs.map((blog) => (
+            <li key={blog.id}>
+              <div className="stack" style={{ gap: 2 }}>
+                <div className="row">
+                  <a href={blogUrl(blog.address)}><b>{blog.name}</b></a>
+                  {blog.isPrimary && <span className="chip brand">대표</span>}
+                </div>
+                <span className="small muted">
+                  {blog.address}.{PLATFORM_DOMAIN} · 글 {blog.postCount}
+                  {blog.movedTo && ` · ${blog.movedTo}(으)로 이사함`}
+                </span>
+              </div>
+              <div className="row">
+                <a className="btn" href={blogUrl(blog.address, '/manage')}>관리</a>
+                {!blog.isPrimary && (
+                  <button className="btn" type="button" disabled={changing} onClick={() => void makePrimary(blog)}>
+                    대표로
+                  </button>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      {blogs !== null && (full
+        ? <p className="small muted">블로그는 {MAX_BLOGS}개까지 만들 수 있습니다.</p>
+        : <Link className="btn" to="/blogs/new">블로그 만들기 ({blogs.length}/{MAX_BLOGS})</Link>)}
+    </section>
   )
 }
 

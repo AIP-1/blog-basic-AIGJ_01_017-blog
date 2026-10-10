@@ -46,7 +46,7 @@ public class Post extends BaseTimeEntity {
     @JoinColumn(name = "category_id")
     private Category category;
 
-    /** image.id. 이미지 엔티티는 스텝 7에서 만든다. */
+    /** 주인이 고른 대표 이미지(image.id, POST-07). null이면 본문 첫 이미지가 대표다(PostThumbnails). */
     @Column(name = "thumbnail_image_id")
     private Long thumbnailImageId;
 
@@ -151,6 +151,26 @@ public class Post extends BaseTimeEntity {
         this.summary = body.summary();
         this.visibility = visibility;
         this.topic = topic;
+    }
+
+    /**
+     * 임시저장 글을 발행한다 (POST-08). 지금이 처음 발행 시각이다. 이미 발행한 글이면 아무것도 바꾸지 않는다.
+     */
+    public void publish(LocalDateTime now) {
+        if (status == PostStatus.PUBLISHED) {
+            return;
+        }
+        this.status = PostStatus.PUBLISHED;
+        this.publishedAt = now;
+    }
+
+    /** 대표 이미지를 바꾼다. 본문에 든 이미지인지는 PostService가 확인했다. null이면 본문 첫 이미지. */
+    public void changeThumbnail(Long imageId) {
+        this.thumbnailImageId = imageId;
+    }
+
+    public boolean isDraft() {
+        return status == PostStatus.DRAFT;
     }
 
     /**

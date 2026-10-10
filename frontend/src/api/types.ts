@@ -150,6 +150,10 @@ export interface ManagedPost {
   updatedAt: string | null
   commentAllowed: boolean
   blind: { reason: string; reasonMessage: string } | null
+  /** 고른 대표 이미지. null이면 본문 첫 이미지 (POST-07) */
+  thumbnailImageId: number | null
+  /** 본문에 든 이미지(본문 순서). 대표 이미지 후보 */
+  images: UploadedImage[]
 }
 
 /** 발행·수정 응답 */
@@ -204,6 +208,16 @@ export interface Comment {
 
 export interface CommentList extends CursorResponse<Comment> {
   totalCount: number
+}
+
+/** 마이페이지 내 블로그 한 줄 (GET /api/me/blogs, BLOG-08). movedTo는 이사한 블로그의 새 주소 */
+export interface MyBlog {
+  id: number
+  address: string
+  name: string
+  isPrimary: boolean
+  movedTo: string | null
+  postCount: number
 }
 
 /** 올린 이미지 (POST /api/images) */

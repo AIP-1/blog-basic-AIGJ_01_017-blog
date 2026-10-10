@@ -56,10 +56,12 @@ const editorExtensions = [
   Image.configure({ inline: false, allowBase64: false }),
 ]
 
-export default function Editor({ initialHtml, onChange }: {
+export default function Editor({ initialHtml, onChange, onImageUploaded }: {
   /** 수정 화면에서 불러온 본문. 처음 그릴 때와 불러오기가 끝났을 때 한 번 넣는다 */
   initialHtml: string
   onChange: (html: string) => void
+  /** 이미지를 올려 본문에 넣었을 때. 글쓰기 화면이 대표 이미지 후보의 번호(id)를 알아 둔다 (POST-07) */
+  onImageUploaded?: (image: UploadedImage) => void
 }) {
   // 붙여넣기 처리기는 에디터를 만들 때 정해지므로, 만들어진 에디터는 ref로 꺼내 쓴다
   const editorRef = useRef<TiptapEditor | null>(null)
@@ -97,7 +99,7 @@ export default function Editor({ initialHtml, onChange }: {
 
   return (
     <div>
-      <Toolbar editor={editor} />
+      <Toolbar editor={editor} onImageUploaded={onImageUploaded} />
       <EditorContent editor={editor} className="editor-area" />
       <p className="hint">
         마크다운 문법도 쓸 수 있습니다: <code>## 제목</code> <code>**굵게**</code> <code>*기울임*</code>{' '}
@@ -108,7 +110,10 @@ export default function Editor({ initialHtml, onChange }: {
   )
 }
 
-function Toolbar({ editor }: { editor: TiptapEditor | null }) {
+function Toolbar({ editor, onImageUploaded }: {
+  editor: TiptapEditor | null
+  onImageUploaded?: (image: UploadedImage) => void
+}) {
   const fileInput = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
@@ -131,6 +136,7 @@ function Toolbar({ editor }: { editor: TiptapEditor | null }) {
         // 방금 넣은 사진이 선택된 채라 setImage는 그 사진을 바꿔 버린다. 선택의 끝 뒤에 넣어 고른 순서를 지킨다
         editor.chain().focus().insertContentAt(editor.state.selection.to,
           { type: 'image', attrs: { src: image.url, alt: file.name } }).run()
+        onImageUploaded?.(image)
       } catch (error) {
         setUploadError(`${file.name}: ${errorMessage(error)}`)
       }
