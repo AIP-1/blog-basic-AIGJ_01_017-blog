@@ -117,6 +117,7 @@ public class Comment extends BaseTimeEntity implements CommentEntry {
         return blinded;
     }
 
+
     public LocalDateTime getDeletedAt() {
         return deletedAt;
     }

@@ -332,6 +332,7 @@ public class Post extends BaseTimeEntity {
         return blinded;
     }
 
+
     public LocalDateTime getDeletedAt() {
         return deletedAt;
     }

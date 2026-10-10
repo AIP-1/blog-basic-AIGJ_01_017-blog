@@ -2,12 +2,17 @@ package com.nhnacademy.blog.member.domain;
 
 import jakarta.persistence.LockModeType;
 import java.util.Optional;
+import java.time.LocalDateTime;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface MemberRepository extends JpaRepository<Member, Long> {
+public interface MemberRepository extends JpaRepository<Member, Long>, JpaSpecificationExecutor<Member> {
+
+    /** 이 시각 뒤에 가입한 회원 수 (관리자 대시보드). */
+    long countByCreatedAtGreaterThanEqual(LocalDateTime since);
 
     /** 이메일 가입 회원 중에 같은 이메일이 있는가. 소셜 가입·탈퇴 회원은 email이 NULL이라 걸리지 않는다. */
     boolean existsByEmail(String email);

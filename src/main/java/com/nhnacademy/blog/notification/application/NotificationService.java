@@ -29,7 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * 알림 (T113, SUB-04). 내 글의 댓글, 내 댓글의 답글, 내 글의 공감, 내 블로그의 새 구독자가 생기면 만든다.
  * 내가 한 일은 나에게 알리지 않는다. 만드는 쪽(댓글·공감·구독 서비스)의 트랜잭션 안에서 함께 저장된다.
- * 읽을 때는 대상이 지워졌거나 받는 사람이 볼 수 없게 된 알림을 뺀다(contracts SUB-04). 제재·해제(SANCTION)는 스텝 18.
+ * 읽을 때는 대상이 지워졌거나 받는 사람이 볼 수 없게 된 알림을 뺀다(contracts SUB-04). 제재·해제(SANCTION)는 관리자 조치가 만든다(스텝 18).
  */
 @Service
 public class NotificationService {
@@ -85,6 +85,16 @@ public class NotificationService {
     public void subscribed(Blog blog, Member subscriber) {
         send(subscriber, blog.getMember().getId(), NotificationType.SUBSCRIBE, NotificationTargetType.BLOG,
                 blog.getId(), subscriber.getNickname() + "님이 " + blog.getName() + "을(를) 구독했습니다.");
+    }
+
+    /**
+     * 관리자 조치(제재·해제)를 알린다 (SUB-04, ADMIN-02·03·05). 관리자가 한 일이라 "내가 한 일" 검사가 없다.
+     * 눌렀을 때 갈 곳은 대상으로 정한다(글·댓글은 그 글, 블로그는 그 블로그 홈, 회원은 마이페이지).
+     */
+    public void sanctioned(Long receiverId, NotificationTargetType targetType, Long targetId, String message) {
+        String text = message.length() <= Notification.MESSAGE_LENGTH ? message
+                : message.substring(0, Notification.MESSAGE_LENGTH - 1) + "…";
+        notificationRepository.save(Notification.of(receiverId, NotificationType.SANCTION, targetType, targetId, text));
     }
 
     private void send(Member actor, Long receiverId, NotificationType type, NotificationTargetType targetType,
