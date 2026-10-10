@@ -89,7 +89,7 @@ public class PostManageController {
     public void changeVisibility(@CurrentBlog Blog blog, @AuthenticationPrincipal LoginMember member,
                                  @PathVariable Long id, @RequestBody VisibilityRequest request) {
         postService.findOwned(blog, id, member);
-        requestValidator.validate(request).checkSupported();
+        requestValidator.validate(request);
         postService.changeVisibility(blog, id, member, request.visibility());
     }
 
