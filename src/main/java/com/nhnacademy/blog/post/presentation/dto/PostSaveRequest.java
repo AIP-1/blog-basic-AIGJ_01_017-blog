@@ -15,7 +15,8 @@ import java.util.List;
 
 /**
  * 글 저장 본문 (contracts/rest-api.md 글 저장 본문). POST /api/posts, PUT /api/posts/{id}가 같이 쓴다.
- * 발행(PUBLISHED)·임시저장(DRAFT, 스텝 13)과 공개·비공개, 태그(스텝 7), 대표 이미지(스텝 13)가 된다.
+ * 발행(PUBLISHED)·임시저장(DRAFT, 스텝 13)·예약(SCHEDULED, 스텝 17)과 공개 범위, 태그(스텝 7), 대표 이미지(스텝 13),
+ * 댓글 허용(commentAllowed, 스텝 17. 보내지 않으면 새 글은 허용, 수정은 그대로)이 된다.
  * 나머지 칸은 기능이 생기는 스텝에서 받고, 그 전에 값을 보내면 조용히 버리지 않고 400으로 알린다(checkSupported).
  * 제목은 발행할 때만 필수다. 임시저장은 제목이 비어도 된다(contracts 글 저장 본문 status 표).
  */
@@ -52,14 +53,15 @@ public record PostSaveRequest(
         if (status == PostStatus.PUBLISHED && (title == null || title.isBlank())) {
             errors.add(new FieldErrorDetail("title", "제목을 입력해 주세요."));
         }
-        if (status == PostStatus.SCHEDULED) {
-            errors.add(new FieldErrorDetail("status", "예약 발행은 아직 할 수 없습니다.")); // POST-13
+        if (status == PostStatus.SCHEDULED && (title == null || title.isBlank())) {
+            errors.add(new FieldErrorDetail("title", "제목을 입력해 주세요."));
         }
-        if (scheduledAt != null) {
-            errors.add(new FieldErrorDetail("scheduledAt", "예약 발행은 아직 할 수 없습니다.")); // POST-13
+        // 예약 시각은 예약 발행(POST-13)에서만. 지금보다 뒤인지는 시계를 아는 PostService가 본다
+        if (status == PostStatus.SCHEDULED && scheduledAt == null) {
+            errors.add(new FieldErrorDetail("scheduledAt", "예약 시각을 골라 주세요."));
         }
-        if (Boolean.FALSE.equals(commentAllowed)) {
-            errors.add(new FieldErrorDetail("commentAllowed", "댓글 막기는 아직 할 수 없습니다.")); // CMT-07
+        if (status != PostStatus.SCHEDULED && scheduledAt != null) {
+            errors.add(new FieldErrorDetail("scheduledAt", "예약 시각은 예약 발행에서만 보낼 수 있습니다."));
         }
         if (!errors.isEmpty()) {
             throw BusinessException.fieldErrors(ErrorCode.VALIDATION_FAILED, errors);
@@ -68,7 +70,7 @@ public record PostSaveRequest(
 
     public PostCommand toCommand() {
         return new PostCommand(title == null ? "" : title.trim(), contentHtml == null ? "" : contentHtml, categoryId,
-                topic, visibility, tagNames, status, thumbnailImageId);
+                topic, visibility, tagNames, status, thumbnailImageId, scheduledAt, commentAllowed);
     }
 
 }

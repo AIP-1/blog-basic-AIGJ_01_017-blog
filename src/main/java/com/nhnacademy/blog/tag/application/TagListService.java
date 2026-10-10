@@ -31,6 +31,25 @@ public class TagListService {
         this.clock = clock;
     }
 
+    /**
+     * 관리 화면의 태그 표 (TAG-04). 블로그 화면용 목록과 달리 임시저장·예약 글에만 단 태그도 나온다(이름을 바꾸거나 지울 수 있게).
+     * 글이 없는 태그는 글을 지우거나 고칠 때 지워지지만(TagService.removeUnused), 그 전에 생긴 것이 있으면 0으로 나온다.
+     * 전체 글 수가 많은 순, 같으면 이름순이다.
+     */
+    @Transactional(readOnly = true)
+    public List<ManagedTag> managed(Blog blog, Long ownerId) {
+        Map<Long, Long> all = postRepository.countByTag(
+                PostSpecifications.inBlog(blog.getId()).and(PostSpecifications.ownerView()));
+        Map<Long, Long> published = postRepository.countByTag(
+                PostSpecifications.listedIn(blog, ownerId, LocalDateTime.now(clock)));
+        Comparator<ManagedTag> byName = Comparator.comparing(ManagedTag::name, TagNames.nameComparator());
+        return tagRepository.findByBlogId(blog.getId()).stream()
+                .map(tag -> new ManagedTag(tag.getId(), tag.getName(), all.getOrDefault(tag.getId(), 0L),
+                        published.getOrDefault(tag.getId(), 0L)))
+                .sorted(Comparator.comparingLong(ManagedTag::postCount).reversed().thenComparing(byName))
+                .toList();
+    }
+
     @Transactional(readOnly = true)
     public List<TagCount> tags(Blog blog, Long viewerId) {
         Map<Long, Long> counts = postRepository.countByTag(

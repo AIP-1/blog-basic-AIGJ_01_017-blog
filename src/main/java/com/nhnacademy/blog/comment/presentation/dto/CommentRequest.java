@@ -1,12 +1,12 @@
 package com.nhnacademy.blog.comment.presentation.dto;
 
-import jakarta.validation.constraints.AssertFalse;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 /**
  * 댓글 쓰기 (CMT-01). 내용은 1~1,000자.
- * parentId가 있으면 그 댓글의 답글이다(CMT-05, 한 단계). 비밀댓글(secret, CMT-06)은 백로그라 아직 보내면 400이다.
+ * parentId가 있으면 그 댓글의 답글이다(CMT-05, 한 단계). secret이 true면 비밀댓글이다(CMT-06, 스텝 17):
+ * 글 주인과 작성자만 내용을 본다. 보내지 않으면 공개 댓글이다.
  */
 public record CommentRequest(
         @NotBlank(message = "댓글 내용을 입력해 주세요.")
@@ -15,6 +15,10 @@ public record CommentRequest(
 
         Long parentId,
 
-        @AssertFalse(message = "비밀댓글은 아직 쓸 수 없습니다.")
         Boolean secret) {
+
+    public boolean isSecret() {
+        return Boolean.TRUE.equals(secret);
+    }
+
 }

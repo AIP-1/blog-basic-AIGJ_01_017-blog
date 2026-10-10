@@ -12,6 +12,7 @@ import BlogHeader from '../../components/BlogHeader'
 import Comments from '../../components/Comments'
 import LikeButton from '../../components/LikeButton'
 import ErrorPage from '../../components/ErrorPage'
+import SameCategoryPosts from '../../components/SameCategoryPosts'
 import ShareButtons from '../../components/ShareButtons'
 import Sidebar from '../../components/Sidebar'
 import SimilarPosts from '../../components/SimilarPosts'
@@ -199,6 +200,9 @@ function Article({ post, me, onDelete, onVisibilityChange, actionError, onCommen
         <span>이전 글 {post.prev ? <Link to={`/${post.prev.id}`}>{post.prev.title}</Link> : <span className="muted">없음</span>}</span>
         <span>다음 글 {post.next ? <Link to={`/${post.next.id}`}>{post.next.title}</Link> : <span className="muted">없음</span>}</span>
       </nav>
+      {post.category && (
+        <SameCategoryPosts key={`same-${post.id}`} postId={post.id} categoryName={post.category.name} />
+      )}
       <SimilarPosts key={`similar-${post.id}`} postId={post.id} />
       <Comments key={`comments-${post.id}`} postId={post.id} me={me} commentAllowed={post.commentAllowed}
                 onCountChange={onCommentCount} />

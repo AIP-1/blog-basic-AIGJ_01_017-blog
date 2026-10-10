@@ -24,6 +24,7 @@ import com.nhnacademy.blog.tag.application.TagService;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -76,11 +77,17 @@ public class PostService {
         Category category = category(blog, command.categoryId());
         PostBody body = body(command.contentHtml());
         postThumbnails.requireInBody(command.thumbnailImageId(), body.html());
-        Post post = command.status() == PostStatus.DRAFT
-                ? Post.draft(blog, category, command.title(), body, command.visibility(), command.topic())
-                : Post.published(blog, category, command.title(), body, command.visibility(), command.topic(),
-                        LocalDateTime.now(clock));
+        Post post = switch (command.status()) {
+            case DRAFT -> Post.draft(blog, category, command.title(), body, command.visibility(), command.topic());
+            case SCHEDULED -> Post.scheduled(blog, category, command.title(), body, command.visibility(),
+                    command.topic(), futureSchedule(command.scheduledAt()));
+            case PUBLISHED -> Post.published(blog, category, command.title(), body, command.visibility(),
+                    command.topic(), LocalDateTime.now(clock));
+        };
         post.changeThumbnail(command.thumbnailImageId());
+        if (command.commentAllowed() != null) {
+            post.changeCommentAllowed(command.commentAllowed());
+        }
         post.replaceTags(tagService.resolve(blog, command.tagNames()));
         Post saved = postRepository.save(post);
         // 받는 쪽(추천 임베딩)은 이 트랜잭션이 커밋된 뒤에 움직인다(@TransactionalEventListener). 임시저장 글은 건너뛴다
@@ -123,20 +130,38 @@ public class PostService {
     @Transactional
     public Post edit(Blog blog, Long postId, LoginMember member, PostCommand command) {
         Post post = findEditable(blog, postId, member);
-        if (command.status() == PostStatus.DRAFT && !post.isDraft()) {
+        if (command.status() == PostStatus.DRAFT && post.isPublished()) {
             throw BusinessException.invalidField("status", "발행한 글은 임시저장으로 되돌릴 수 없습니다. 비공개로 바꿔 주세요.");
+        }
+        if (command.status() == PostStatus.SCHEDULED && post.isPublished()) {
+            throw BusinessException.invalidField("status", "이미 발행한 글은 예약할 수 없습니다.");
         }
         Category category = category(blog, command.categoryId());
         PostBody body = body(command.contentHtml());
         postThumbnails.requireInBody(command.thumbnailImageId(), body.html());
         post.edit(category, command.title(), body, command.visibility(), command.topic());
         post.changeThumbnail(command.thumbnailImageId());
+        Set<Long> oldTagIds = post.tagIds();
         post.replaceTags(tagService.resolve(blog, command.tagNames()));
-        if (command.status() == PostStatus.PUBLISHED) {
-            post.publish(LocalDateTime.now(clock));
+        switch (command.status()) {
+            case PUBLISHED -> post.publish(LocalDateTime.now(clock));
+            case SCHEDULED -> post.schedule(futureSchedule(command.scheduledAt()));
+            case DRAFT -> post.unschedule();
         }
+        if (command.commentAllowed() != null) {
+            post.changeCommentAllowed(command.commentAllowed());
+        }
+        tagService.removeUnused(oldTagIds);
         events.publishEvent(new PostContentChangedEvent(post.getId()));
         return post;
+    }
+
+    /** 예약 시각은 지금보다 뒤여야 한다(지난 시각이면 바로 발행과 같아 헷갈린다). 초 아래는 버린다. */
+    private LocalDateTime futureSchedule(LocalDateTime scheduledAt) {
+        if (!scheduledAt.isAfter(LocalDateTime.now(clock))) {
+            throw BusinessException.invalidField("scheduledAt", "예약 시각은 지금보다 뒤여야 합니다.");
+        }
+        return scheduledAt.withNano(0);
     }
 
     /** 편집용 글. 태그 이름, 숨김 사유, 본문 이미지(대표 이미지 후보)를 트랜잭션 안에서 꺼내 둔다. */
@@ -165,7 +190,10 @@ public class PostService {
         postRepository.deleteLikes(id);
         // 댓글 일괄 수정이 영속성 컨텍스트를 비우므로(clearAutomatically) 글은 그 뒤에 다시 읽어 지운다
         commentRepository.softDeleteByPostId(id, now);
-        postRepository.findById(id).orElseThrow().delete(now);
+        Post post = postRepository.findById(id).orElseThrow();
+        Set<Long> tagIds = post.tagIds();
+        post.delete(now);
+        tagService.removeUnused(tagIds);
         events.publishEvent(new PostDeletedEvent(id));
     }
 

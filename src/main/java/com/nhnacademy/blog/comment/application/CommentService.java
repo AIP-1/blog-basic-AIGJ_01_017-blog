@@ -26,7 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * 댓글 보기·쓰기·지우기 (T044, CMT-01, CMT-02).
  * 댓글은 글에 딸려 있어서, 글을 볼 수 없는 사람에게는 댓글도 없다(글과 같은 404·403 판단, PostReadService.readable).
- * 답글은 한 단계(CMT-05, 스텝 7), 본인 댓글 고치기(CMT-03, 스텝 14). 비밀댓글 쓰기(CMT-06)는 백로그다.
+ * 답글은 한 단계(CMT-05, 스텝 7), 본인 댓글 고치기(CMT-03, 스텝 14), 비밀댓글(CMT-06, 스텝 17).
  * 보는 사람 기준의 모양(비밀·삭제된 자리·숨김)은 방명록과 같은 CommentViews가 정한다.
  */
 @Service
@@ -111,14 +111,15 @@ public class CommentService {
 
     /** 쓰기. 글의 댓글 수도 같은 트랜잭션에서 늘린다(새로고침해도 실제 값과 같게, data-model). */
     @Transactional
-    public CommentView write(Blog blog, Long postId, LoginMember member, String content, Long parentId) {
+    public CommentView write(Blog blog, Long postId, LoginMember member, String content, Long parentId,
+                             boolean secret) {
         Post post = writablePost(blog, postId, member);
         // 댓글 INSERT(외래 키 공유 잠금) 뒤 댓글 수 UPDATE(배타 잠금)가 동시에 엇갈리면 데드락이라 글 행부터 잠근다
         postRepository.lockById(post.getId());
         Member author = memberRepository.getReferenceById(member.id());
         Comment comment = commentRepository.save(parentId == null
-                ? Comment.write(post, author, content.trim(), false)
-                : Comment.reply(parentOf(post, parentId), author, content.trim(), false));
+                ? Comment.write(post, author, content.trim(), secret)
+                : Comment.reply(parentOf(post, parentId), author, content.trim(), secret));
         postRepository.addCommentCount(post.getId(), 1);
         Comment saved = commentRepository.findBy(
                 (root, query, cb) -> cb.equal(root.get("id"), comment.getId()),

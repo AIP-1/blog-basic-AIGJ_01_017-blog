@@ -79,6 +79,22 @@ public class Category {
         this.name = name;
     }
 
+    /** 비공개 켜기·끄기 (CAT-05). 비공개면 주인 말고는 이 카테고리와 그 하위, 그 글들이 없는 것처럼 보인다. */
+    public void changePrivate(boolean privateCategory) {
+        this.privateCategory = privateCategory;
+    }
+
+    /** 순서·상하위 바꾸기 (CAT-04). 2단계 규칙과 같은 자리 이름 중복은 CategoryService가 먼저 본다. */
+    public void moveTo(Category parent, int sortOrder) {
+        this.parent = parent;
+        this.sortOrder = sortOrder;
+    }
+
+    /** 이 카테고리나 그 상위가 비공개인가. 글의 가시성 판단이 쓴다(2단계라 상위 하나만 보면 된다). */
+    public boolean isHidden() {
+        return privateCategory || (parent != null && parent.isPrivateCategory());
+    }
+
     public Long getId() {
         return id;
     }

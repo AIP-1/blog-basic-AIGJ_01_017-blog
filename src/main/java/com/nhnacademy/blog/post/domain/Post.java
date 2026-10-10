@@ -131,6 +131,17 @@ public class Post extends BaseTimeEntity {
         return new Post(blog, category, title, body, PostStatus.DRAFT, visibility, topic);
     }
 
+    /**
+     * 예약 발행 글 (POST-13). 정한 시각 전에는 주인 말고 아무도 볼 수 없다(가시성 판단이 PUBLISHED만 남에게 보여 준다).
+     * 그 시각에 ScheduledPublisher가 발행하고, 그 시각이 처음 발행 시각이다.
+     */
+    public static Post scheduled(Blog blog, Category category, String title, PostBody body, Visibility visibility,
+                                 Topic topic, LocalDateTime scheduledAt) {
+        Post post = new Post(blog, category, title, body, PostStatus.SCHEDULED, visibility, topic);
+        post.scheduledAt = scheduledAt;
+        return post;
+    }
+
     /** 바로 발행한 글. */
     public static Post published(Blog blog, Category category, String title, PostBody body, Visibility visibility,
                                  Topic topic, LocalDateTime publishedAt) {
@@ -162,6 +173,44 @@ public class Post extends BaseTimeEntity {
         }
         this.status = PostStatus.PUBLISHED;
         this.publishedAt = now;
+        this.scheduledAt = null;
+    }
+
+    /** 아직 발행하지 않은 글(임시저장·예약)을 예약으로 바꾸거나 예약 시각을 바꾼다 (POST-13). 발행한 글은 PostService가 막는다. */
+    public void schedule(LocalDateTime scheduledAt) {
+        this.status = PostStatus.SCHEDULED;
+        this.scheduledAt = scheduledAt;
+    }
+
+    /** 예약을 거두고 임시저장으로 (예약 글을 DRAFT로 저장할 때). */
+    public void unschedule() {
+        if (status == PostStatus.SCHEDULED) {
+            this.status = PostStatus.DRAFT;
+            this.scheduledAt = null;
+        }
+    }
+
+    /**
+     * 정한 시각이 되어 발행한다 (POST-13, contracts 글 저장 본문 status 표). 그 예약 시각이 처음 발행 시각이고
+     * (작업이 몇십 초 늦게 돌아도 글 목록 순서는 정한 시각대로), 공개 범위는 공개로 바뀐다.
+     */
+    public void publishScheduled() {
+        if (status != PostStatus.SCHEDULED) {
+            return;
+        }
+        this.status = PostStatus.PUBLISHED;
+        this.publishedAt = scheduledAt;
+        this.visibility = Visibility.PUBLIC;
+        this.scheduledAt = null;
+    }
+
+    /** 댓글 허용·막기 (CMT-07). 막아도 이미 달린 댓글은 그대로 보인다. */
+    public void changeCommentAllowed(boolean commentAllowed) {
+        this.commentAllowed = commentAllowed;
+    }
+
+    public boolean isPublished() {
+        return status == PostStatus.PUBLISHED;
     }
 
     /** 대표 이미지를 바꾼다. 본문에 든 이미지인지는 PostService가 확인했다. null이면 본문 첫 이미지. */
@@ -175,7 +224,7 @@ public class Post extends BaseTimeEntity {
 
     /**
      * 태그를 이 목록으로 바꾼다. 빠진 태그의 연결 행만 지우고 새 태그의 연결 행만 넣는다(그대로인 태그는 건드리지 않음).
-     * 빠진 태그도 블로그 태그(tag 행)는 남는다.
+     * 빠진 태그가 어느 글에도 남지 않으면 블로그 태그(tag 행)는 TagService.removeUnused가 지운다.
      */
     public void replaceTags(Collection<Tag> newTags) {
         Set<Long> wanted = newTags.stream().map(Tag::getId).collect(Collectors.toSet());
@@ -184,6 +233,11 @@ public class Post extends BaseTimeEntity {
         newTags.stream()
                 .filter(tag -> !current.contains(tag.getId()))
                 .forEach(tag -> postTags.add(PostTag.of(this, tag)));
+    }
+
+    /** 단 태그의 id. 트랜잭션 안에서 불러야 한다(지연 로딩). */
+    public Set<Long> tagIds() {
+        return postTags.stream().map(postTag -> postTag.getTag().getId()).collect(Collectors.toSet());
     }
 
     /** 태그 이름, 가나다순. 트랜잭션 안에서 불러야 한다(지연 로딩). */

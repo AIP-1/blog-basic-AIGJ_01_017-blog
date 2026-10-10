@@ -58,6 +58,15 @@ public class Tag {
         return new Tag(blog, name);
     }
 
+    /** 이름 바꾸기 (TAG-04). 같은 블로그의 다른 태그와 겹치는지는 TagManageService가 먼저 본다. */
+    public void rename(String name) {
+        this.name = name;
+    }
+
+    public boolean belongsTo(Blog blog) {
+        return this.blog.getId().equals(blog.getId());
+    }
+
     public Long getId() {
         return id;
     }

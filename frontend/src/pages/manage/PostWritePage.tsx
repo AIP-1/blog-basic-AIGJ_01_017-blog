@@ -23,6 +23,9 @@ type PostState = 'NEW' | 'LOADING' | ManagedPost['status']
  * 처음 저장은 POST /api/posts(DRAFT)로 글 번호를 받고, 그 뒤 저장과 발행은 그 번호로 PUT한다.
  * 저장 요청은 한 번에 하나만 보낸다(자동 저장과 발행이 겹치면 발행이 앞 저장을 기다린다).
  * 발행한 글을 고칠 때는 임시저장으로 되돌릴 수 없으므로 자동 저장도 임시저장 버튼도 없다.
+ * 댓글 허용(CMT-07, 스텝 17): 끄면 그 글에는 댓글을 쓸 수 없다(이미 달린 댓글은 보인다).
+ * 예약 발행(POST-13, 스텝 17): 발행하지 않은 글은 "예약 발행"을 켜고 시각을 고르면 그 시각에 공개로 발행된다.
+ * 예약 글은 자동 저장하지 않는다(임시저장으로 바꾸면 예약이 풀리므로).
  *
  * 대표 이미지(POST-07, 스텝 13): 본문에 든 이미지 가운데 고른다. 고르지 않거나 고른 이미지를 본문에서 지우면
  * 본문 첫 이미지가 대표다. 이미지 번호는 수정 화면을 열 때 서버가 준 목록과 이 화면에서 올린 이미지로 안다.
@@ -40,6 +43,10 @@ export default function PostWritePage() {
   const [topics, setTopics] = useState<Topic[]>([])
   const [tagNames, setTagNames] = useState<string[]>([])
   const [visibility, setVisibility] = useState<Visibility>('PUBLIC')
+  const [commentAllowed, setCommentAllowed] = useState(true)
+  /** 예약 발행을 켰나, 고른 시각(입력칸 값 "2026-10-12T09:00") */
+  const [scheduleOn, setScheduleOn] = useState(false)
+  const [scheduledAt, setScheduledAt] = useState('')
   // 이미지 주소 → 이미지. 대표 이미지 후보의 번호를 찾는 데 쓴다
   const [knownImages, setKnownImages] = useState<Record<string, UploadedImage>>({})
   const [thumbnailId, setThumbnailId] = useState<number | null>(null)
@@ -87,6 +94,12 @@ export default function PostWritePage() {
         setTagNames(post.tagNames)
         setTopic(post.topic ?? '')
         setVisibility(post.visibility)
+        setCommentAllowed(post.commentAllowed)
+        if (post.status === 'SCHEDULED' && post.scheduledAt) {
+          setScheduleOn(true)
+          // "2026-10-12T09:00:00+09:00"에서 입력칸 모양 "2026-10-12T09:00"만
+          setScheduledAt(post.scheduledAt.slice(0, 16))
+        }
         setBlind(post.blind)
         setPostState(post.status)
         setKnownImages(Object.fromEntries(post.images.map((image) => [image.url, image])))
@@ -94,7 +107,7 @@ export default function PostWritePage() {
         lastSaved.current = snapshotOf({
           title: post.title, contentHtml: post.contentHtml, categoryId: post.categoryId, tagNames: post.tagNames,
           topic: post.topic, visibility: post.visibility,
-          thumbnailImageId: post.thumbnailImageId,
+          thumbnailImageId: post.thumbnailImageId, commentAllowed: post.commentAllowed,
         })
       })
       .catch((error: unknown) => active && setLoadError(
@@ -136,6 +149,7 @@ export default function PostWritePage() {
       topic: topic === '' ? null : topic,
       visibility,
       thumbnailImageId: effectiveThumbnail(thumbnailId, choices),
+      commentAllowed,
     }
   }
 
@@ -183,14 +197,21 @@ export default function PostWritePage() {
       setErrors({ title: '제목을 입력해 주세요.' })
       return
     }
+    if (scheduling && !scheduledAt) {
+      setErrors({ scheduledAt: '예약 시각을 골라 주세요.' })
+      return
+    }
     setSaving(true)
     setErrors({})
-    const body = { ...formValues(), status: 'PUBLISHED' }
+    const body = scheduling
+      ? { ...formValues(), status: 'SCHEDULED', scheduledAt: `${scheduledAt}:00` }
+      : { ...formValues(), status: 'PUBLISHED' }
     try {
       const saved = await serially(() => savedId.current !== null
         ? api<PostSaved>(`/api/posts/${savedId.current}`, { method: 'PUT', body })
         : api<PostSaved>('/api/posts', { method: 'POST', body, idempotencyKey: idempotencyKey.current }))
-      navigate(`/${saved.id}`)
+      // 예약 글은 아직 블로그에 없으니 글 관리의 예약 목록으로 간다
+      navigate(scheduling ? '/manage/posts?status=SCHEDULED' : `/${saved.id}`)
     } catch (error) {
       const fields = fieldMessages(error)
       setErrors(Object.keys(fields).length > 0 ? fields : { form: errorMessage(error) })
@@ -211,6 +232,8 @@ export default function PostWritePage() {
   }
 
   const drafting = postState === 'NEW' || postState === 'DRAFT'
+  /** 예약 발행으로 저장하나. 이미 발행한 글은 예약할 수 없다 */
+  const scheduling = scheduleOn && postState !== 'PUBLISHED'
   const choices = thumbnailChoices(contentHtml, knownImages)
   const chosenThumbnail = effectiveThumbnail(thumbnailId, choices)
 
@@ -240,7 +263,7 @@ export default function PostWritePage() {
               </button>
             )}
             <button className="btn primary" type="submit" disabled={saving || blind !== null}>
-              {postState === 'PUBLISHED' ? '수정' : '발행'}
+              {postState === 'PUBLISHED' ? '수정' : scheduling ? '예약 발행' : '발행'}
             </button>
           </div>
         </div>
@@ -337,8 +360,31 @@ export default function PostWritePage() {
           {visibility === 'SUBSCRIBERS' && (
             <span className="hint">구독한 회원과 나만 본문을 봅니다. 다른 사람에게는 목록에서 빠지고, 링크로 열면 구독 안내가 보입니다.</span>
           )}
+          {scheduling && <span className="hint">예약 글은 정한 시각에 "공개"로 발행됩니다.</span>}
           {errors.visibility && <p className="err">{errors.visibility}</p>}
         </fieldset>
+
+        <label className="row small">
+          <input type="checkbox" checked={commentAllowed} onChange={(event) => setCommentAllowed(event.target.checked)} />
+          댓글 허용
+          <span className="muted">끄면 이 글에는 댓글을 쓸 수 없습니다. 이미 달린 댓글은 그대로 보입니다.</span>
+        </label>
+
+        {postState !== 'PUBLISHED' && (
+          <div className="field">
+            <label className="row small">
+              <input type="checkbox" checked={scheduleOn} onChange={(event) => setScheduleOn(event.target.checked)} />
+              예약 발행
+            </label>
+            {scheduleOn && (
+              <input type="datetime-local" value={scheduledAt} style={{ maxWidth: 240 }} aria-label="예약 시각"
+                     onChange={(event) => setScheduledAt(event.target.value)} />
+            )}
+            {scheduleOn && <span className="hint">고른 시각이 되면 공개로 발행되고, 그 시각이 발행 시각입니다(1분 안에).</span>}
+            {errors.scheduledAt && <p className="err">{errors.scheduledAt}</p>}
+            {errors.status && <p className="err">{errors.status}</p>}
+          </div>
+        )}
       </form>
     </main>
   )
@@ -347,8 +393,8 @@ export default function PostWritePage() {
 /** 저장할 입력값을 한 줄로. 마지막 저장과 비교해 바뀐 것이 있는지 본다. */
 function snapshotOf(values: {
   title: string; contentHtml: string; categoryId: number | null; tagNames: string[]; topic: string | null;
-  visibility: Visibility; thumbnailImageId: number | null
+  visibility: Visibility; thumbnailImageId: number | null; commentAllowed: boolean
 }): string {
   return JSON.stringify([values.title.trim(), values.contentHtml, values.categoryId, values.tagNames, values.topic,
-    values.visibility, values.thumbnailImageId])
+    values.visibility, values.thumbnailImageId, values.commentAllowed])
 }

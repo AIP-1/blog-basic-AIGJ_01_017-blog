@@ -147,16 +147,26 @@ class PostWriteIntegrationTest extends IntegrationTestSupport {
     }
 
     @Test
-    void unsupportedOptionsAreRejectedNotIgnored() throws Exception {
+    void subscribersAndScheduleOptionsAreCheckedNotIgnored() throws Exception {
         // 구독자 공개는 스텝 16부터 된다(POST-12)
         publish(ownerCookies, body("x", "SUBSCRIBERS"), UUID.randomUUID().toString())
                 .andExpect(status().isCreated());
+        // 예약 발행(스텝 17, POST-13): 예약 시각은 예약에서만, 예약이면 필수, 지난 시각은 400
         publish(ownerCookies, """
-                {"title":"x","contentHtml":"","visibility":"PUBLIC","status":"SCHEDULED","scheduledAt":"2026-12-01T09:00:00"}
+                {"title":"x","contentHtml":"","visibility":"PUBLIC","status":"SCHEDULED"}
                 """, UUID.randomUUID().toString())
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.fieldErrors[0].field").value("status"))
-                .andExpect(jsonPath("$.fieldErrors[1].field").value("scheduledAt"));
+                .andExpect(jsonPath("$.fieldErrors[0].field").value("scheduledAt"));
+        publish(ownerCookies, """
+                {"title":"x","contentHtml":"","visibility":"PUBLIC","status":"PUBLISHED","scheduledAt":"2099-12-01T09:00:00"}
+                """, UUID.randomUUID().toString())
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors[0].field").value("scheduledAt"));
+        publish(ownerCookies, """
+                {"title":"x","contentHtml":"","visibility":"PUBLIC","status":"SCHEDULED","scheduledAt":"2000-01-01T09:00:00"}
+                """, UUID.randomUUID().toString())
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors[0].field").value("scheduledAt"));
     }
 
     @Test

@@ -10,8 +10,9 @@ import org.springframework.context.annotation.Import;
  * 올린 이미지는 개발용 uploads/가 아니라 임시 폴더에 쓴다.
  * MockMvc 요청마다 다른 접속 주소를 준다(TestWebConfiguration, IP별 시도 제한이 테스트끼리 쌓이지 않게).
  * 비슷한 글 추천의 임베딩은 Ollama 대신 가짜를 쓴다(TestRecommendConfiguration).
+ * 1분마다 도는 예약 발행 작업은 끈다(테스트가 ScheduledPublisher.publishDue를 직접 부른다).
  */
-@SpringBootTest(properties = "app.upload.dir=${java.io.tmpdir}/blog-test-uploads")
+@SpringBootTest(properties = {"app.upload.dir=${java.io.tmpdir}/blog-test-uploads", "app.scheduling.enabled=false"})
 @AutoConfigureMockMvc
 @Import({TestcontainersConfiguration.class, TestWebConfiguration.class, TestRecommendConfiguration.class})
 public abstract class IntegrationTestSupport {

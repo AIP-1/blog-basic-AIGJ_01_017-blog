@@ -8,7 +8,7 @@ import CommentItem from './CommentItem'
 import { afterDelete, afterEdit } from './commentList'
 
 /**
- * 글 아래 댓글 (CMT-01, CMT-02, CMT-03, CMT-05). 작성순 20개씩 더보기, 회원은 쓰기·답글(한 단계),
+ * 글 아래 댓글 (CMT-01, CMT-02, CMT-03, CMT-05, CMT-06 비밀댓글). 작성순 20개씩 더보기, 회원은 쓰기·답글(한 단계),
  * 작성자는 고치기, 작성자·블로그 주인은 지우기.
  * 비회원에게는 쓰기 칸 대신 로그인 안내를 보여 주고, 로그인하면 이 글로 돌아온다(spec US3 시나리오 6).
  * 답글이 있는 댓글을 지우면 "삭제된 댓글입니다" 자리로 남는다(서버 규칙과 같게 화면도 바꾼다).
@@ -112,6 +112,7 @@ export default function Comments({ postId, me, commentAllowed, onCountChange }: 
               <div className="comment reply">
                 <span />
                 <CommentForm path={path} parentId={comment.id} onCreated={added} placeholder="답글을 입력하세요"
+                             allowSecret secretLabel="비밀댓글"
                              onError={setError} />
               </div>
             )}
@@ -126,7 +127,8 @@ export default function Comments({ postId, me, commentAllowed, onCountChange }: 
         <a className="btn" href={loginUrl()} style={{ justifySelf: 'start' }}>로그인하고 댓글 쓰기</a>
       )}
       {commentAllowed && me.status === 'member' && (
-        <CommentForm path={path} parentId={null} onCreated={added} placeholder="댓글을 입력하세요" onError={setError} />
+        <CommentForm path={path} parentId={null} onCreated={added} placeholder="댓글을 입력하세요" onError={setError}
+                     allowSecret secretLabel="비밀댓글" />
       )}
     </section>
   )

@@ -16,7 +16,7 @@ import java.util.Map;
 public record ManagedPostResponse(Long id, String title, String contentHtml, Long categoryId, List<String> tagNames,
                                   String topic, String visibility, String status, OffsetDateTime publishedAt,
                                   OffsetDateTime updatedAt, boolean commentAllowed, Map<String, String> blind,
-                                  Long thumbnailImageId, List<BodyImage> images) {
+                                  Long thumbnailImageId, List<BodyImage> images, OffsetDateTime scheduledAt) {
 
     /** 본문에 든 이미지 { id, url, thumbnailUrl } (POST /api/images 응답과 같은 모양). */
     public record BodyImage(Long id, String url, String thumbnailUrl) {
@@ -33,7 +33,8 @@ public record ManagedPostResponse(Long id, String title, String contentHtml, Lon
                 post.getThumbnailImageId(),
                 managed.images().stream()
                         .map(image -> new BodyImage(image.getId(), image.getPath(), image.getThumbnailPath()))
-                        .toList());
+                        .toList(),
+                DateTimes.toOffset(post.getScheduledAt()));
     }
 
 }

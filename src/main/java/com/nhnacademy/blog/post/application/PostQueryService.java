@@ -14,6 +14,7 @@ import com.nhnacademy.blog.tag.domain.TagRepository;
 import jakarta.persistence.criteria.JoinType;
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -48,7 +49,8 @@ public class PostQueryService {
 
     /**
      * categoryId: null이면 전체, 0이면 미분류, 그 밖에는 그 카테고리와 하위 카테고리의 글.
-     * tag: 그 이름의 태그가 달린 글(TAG-02, 대소문자 무시). 블로그에 없는 태그면 404.
+     * tag: 그 이름의 태그가 달린 글(TAG-02, 대소문자 무시). 블로그에 없는 태그, 보는 사람이 볼 수 있는 글이 하나도 없는 태그면
+     * 404다(비공개 글에만 단 태그 이름이 드러나지 않게, 태그 목록에서 빠지는 것과 같은 규칙).
      */
     @Transactional(readOnly = true)
     public Page<Post> blogPosts(Blog blog, Long viewerId, Long categoryId, String tag, PageQuery page) {
@@ -58,8 +60,30 @@ public class PostQueryService {
         }
         if (tag != null) {
             condition = condition.and(taggedWith(blog, tag));
+            if (!postRepository.exists(condition)) {
+                throw new BusinessException(ErrorCode.NOT_FOUND);
+            }
         }
         return postRepository.findAll(condition, page.toPageable(LATEST));
+    }
+
+    /**
+     * 같은 카테고리의 다른 글 (T104, OWN-05). 이 글과 같은 카테고리(하위까지는 넓히지 않음)의, 보는 사람이 블로그 목록에서
+     * 볼 수 있는 글(listedIn) 중 최신순 size개. 이 글은 뺀다. 미분류 글이면 빈 목록이다(미분류는 카테고리가 아니라서).
+     * 글을 볼 수 있는지(404·403)는 컨트롤러가 먼저 확인했다.
+     */
+    @Transactional(readOnly = true)
+    public List<Post> sameCategory(Blog blog, Post post, Long viewerId, int size) {
+        if (post.getCategory() == null) {
+            return List.of();
+        }
+        Long categoryId = post.getCategory().getId();
+        Specification<Post> condition = PostSpecifications.listedIn(blog, viewerId, LocalDateTime.now(clock))
+                .and((root, query, cb) -> cb.and(
+                        cb.equal(root.get("category").get("id"), categoryId),
+                        cb.notEqual(root.get("id"), post.getId())));
+        // 목록 한 줄에 카테고리 이름이 나가므로 함께 읽는다(응답은 트랜잭션 밖에서 만든다)
+        return postRepository.findBy(condition, query -> query.sortBy(LATEST).project("category").limit(size).all());
     }
 
     private Specification<Post> taggedWith(Blog blog, String name) {
