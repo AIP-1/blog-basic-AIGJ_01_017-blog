@@ -41,7 +41,7 @@ export default function BlogHeader({ blog, me }: { blog: Blog; me: MeState }) {
             ? <Link className="btn primary" to="/manage/write">글쓰기</Link>
             : <a className="btn primary" href={writeUrl(me.me)}>글쓰기</a>}
           {blog.viewer.isOwner && <Link className="btn" to="/manage">관리</Link>}
-          <span className="small">{me.me.nickname}</span>
+          <a className="btn" href={platformUrl('/me')} title={me.me.nickname}>마이페이지</a>
           <LogoutButton />
         </div>
       )}
