@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router'
 import { loginUrl } from '../api/client'
 import type { Blog } from '../api/types'
 import { blogUrl, platformUrl } from '../app/host'
+import { notificationLabel } from '../app/notifications'
 import type { MeState } from '../app/useMe'
 import { writeUrl } from '../app/writeLink'
 import LogoutButton from './LogoutButton'
@@ -48,6 +49,7 @@ export default function BlogHeader({ blog, me }: { blog: Blog; me: MeState }) {
           {blog.viewer.isOwner && <Link className="btn" to="/manage">관리</Link>}
           {primaryBlog && primaryBlog.address !== blog.address
             && <a className="btn" href={blogUrl(primaryBlog.address)}>내 블로그</a>}
+          <a className="btn" href={platformUrl('/me/notifications')}>{notificationLabel(me.me.unreadNotificationCount)}</a>
           <a className="btn" href={platformUrl('/me')} title={me.me.nickname}>마이페이지</a>
           {me.me.role === 'ADMIN' && <a className="btn" href={platformUrl('/admin')}>서비스 관리</a>}
           <LogoutButton />
