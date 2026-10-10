@@ -50,6 +50,24 @@ public final class TagNames {
         return ordered;
     }
 
+    /**
+     * 태그 하나의 이름 정리 (TAG-04 이름 바꾸기). 글에 달 때와 같은 규칙이다: 앞뒤 공백과 앞의 #을 떼고,
+     * 비면 400, 30자를 넘거나 /가 있으면 400. 오류 칸 이름은 name.
+     */
+    public static String normalizeOne(String raw) {
+        String trimmed = raw == null ? "" : raw.trim().replaceFirst("^#+", "").trim();
+        if (trimmed.isEmpty()) {
+            throw BusinessException.invalidField("name", "태그 이름을 입력해 주세요.");
+        }
+        if (trimmed.length() > Tag.MAX_NAME_LENGTH) {
+            throw BusinessException.invalidField("name", "태그는 " + Tag.MAX_NAME_LENGTH + "자까지입니다.");
+        }
+        if (trimmed.contains("/")) {
+            throw BusinessException.invalidField("name", "태그에는 /를 쓸 수 없습니다.");
+        }
+        return trimmed;
+    }
+
     /** DB처럼 대소문자·악센트를 무시하고 이름을 비교한다. Collator는 스레드 안전하지 않아 쓸 때마다 만든다. */
     public static Collator nameComparator() {
         Collator collator = Collator.getInstance(Locale.ROOT);

@@ -19,6 +19,11 @@ public interface TagRepository extends JpaRepository<Tag, Long> {
 
     List<Tag> findByBlogId(Long blogId);
 
+    /** 태그를 지우기 전에 글과의 연결을 끊는다 (TAG-04). 글은 남는다. 지운 연결 수. */
+    @Modifying(clearAutomatically = true)
+    @Query(value = "DELETE FROM post_tag WHERE tag_id = :tagId", nativeQuery = true)
+    int unlinkPosts(@Param("tagId") Long tagId);
+
     /**
      * 없으면 만든다. 같은 이름(DB 정렬 규칙 기준)이 있거나 다른 트랜잭션이 막 만들었으면 아무것도 하지 않는다(0행).
      * 동시에 같은 새 태그를 만들어도 UNIQUE 위반(500)이 나지 않는다.
