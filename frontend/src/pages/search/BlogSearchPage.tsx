@@ -84,7 +84,7 @@ export default function BlogSearchPage() {
                           href={(number) => `/search?${new URLSearchParams({ q, page: String(number) })}`} />
             )}
           </div>
-          {sidebar && <Sidebar modules={sidebar.modules} />}
+          {sidebar && <Sidebar modules={sidebar.modules} me={me} />}
         </div>
       </main>
     </div>

@@ -3,11 +3,12 @@ import { api, uploadFile } from '../../api/client'
 import { type FieldMessages, errorMessage, fieldMessages } from '../../api/errors'
 import type { Blog } from '../../api/types'
 import { PLATFORM_DOMAIN } from '../../app/host'
+import { DeleteSection, DesignSection, MoveSection, SidebarSection } from './BlogDesignSections'
 
 /**
  * 블로그 설정의 "블로그 정보" (BLOG-02). 주소는 바꿀 수 없어 보여 주기만 한다.
  * 프로필 이미지는 고르는 즉시 올리고(POST /api/images) 미리 보여 준 뒤, 저장을 눌러야 블로그에 반영한다.
- * 꾸미기·사이드바·이사·삭제(BLOG-05~07, 백로그)는 기능이 생기면 이 화면에 더한다.
+ * 아래로 꾸미기(스킨·포인트 색·목록 형태), 사이드바, 블로그 이사, 블로그 삭제가 이어진다(BLOG-05~07, 스텝 19).
  */
 export default function BlogSettingsPage({ blog, onSaved }: { blog: Blog; onSaved: (blog: Blog) => void }) {
   const [name, setName] = useState(blog.name)
@@ -95,6 +96,10 @@ export default function BlogSettingsPage({ blog, onSaved }: { blog: Blog; onSave
           {saved && <span className="ok">저장했습니다.</span>}
         </div>
       </form>
+      <DesignSection key={`design-${blog.skin}-${blog.accentColor}-${blog.listLayout}`} blog={blog} onSaved={onSaved} />
+      <SidebarSection />
+      <MoveSection blog={blog} />
+      <DeleteSection blog={blog} />
     </main>
   )
 }

@@ -7,7 +7,7 @@ import { useBlog } from '../../app/useBlog'
 import { useMe } from '../../app/useMe'
 import BlogHeader from '../../components/BlogHeader'
 import Pagination from '../../components/Pagination'
-import { PostItem } from '../../components/PostItem'
+import { PostCard, PostItem } from '../../components/PostItem'
 import Sidebar from '../../components/Sidebar'
 import ReportButton from '../../components/ReportButton'
 import SubscribeButton from '../../components/SubscribeButton'
@@ -92,8 +92,10 @@ export default function BlogMainPage() {
             {error && <p className="err">{error}</p>}
             {posts && posts.content.length === 0 && <EmptyPosts blog={blog} />}
             {posts && posts.content.length > 0 && (
-              <div className="post-list">
-                {posts.content.map((post) => <PostItem key={post.id} post={post} owner={blog.viewer.isOwner} />)}
+              <div className={blog.listLayout === 'THUMBNAIL' ? 'grid-cards post-grid' : 'post-list'}>
+                {posts.content.map((post) => blog.listLayout === 'THUMBNAIL'
+                  ? <PostCard key={post.id} post={post} />
+                  : <PostItem key={post.id} post={post} owner={blog.viewer.isOwner} />)}
               </div>
             )}
             {posts && (
@@ -101,7 +103,7 @@ export default function BlogMainPage() {
                           href={(number) => `${basePath}?page=${number}`} />
             )}
           </div>
-          {sidebar && <Sidebar modules={sidebar.modules} />}
+          {sidebar && <Sidebar modules={sidebar.modules} me={me} />}
         </div>
       </main>
     </div>

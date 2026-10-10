@@ -135,7 +135,7 @@ export default function PostPage() {
             : <Article post={state.post} me={me} onDelete={remove} actionError={actionError}
                        onVisibilityChange={(visibility) => changeVisibility(state.post, visibility)}
                        onCommentCount={(count) => setState({ status: 'ok', post: { ...state.post, commentCount: count } })} />}
-          {sidebar && <Sidebar modules={sidebar.modules} />}
+          {sidebar && <Sidebar modules={sidebar.modules} me={me} />}
         </div>
       </main>
     </div>

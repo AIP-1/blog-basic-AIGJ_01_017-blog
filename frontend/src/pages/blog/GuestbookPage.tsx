@@ -126,7 +126,7 @@ export default function GuestbookPage() {
             </div>
             {result && <Pagination page={result.page} totalPages={result.totalPages} href={(number) => `?page=${number}`} />}
           </section>
-          {sidebar && <Sidebar modules={sidebar.modules} />}
+          {sidebar && <Sidebar modules={sidebar.modules} me={me} />}
         </div>
       </main>
     </div>
