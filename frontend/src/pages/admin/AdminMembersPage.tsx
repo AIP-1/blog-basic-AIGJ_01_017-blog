@@ -166,7 +166,7 @@ function MemberDetail({ id, onChanged }: { id: number; onChanged: () => void }) 
         <SuspendForm memberId={id} suspended={member.status === 'SUSPENDED'} onChanged={() => { load(); onChanged() }} />
       )}
       <b className="small">제재 이력</b>
-      <LogTable logs={detail.moderations} empty="제재 이력이 없습니다." />
+      <LogTable logs={detail.moderations} empty="제재 이력이 없습니다." onChanged={() => { load(); onChanged() }} />
     </section>
   )
 }

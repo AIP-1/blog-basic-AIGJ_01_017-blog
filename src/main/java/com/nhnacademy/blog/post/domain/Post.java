@@ -332,10 +332,6 @@ public class Post extends BaseTimeEntity {
         return blinded;
     }
 
-    /** 관리자 숨김·해제 (ADMIN-03). 사유는 moderation_log의 최신 BLIND 행에 있다. */
-    public void changeBlinded(boolean blinded) {
-        this.blinded = blinded;
-    }
 
     public LocalDateTime getDeletedAt() {
         return deletedAt;

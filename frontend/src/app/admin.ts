@@ -92,3 +92,13 @@ export function topReason(reasons: Record<string, number>): ReasonCode {
   }
   return best
 }
+
+/** 제재 이력 한 줄을 풀 때 부를 API. 숨김·제한·정지가 아니면 null */
+export function releasePath(log: { action: string; target: { type: string; id: number } }): string | null {
+  const { type, id } = log.target
+  if (log.action === 'BLIND' && type === 'POST') return `/api/admin/posts/${id}/blind`
+  if (log.action === 'BLIND' && type === 'COMMENT') return `/api/admin/comments/${id}/blind`
+  if (log.action === 'RESTRICT_BLOG' && type === 'BLOG') return `/api/admin/blogs/${id}/restriction`
+  if (log.action === 'SUSPEND' && type === 'MEMBER') return `/api/admin/members/${id}/suspension`
+  return null
+}

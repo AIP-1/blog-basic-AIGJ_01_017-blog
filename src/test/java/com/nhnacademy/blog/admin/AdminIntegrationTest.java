@@ -155,6 +155,7 @@ class AdminIntegrationTest extends IntegrationTestSupport {
     @Test
     void blindedPostIsNotFoundForOthersAndShowsReasonToAuthor() throws Exception {
         long post = publish("숨길 글");
+        Object updatedAt = jdbcTemplate.queryForObject("SELECT updated_at FROM post WHERE id = ?", Object.class, post);
         send(post("/api/admin/posts/" + post + "/blind"), PLATFORM, adminCookies, "{\"reason\":\"COPYRIGHT\"}")
                 .andExpect(status().isNoContent());
 
@@ -166,7 +167,12 @@ class AdminIntegrationTest extends IntegrationTestSupport {
 
         send(delete("/api/admin/posts/" + post + "/blind"), PLATFORM, adminCookies, null)
                 .andExpect(status().isNoContent());
-        send(get("/api/posts/" + post), TestBlogs.host(blog), readerCookies, null).andExpect(status().isOk());
+        send(get("/api/posts/" + post), TestBlogs.host(blog), readerCookies, null)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.updatedAt").value(nullValue()));
+        // 관리자 조치는 작성자가 고친 것이 아니라 수정 시각이 그대로다
+        assertThat(jdbcTemplate.queryForObject("SELECT updated_at FROM post WHERE id = ?", Object.class, post))
+                .isEqualTo(updatedAt);
         send(post("/api/admin/posts/999999999/blind"), PLATFORM, adminCookies, "{\"reason\":\"SPAM\"}")
                 .andExpect(status().isNotFound());
         send(post("/api/admin/posts/" + post + "/blind"), PLATFORM, adminCookies, "{\"reason\":\"NOPE\"}")
@@ -187,6 +193,8 @@ class AdminIntegrationTest extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.content[0].state").value("NORMAL"))
                 .andExpect(jsonPath("$.content[0].blind.reason").value("SPAM"));
         assertThat(sanctionNotifications(reader)).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("SELECT updated_at = created_at FROM comment WHERE id = ?", Boolean.class,
+                comment)).isTrue();
     }
 
     @Test

@@ -207,7 +207,7 @@ function Article({ post, me, onDelete, onVisibilityChange, actionError, onCommen
       </div>
       {adminBlinded && (
         <p className="err" role="status">
-          이 글을 숨겼습니다. 이제 작성자 말고는 볼 수 없습니다. 해제는 서비스 관리의 회원 상세·관리 이력에서 합니다.
+          이 글을 숨겼습니다. 이제 작성자 말고는 볼 수 없습니다. 해제는 서비스 관리의 관리 이력이나 회원 상세에서 "해제"로 합니다.
         </p>
       )}
       <nav className="row between small" aria-label="이전·다음 글">

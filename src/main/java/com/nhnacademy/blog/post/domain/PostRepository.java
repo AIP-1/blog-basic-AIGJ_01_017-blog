@@ -22,6 +22,14 @@ public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificat
     @Query("select p from Post p join fetch p.blog b join fetch b.member left join fetch p.category where p.id = :id")
     Optional<Post> findWithBlogById(@Param("id") Long id);
 
+    /**
+     * 관리자 숨김·해제 (ADMIN-03). 작성자가 고친 것이 아니라 수정 시각은 그대로 둔다(글 머리의 "수정 …"이 바뀌지 않게).
+     * updated_at은 DB의 ON UPDATE CURRENT_TIMESTAMP라, 같은 UPDATE에서 지금 값으로 직접 넣어야 그대로 남는다.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update Post p set p.blinded = :blinded, p.updatedAt = p.updatedAt where p.id = :id")
+    int changeBlinded(@Param("id") Long id, @Param("blinded") boolean blinded);
+
     /** 이 시각 뒤에 발행된 글 수(지운 글 빼고, 관리자 대시보드). */
     @Query("select count(p) from Post p where p.status = com.nhnacademy.blog.post.domain.PostStatus.PUBLISHED"
             + " and p.publishedAt >= :since and p.deletedAt is null")

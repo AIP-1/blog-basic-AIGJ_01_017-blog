@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ModerationTarget } from '../api/types'
-import { actionLabel, reasonLabel, resolveChoices, targetHref, topReason } from './admin'
+import { actionLabel, reasonLabel, releasePath, resolveChoices, targetHref, topReason } from './admin'
 
 const location = { protocol: 'http:', port: '8080', hostname: 'blog.test' } as Location
 
@@ -36,6 +36,16 @@ describe('신고 처리', () => {
   it('가장 많은 사유를 처음 값으로', () => {
     expect(topReason({ COPYRIGHT: 6, ETC: 1 })).toBe('COPYRIGHT')
     expect(topReason({})).toBe('SPAM')
+  })
+
+  it('풀 수 있는 조치만 해제 API가 있다', () => {
+    const line = (action: string, type: string) => ({ action, target: { type, id: 5 } })
+    expect(releasePath(line('BLIND', 'POST'))).toBe('/api/admin/posts/5/blind')
+    expect(releasePath(line('BLIND', 'COMMENT'))).toBe('/api/admin/comments/5/blind')
+    expect(releasePath(line('RESTRICT_BLOG', 'BLOG'))).toBe('/api/admin/blogs/5/restriction')
+    expect(releasePath(line('SUSPEND', 'MEMBER'))).toBe('/api/admin/members/5/suspension')
+    expect(releasePath(line('UNBLIND', 'POST'))).toBeNull()
+    expect(releasePath(line('REJECT_REPORT', 'BLOG'))).toBeNull()
   })
 
   it('코드를 화면 이름으로', () => {

@@ -28,6 +28,7 @@ export default function AdminLogsPage() {
   const targetType = params.get('targetType') ?? ''
   const [result, setResult] = useState<PageResponse<ModerationLogLine> | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
     const query = new URLSearchParams()
@@ -44,7 +45,7 @@ export default function AdminLogsPage() {
         const fields = fieldMessages(caught)
         setError(fields.from ?? fields.to ?? fields.targetType ?? errorMessage(caught))
       })
-  }, [params])
+  }, [params, reloadKey])
 
   function apply(next: Record<string, string>) {
     const merged = new URLSearchParams(params)
@@ -89,7 +90,8 @@ export default function AdminLogsPage() {
         <button className="btn" type="submit">검색</button>
       </form>
       {error && <p className="err" role="alert">{error}</p>}
-      {result && <LogTable logs={result.content} empty="조건에 맞는 이력이 없습니다." />}
+      {result && <LogTable logs={result.content} empty="조건에 맞는 이력이 없습니다."
+                           onChanged={() => setReloadKey((key) => key + 1)} />}
       {result && result.totalPages > 1 && <Pagination page={result.page} totalPages={result.totalPages} href={href} />}
       <NoticeAdmin />
     </main>

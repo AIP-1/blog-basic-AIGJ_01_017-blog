@@ -25,6 +25,8 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * 관리자 조치 (ADMIN-02 정지, ADMIN-03 숨김, ADMIN-05 블로그 이용 제한). 신고 처리(ADMIN-04)도 이것을 부른다.
  * 조치마다 한 트랜잭션에서 대상 상태 바꾸기 → 관리 이력(moderation_log) INSERT → 받는 사람에게 SANCTION 알림.
+ * 글·댓글 숨김은 작성자가 고친 것이 아니라서 수정 시각을 바꾸지 않는 UPDATE 한 문장으로 한다(엔티티를 고치면
+ * 변경 감지와 @LastModifiedDate가 수정 시각을 지금으로 바꿔 화면에 "수정 …"이 붙는다).
  * 관리자는 남의 내용을 고치거나 지우지 않고 숨기거나 제한만 한다(헌법 원칙 V).
  * 이미 그 상태인 대상을 다시 해제하면 아무것도 하지 않는다(204, 이력 없음). 다시 제재하면 새 사유로 이력을 하나 더 남긴다.
  */
@@ -89,10 +91,12 @@ public class ModerationService {
     @Transactional
     public void blindPost(Long adminId, Long postId, Sanction sanction) {
         Post post = post(postId);
-        post.changeBlinded(true);
+        Long ownerId = post.getBlog().getMember().getId();
+        String title = post.getTitle();
+        postRepository.changeBlinded(postId, true);
         record(adminId, ModerationAction.BLIND, ModerationTargetType.POST, postId, sanction);
-        notificationService.sanctioned(post.getBlog().getMember().getId(), NotificationTargetType.POST, postId,
-                "\"" + shorten(post.getTitle()) + "\" 글이 운영 정책 위반(" + sanction.label() + ")으로 숨김 처리되었습니다.");
+        notificationService.sanctioned(ownerId, NotificationTargetType.POST, postId,
+                "\"" + shorten(title) + "\" 글이 운영 정책 위반(" + sanction.label() + ")으로 숨김 처리되었습니다.");
     }
 
     @Transactional
@@ -101,20 +105,23 @@ public class ModerationService {
         if (!post.isBlinded()) {
             return;
         }
-        post.changeBlinded(false);
+        Long ownerId = post.getBlog().getMember().getId();
+        String title = post.getTitle();
+        postRepository.changeBlinded(postId, false);
         record(adminId, ModerationAction.UNBLIND, ModerationTargetType.POST, postId, null);
-        notificationService.sanctioned(post.getBlog().getMember().getId(), NotificationTargetType.POST, postId,
-                "\"" + shorten(post.getTitle()) + "\" 글의 숨김이 해제되었습니다.");
+        notificationService.sanctioned(ownerId, NotificationTargetType.POST, postId,
+                "\"" + shorten(title) + "\" 글의 숨김이 해제되었습니다.");
     }
 
     @Transactional
     public void blindComment(Long adminId, Long commentId, Sanction sanction) {
         Comment comment = comment(commentId);
-        comment.changeBlinded(true);
+        Long authorId = comment.getMember().getId();
+        String title = comment.getPost().getTitle();
+        commentRepository.changeBlinded(commentId, true);
         record(adminId, ModerationAction.BLIND, ModerationTargetType.COMMENT, commentId, sanction);
-        notificationService.sanctioned(comment.getMember().getId(), NotificationTargetType.COMMENT, commentId,
-                "\"" + shorten(comment.getPost().getTitle()) + "\"에 쓴 댓글이 운영 정책 위반(" + sanction.label()
-                        + ")으로 숨김 처리되었습니다.");
+        notificationService.sanctioned(authorId, NotificationTargetType.COMMENT, commentId,
+                "\"" + shorten(title) + "\"에 쓴 댓글이 운영 정책 위반(" + sanction.label() + ")으로 숨김 처리되었습니다.");
     }
 
     @Transactional
@@ -123,10 +130,12 @@ public class ModerationService {
         if (!comment.isBlinded()) {
             return;
         }
-        comment.changeBlinded(false);
+        Long authorId = comment.getMember().getId();
+        String title = comment.getPost().getTitle();
+        commentRepository.changeBlinded(commentId, false);
         record(adminId, ModerationAction.UNBLIND, ModerationTargetType.COMMENT, commentId, null);
-        notificationService.sanctioned(comment.getMember().getId(), NotificationTargetType.COMMENT, commentId,
-                "\"" + shorten(comment.getPost().getTitle()) + "\"에 쓴 댓글의 숨김이 해제되었습니다.");
+        notificationService.sanctioned(authorId, NotificationTargetType.COMMENT, commentId,
+                "\"" + shorten(title) + "\"에 쓴 댓글의 숨김이 해제되었습니다.");
     }
 
     // ---------- 블로그 이용 제한 (ADMIN-05) ----------
