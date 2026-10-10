@@ -77,7 +77,7 @@ export default function GlobalSearchPage() {
       <main className="page">
         <section className="section" style={{ maxWidth: 760 }}>
           <h2>검색</h2>
-          <form className="row nowrap" role="search" onSubmit={submit}>
+          <form className="search-box" role="search" onSubmit={submit} style={{ maxWidth: 480 }}>
             <input type="search" value={input} maxLength={100} placeholder="글과 블로그 검색" aria-label="전체 검색"
                    onChange={(event) => setInput(event.target.value)} />
             <button className="btn primary" type="submit" disabled={!input.trim()}>검색</button>
