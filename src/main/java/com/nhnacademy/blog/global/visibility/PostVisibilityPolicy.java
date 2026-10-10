@@ -66,6 +66,7 @@ public class PostVisibilityPolicy {
         // ④ 다른 사람이 볼 수 있나
         boolean openExceptAudience = post.getStatus() == PostStatus.PUBLISHED
                 && !post.isBlinded()
+                && (post.getCategory() == null || !post.getCategory().isHidden())   // 비공개 카테고리 (CAT-05)
                 && blogVisibilityPolicy.isOpenToOthers(blog);
         if (!openExceptAudience) {
             return new PostAccess.NotFound();

@@ -1,6 +1,7 @@
 package com.nhnacademy.blog.global.visibility;
 
 import com.nhnacademy.blog.blog.domain.Blog;
+import com.nhnacademy.blog.category.domain.Category;
 import com.nhnacademy.blog.member.domain.Member;
 import com.nhnacademy.blog.member.domain.MemberStatus;
 import com.nhnacademy.blog.post.domain.Post;
@@ -11,7 +12,9 @@ import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.From;
 import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
 import java.time.LocalDateTime;
 import org.springframework.data.jpa.domain.Specification;
@@ -81,9 +84,19 @@ public final class PostSpecifications {
                     cb.equal(post.get("visibility"), Visibility.SUBSCRIBERS), cb.exists(subscribed)));
         }
 
+        // 비공개 카테고리(CAT-05): 글의 카테고리나 그 상위가 비공개면 주인 말고는 없는 글이다.
+        // 조인 대신 부분 쿼리로 본다(카테고리별 글 수처럼 카테고리로 묶는 쿼리와 조인이 엉키지 않게)
+        Subquery<Long> hiddenCategory = query.subquery(Long.class);
+        Root<Category> category = hiddenCategory.from(Category.class);
+        Join<Category, Category> parent = category.join("parent", JoinType.LEFT);
+        hiddenCategory.select(category.get("id")).where(
+                cb.equal(category.get("id"), post.get("category").get("id")),
+                cb.or(cb.isTrue(category.get("privateCategory")), cb.isTrue(parent.get("privateCategory"))));
+
         return cb.and(
                 cb.isNull(post.get("deletedAt")),
                 cb.isNull(blog.get("deletedAt")),
+                cb.not(cb.exists(hiddenCategory)),
                 cb.equal(post.get("status"), PostStatus.PUBLISHED),
                 cb.isFalse(post.get("blinded")),
                 cb.isFalse(blog.get("restricted")),
