@@ -35,4 +35,8 @@ public interface BlogRepository extends JpaRepository<Blog, Long>, JpaSpecificat
             + " where b.member.id in :memberIds and b.primary = true and b.deletedAt is null")
     List<Blog> findPrimaryByMemberIds(@Param("memberIds") Collection<Long> memberIds);
 
+    /** 주인을 함께 읽는 블로그 하나(구독처럼 주소가 아니라 번호로 블로그를 가리키는 API). */
+    @Query("select b from Blog b join fetch b.member where b.id = :id")
+    Optional<Blog> findWithMemberById(@Param("id") Long id);
+
 }
