@@ -59,7 +59,8 @@ public class CommentController {
                                  @PathVariable Long postId, @RequestBody CommentRequest request) {
         commentService.writablePost(blog, postId, member);
         requestValidator.validate(request);
-        return CommentResponse.from(commentService.write(blog, postId, member, request.content(), request.parentId()));
+        return CommentResponse.from(commentService.write(blog, postId, member, request.content(), request.parentId(),
+                request.isSecret()));
     }
 
     /** 작성자 본인만(CMT-03). 숨긴 댓글은 403. 비회원 401, 남의 댓글 403, 그다음 입력 오류 400 순서다. */
