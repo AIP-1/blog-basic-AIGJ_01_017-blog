@@ -32,7 +32,7 @@ export default function NoticesPage() {
         {result && result.content.length > 0 && (
           <div className="table-wrap">
             <table className="manage-table">
-              <thead><tr><th>제목</th><th>작성일</th></tr></thead>
+              <thead><tr><th>제목</th><th className="num">작성일</th></tr></thead>
               <tbody>
                 {result.content.map((notice) => (
                   <tr key={notice.id}>
