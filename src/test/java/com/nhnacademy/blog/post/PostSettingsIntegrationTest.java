@@ -249,6 +249,25 @@ class PostSettingsIntegrationTest extends IntegrationTestSupport {
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors[0].field").value("status"));
     }
 
+    @Test
+    void schedulerEntryPointPersistsThePublishing() throws Exception {
+        // 스케줄러가 부르는 run()을 거쳐도 발행이 저장되어야 한다. run()이 같은 객체의 publishDue()를 부를 때
+        // 트랜잭션이 걸리지 않아 저장되지 않던 버그(확인용 서버에서 매분 "예약 발행 1개"가 반복됨)를 막는다
+        LocalDateTime at = LocalDateTime.now().plusHours(1).withNano(0);
+        String response = send(post("/api/posts").header("Idempotency-Key", UUID.randomUUID().toString()),
+                ownerCookies, """
+                        {"title":"예약 글","contentHtml":"<p>본문</p>","visibility":"PUBLIC","status":"SCHEDULED",
+                         "scheduledAt":"%s"}""".formatted(at.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        long post = ((Number) JsonPath.read(response, "$.id")).longValue();
+        jdbcTemplate.update("UPDATE post SET scheduled_at = ? WHERE id = ?", LocalDateTime.now().minusMinutes(1), post);
+
+        scheduledPublisher.run();
+
+        assertThat(jdbcTemplate.queryForObject("SELECT status FROM post WHERE id = ?", String.class, post))
+                .isEqualTo("PUBLISHED");
+    }
+
     // ---------- OWN-05 같은 카테고리 다른 글 ----------
 
     @Test

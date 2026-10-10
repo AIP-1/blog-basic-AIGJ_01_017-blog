@@ -34,7 +34,13 @@ public class ScheduledPublisher {
         this.clock = clock;
     }
 
+    /**
+     * 스케줄러가 부르는 입구. publishDue를 같은 객체 안에서 부르면 Spring 프록시를 거치지 않아 publishDue의
+     * {@code @Transactional}이 걸리지 않는다(바꾼 상태가 저장되지 않고, 매분 같은 글을 "발행"한다). 그래서 이 메서드에도
+     * 트랜잭션을 건다. 스케줄러는 프록시를 통해 이 메서드를 부른다.
+     */
     @Scheduled(fixedDelayString = "${app.scheduling.publish-delay:60000}")
+    @Transactional
     public void run() {
         int published = publishDue();
         if (published > 0) {
