@@ -58,11 +58,21 @@ public class BlogHostResolver {
         return Optional.empty();
     }
 
-    /** 같은 경로를 다른 블로그 주소로 보낼 URL (이사·다른 블로그 소속 글의 301). */
+    /** 같은 경로를 다른 블로그 주소로 보낼 URL (이사·다른 블로그 소속 글의 301, 알림의 링크). */
     public String blogUrl(HttpServletRequest request, Blog blog, String pathAndQuery) {
+        return url(request, domainProperties.blogHost(blog.getAddress()), pathAndQuery);
+    }
+
+    /** 플랫폼 주소의 URL (알림의 링크 중 블로그가 아닌 곳, 예: 마이페이지). */
+    public String platformUrl(HttpServletRequest request, String pathAndQuery) {
+        return url(request, platform(), pathAndQuery);
+    }
+
+    /** 지금 요청과 같은 프로토콜·포트로 다른 호스트의 URL을 만든다(개발 :8080, :5173도 그대로). */
+    private static String url(HttpServletRequest request, String host, String pathAndQuery) {
         StringBuilder url = new StringBuilder()
                 .append(request.getScheme()).append("://")
-                .append(domainProperties.blogHost(blog.getAddress()));
+                .append(host);
         int port = request.getServerPort();
         boolean defaultPort = ("http".equals(request.getScheme()) && port == 80)
                 || ("https".equals(request.getScheme()) && port == 443);

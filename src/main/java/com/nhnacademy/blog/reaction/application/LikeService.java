@@ -4,6 +4,8 @@ import com.nhnacademy.blog.blog.domain.Blog;
 import com.nhnacademy.blog.global.auth.LoginMember;
 import com.nhnacademy.blog.global.error.BusinessException;
 import com.nhnacademy.blog.global.error.ErrorCode;
+import com.nhnacademy.blog.member.domain.MemberRepository;
+import com.nhnacademy.blog.notification.application.NotificationService;
 import com.nhnacademy.blog.post.application.PostReadService;
 import com.nhnacademy.blog.post.domain.Post;
 import com.nhnacademy.blog.post.domain.PostRepository;
@@ -22,12 +24,17 @@ public class LikeService {
     private final PostLikeRepository postLikeRepository;
     private final PostRepository postRepository;
     private final PostReadService postReadService;
+    private final MemberRepository memberRepository;
+    private final NotificationService notificationService;
 
     public LikeService(PostLikeRepository postLikeRepository, PostRepository postRepository,
-                       PostReadService postReadService) {
+                       PostReadService postReadService, MemberRepository memberRepository,
+                       NotificationService notificationService) {
         this.postLikeRepository = postLikeRepository;
         this.postRepository = postRepository;
         this.postReadService = postReadService;
+        this.memberRepository = memberRepository;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -36,6 +43,8 @@ public class LikeService {
         postRepository.lockById(post.getId());
         if (postLikeRepository.insertIfAbsent(post.getId(), member.id()) == 1) {
             postRepository.addLikeCount(post.getId(), 1);
+            // 새로 눌렀을 때만 글 주인에게 알린다(SUB-04). 연타한 두 번째 요청은 넣은 행이 0이라 알리지 않는다
+            notificationService.liked(post, memberRepository.getReferenceById(member.id()));
         }
         return new LikeResult(true, currentCount(post.getId()));
     }
