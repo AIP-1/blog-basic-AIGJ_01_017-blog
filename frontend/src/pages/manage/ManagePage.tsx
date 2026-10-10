@@ -11,6 +11,7 @@ import SuspensionNotice from '../../components/SuspensionNotice'
 import NotFoundPage from '../error/NotFoundPage'
 import BlogSettingsPage from './BlogSettingsPage'
 import CategoriesPage from './CategoriesPage'
+import ManageCommentsPage from './ManageCommentsPage'
 import ManageHomePage from './ManageHomePage'
 import ManagePostsPage from './ManagePostsPage'
 import PostWritePage from './PostWritePage'
@@ -67,6 +68,7 @@ export default function ManagePage() {
           <NavLink to="/manage" end>관리 홈</NavLink>
           <NavLink to="/manage/write">글쓰기</NavLink>
           <NavLink to="/manage/posts" end>글 관리</NavLink>
+          <NavLink to="/manage/comments">댓글·방명록</NavLink>
           <NavLink to="/manage/categories">카테고리·태그</NavLink>
           <div className="sec">설정</div>
           <NavLink to="/manage/settings">블로그 설정</NavLink>
@@ -75,6 +77,7 @@ export default function ManagePage() {
           <Route index element={<ManageHomePage blog={blog} />} />
           <Route path="write" element={<PostWritePage key="new" />} />
           <Route path="posts" element={<ManagePostsPage />} />
+          <Route path="comments" element={<ManageCommentsPage />} />
           <Route path="posts/:postId/edit" element={<PostWritePage key="edit" />} />
           <Route path="categories" element={<CategoriesPage />} />
           <Route path="settings" element={<BlogSettingsPage blog={blog} onSaved={setBlog} />} />
