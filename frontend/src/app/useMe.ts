@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ApiError, api } from '../api/client'
+import { ApiError, api, suspensionDetail } from '../api/client'
 import type { Me, SuspensionDetail } from '../api/types'
 
 /**
@@ -14,6 +14,7 @@ export type MeState =
  * 로그인 상태. GET /api/me가 401이면 비회원이다.
  * 로그인 쿠키는 HttpOnly라 자바스크립트가 직접 읽을 수 없어서 서버에 물어본다.
  * 403 MEMBER_SUSPENDED(로그인한 채로 정지됨, ADMIN-02)면 비회원으로 그리되 사유를 함께 넘겨 머리글이 안내를 띄운다.
+ * 같은 화면의 다른 API가 먼저 정지 응답을 받았으면 api 클라이언트가 적어 둔 사유(suspensionDetail)를 쓴다.
  */
 export function useMe(): MeState {
   const [state, setState] = useState<MeState>({ status: 'loading' })
@@ -25,8 +26,10 @@ export function useMe(): MeState {
         if (!active) {
           return
         }
-        setState(error instanceof ApiError && error.code === 'MEMBER_SUSPENDED'
-          ? { status: 'anonymous', suspension: error.detail as unknown as SuspensionDetail }
+        // 다른 API가 먼저 403을 받아 쿠키가 지워졌으면 /api/me는 401이다. 그때도 적어 둔 사유를 쓴다
+        const detail = error instanceof ApiError && error.code === 'MEMBER_SUSPENDED' ? error.detail : suspensionDetail()
+        setState(detail
+          ? { status: 'anonymous', suspension: detail as unknown as SuspensionDetail }
           : { status: 'anonymous' })
       })
     return () => {
