@@ -246,3 +246,93 @@ export interface FoundBlog {
   owner: MemberSummary
   subscriberCount: number
 }
+
+/** 관리 화면의 대상 한 줄 (신고 묶음, 관리 이력). 링크는 app/admin.ts의 targetHref가 만든다 */
+export interface ModerationTarget {
+  type: 'POST' | 'COMMENT' | 'BLOG' | 'MEMBER' | 'REPORT'
+  id: number
+  label: string | null
+  blogAddress: string | null
+  postId: number | null
+  memberId: number | null
+  /** false면 지워진 대상 */
+  exists: boolean
+  /** 지금 숨김·제한·정지 중인가 */
+  sanctioned: boolean
+}
+
+/** 관리 이력 한 줄 (GET /api/admin/moderation-logs) */
+export interface ModerationLogLine {
+  id: number
+  createdAt: string
+  admin: { id: number; nickname: string }
+  action: string
+  reason: string | null
+  reasonMessage: string | null
+  reasonDetail: string | null
+  target: ModerationTarget
+}
+
+export interface AdminDashboard {
+  todaySignups: number
+  todayPosts: number
+  pendingReports: number
+  recentModerations: ModerationLogLine[]
+}
+
+/** 관리자 회원 목록 한 줄. status는 지금 기준 */
+export interface AdminMember {
+  id: number
+  nickname: string
+  email: string | null
+  role: 'USER' | 'ADMIN'
+  status: 'ACTIVE' | 'SUSPENDED' | 'WITHDRAWN'
+  suspendedUntil: string | null
+  createdAt: string
+}
+
+export interface AdminMemberDetail {
+  member: AdminMember
+  blogs: { id: number; address: string; name: string; isPrimary: boolean; deleted: boolean; restricted: boolean }[]
+  reportCount: number
+  suspension: { reason: string | null; reasonMessage: string | null; suspendedUntil: string | null } | null
+  moderations: ModerationLogLine[]
+}
+
+/** 처리 대기 신고의 대상별 묶음 */
+export interface ReportGroup {
+  targetType: 'POST' | 'COMMENT' | 'BLOG'
+  targetId: number
+  targetPreview: string | null
+  target: ModerationTarget
+  reportCount: number
+  reasons: Record<string, number>
+  firstReportedAt: string
+}
+
+export interface TargetReports {
+  target: ModerationTarget
+  reports: {
+    id: number
+    reporter: { id: number; nickname: string } | null
+    reason: string
+    reasonMessage: string
+    description: string | null
+    status: 'PENDING' | 'DONE'
+    result: string | null
+    createdAt: string
+    processedAt: string | null
+  }[]
+}
+
+/** 공지 목록 한 줄, 홈 상단 최신 공지 */
+export interface NoticeSummary {
+  id: number
+  title: string
+  createdAt: string
+}
+
+export interface Notice extends NoticeSummary {
+  content: string
+  updatedAt: string
+}

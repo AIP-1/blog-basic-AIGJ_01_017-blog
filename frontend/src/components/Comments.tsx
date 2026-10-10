@@ -4,7 +4,9 @@ import { errorMessage } from '../api/errors'
 import type { Comment, CommentList } from '../api/types'
 import type { MeState } from '../app/useMe'
 import CommentForm from './CommentForm'
+import AdminBlindButton from './AdminBlindButton'
 import CommentItem from './CommentItem'
+import ReportButton from './ReportButton'
 import { afterDelete, afterEdit } from './commentList'
 
 /**
@@ -24,6 +26,8 @@ export default function Comments({ postId, me, commentAllowed, onCountChange }: 
   const [totalCount, setTotalCount] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [replyingTo, setReplyingTo] = useState<number | null>(null)
+  /** 관리자가 숨기거나 풀면 목록을 다시 받는다 */
+  const [reloadKey, setReloadKey] = useState(0)
   const path = `/api/posts/${postId}/comments`
 
   useEffect(() => {
@@ -40,7 +44,7 @@ export default function Comments({ postId, me, commentAllowed, onCountChange }: 
     return () => {
       active = false
     }
-  }, [postId])
+  }, [postId, reloadKey])
 
   function changeCount(count: number) {
     setTotalCount(count)
@@ -96,17 +100,40 @@ export default function Comments({ postId, me, commentAllowed, onCountChange }: 
     }
   }
 
+  /**
+   * 댓글마다 신고(ADMIN-04, 남의 보이는 댓글만)와 관리자 숨기기·해제(ADMIN-03). 비밀·삭제 댓글은 내용이 없어 신고하지 않는다
+   */
+  function moderation(comment: Comment) {
+    if (comment.state === 'DELETED' || comment.state === 'SECRET') {
+      return null
+    }
+    const mine = me.status === 'member' && comment.author?.id === me.me.id
+    const admin = me.status === 'member' && me.me.role === 'ADMIN'
+    return (
+      <>
+        {comment.state === 'NORMAL' && !mine && !comment.blind && (
+          <ReportButton targetType="COMMENT" targetId={comment.id} me={me} small />
+        )}
+        {admin && (
+          <AdminBlindButton kind="comments" id={comment.id} blinded={comment.state === 'BLINDED' || !!comment.blind}
+                            onDone={() => setReloadKey((key) => key + 1)} />
+        )}
+      </>
+    )
+  }
+
   return (
     <section className="section" id="comments">
       <h2>댓글 <span className="muted num">{totalCount}</span></h2>
       <div>
         {comments.map((comment) => (
           <div key={comment.id}>
-            <CommentItem comment={comment} onDelete={remove} onEdit={edit}
+            <CommentItem comment={comment} onDelete={remove} onEdit={edit} actions={moderation(comment)}
                          onReply={me.status === 'member' && commentAllowed && comment.state !== 'DELETED'
                            ? () => setReplyingTo(replyingTo === comment.id ? null : comment.id) : undefined} />
             {comment.replies.map((reply) => (
-              <CommentItem key={reply.id} comment={reply} onDelete={remove} onEdit={edit} isReply />
+              <CommentItem key={reply.id} comment={reply} onDelete={remove} onEdit={edit} isReply
+                           actions={moderation(reply)} />
             ))}
             {replyingTo === comment.id && (
               <div className="comment reply">

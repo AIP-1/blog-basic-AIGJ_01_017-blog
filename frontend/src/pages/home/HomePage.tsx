@@ -5,6 +5,7 @@ import type { CursorResponse, PopularPosts, PostSummary, Topic } from '../../api
 import { formatTime } from '../../app/format'
 import { blogUrl } from '../../app/host'
 import { useMe } from '../../app/useMe'
+import NoticeBand from '../../components/NoticeBand'
 import PlatformHeader from '../../components/PlatformHeader'
 import PlatformPostItem from '../../components/PlatformPostItem'
 
@@ -53,6 +54,7 @@ export default function HomePage() {
     <div className="app">
       <PlatformHeader me={me} />
       <main className="page">
+        <NoticeBand />
         <PopularSection />
         <TopicSection />
         <section className="section">

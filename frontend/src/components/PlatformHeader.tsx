@@ -35,6 +35,7 @@ export default function PlatformHeader({ me }: { me: MeState }) {
       <nav className="nav-links">
         <Link to="/">홈</Link>
         {me.status === 'member' && <Link to="/feed">구독 피드</Link>}
+        <Link to="/notices">공지</Link>
       </nav>
       <span className="grow" />
       <form className="search-box" role="search" onSubmit={search}>

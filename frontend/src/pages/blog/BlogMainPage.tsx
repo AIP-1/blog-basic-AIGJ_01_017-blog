@@ -9,6 +9,7 @@ import BlogHeader from '../../components/BlogHeader'
 import Pagination from '../../components/Pagination'
 import { PostItem } from '../../components/PostItem'
 import Sidebar from '../../components/Sidebar'
+import ReportButton from '../../components/ReportButton'
 import SubscribeButton from '../../components/SubscribeButton'
 import NotFoundPage from '../error/NotFoundPage'
 
@@ -132,6 +133,7 @@ function BlogProfile({ blog, me, onBlogChange }: {
                              ...blog, subscriberCount, viewer: { ...blog.viewer, subscribed },
                            })} />
         )}
+        {!blog.viewer.isOwner && <ReportButton targetType="BLOG" targetId={blog.id} me={me} small />}
       </div>
     </div>
   )

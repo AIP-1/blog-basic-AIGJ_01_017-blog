@@ -7,10 +7,12 @@ import { formatDateTime } from '../../app/format'
 import { sanitizePostHtml } from '../../app/sanitize'
 import { useBlog } from '../../app/useBlog'
 import { useMe } from '../../app/useMe'
+import AdminBlindButton from '../../components/AdminBlindButton'
 import AuthorName from '../../components/AuthorName'
 import BlogHeader from '../../components/BlogHeader'
 import Comments from '../../components/Comments'
 import LikeButton from '../../components/LikeButton'
+import ReportButton from '../../components/ReportButton'
 import ErrorPage from '../../components/ErrorPage'
 import SameCategoryPosts from '../../components/SameCategoryPosts'
 import ShareButtons from '../../components/ShareButtons'
@@ -148,6 +150,9 @@ function Article({ post, me, onDelete, onVisibilityChange, actionError, onCommen
   actionError: string | null
   onCommentCount: (count: number) => void
 }) {
+  /** 관리자가 이 글을 숨겼다(ADMIN-03). 숨긴 글은 관리자에게도 404라 다시 받지 않고 안내만 */
+  const [adminBlinded, setAdminBlinded] = useState(false)
+  const admin = me.status === 'member' && me.me.role === 'ADMIN'
   return (
     <article className="stack" style={{ gap: 20 }}>
       <header className="post-head">
@@ -195,7 +200,16 @@ function Article({ post, me, onDelete, onVisibilityChange, actionError, onCommen
         <LikeButton key={`like-${post.id}`} postId={post.id} me={me} initialLiked={post.viewer.liked}
                     initialCount={post.likeCount} />
         <ShareButtons postId={post.id} title={post.title} />
+        {!post.viewer.isOwner && <ReportButton targetType="POST" targetId={post.id} me={me} />}
+        {admin && !post.viewer.isOwner && !adminBlinded && (
+          <AdminBlindButton kind="posts" id={post.id} blinded={false} onDone={setAdminBlinded} />
+        )}
       </div>
+      {adminBlinded && (
+        <p className="err" role="status">
+          이 글을 숨겼습니다. 이제 작성자 말고는 볼 수 없습니다. 해제는 서비스 관리의 회원 상세·관리 이력에서 합니다.
+        </p>
+      )}
       <nav className="row between small" aria-label="이전·다음 글">
         <span>이전 글 {post.prev ? <Link to={`/${post.prev.id}`}>{post.prev.title}</Link> : <span className="muted">없음</span>}</span>
         <span>다음 글 {post.next ? <Link to={`/${post.next.id}`}>{post.next.title}</Link> : <span className="muted">없음</span>}</span>

@@ -19,7 +19,8 @@ const HIDDEN_LABEL: Record<CommentKind, Record<'SECRET' | 'BLINDED' | 'DELETED',
  * 비밀글은 서버가 내용을 빼고 SECRET으로 주므로 화면은 문구만 바꾼다. 작성자 본인에게는 "수정"(viewer.canEdit),
  * 본인·블로그 주인에게는 "삭제"(viewer.canDelete)가 보인다. 권한은 서버가 다시 검사한다.
  */
-export default function CommentItem({ comment, kind = 'comment', onDelete, onReply, onEdit, isReply = false, extra }: {
+export default function CommentItem({ comment, kind = 'comment', onDelete, onReply, onEdit, isReply = false, extra,
+  actions }: {
   comment: Comment
   kind?: CommentKind
   onDelete: (comment: Comment) => void
@@ -29,6 +30,8 @@ export default function CommentItem({ comment, kind = 'comment', onDelete, onRep
   isReply?: boolean
   /** 작성자 줄에 덧붙일 것(관리 화면의 글 제목 등) */
   extra?: ReactNode
+  /** 버튼 줄 끝에 덧붙일 것(신고, 관리자 숨기기) */
+  actions?: ReactNode
 }) {
   const [editing, setEditing] = useState(false)
   const hidden = comment.state === 'NORMAL' ? null : HIDDEN_LABEL[kind][comment.state]
@@ -64,6 +67,7 @@ export default function CommentItem({ comment, kind = 'comment', onDelete, onRep
             {comment.viewer.canDelete && (
               <button className="btn ghost small" type="button" onClick={() => onDelete(comment)}>삭제</button>
             )}
+            {actions}
           </div>
         )}
       </div>
