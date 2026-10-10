@@ -1,14 +1,19 @@
 package com.nhnacademy.blog.member.presentation;
 
+import com.nhnacademy.blog.global.auth.AuthCookieManager;
 import com.nhnacademy.blog.global.auth.LoginMember;
 import com.nhnacademy.blog.global.web.RequestValidator;
 import com.nhnacademy.blog.member.application.MeService;
+import com.nhnacademy.blog.member.application.WithdrawalService;
 import com.nhnacademy.blog.member.presentation.dto.MeResponse;
 import com.nhnacademy.blog.member.presentation.dto.MeUpdateRequest;
 import com.nhnacademy.blog.member.presentation.dto.PasswordChangeRequest;
+import com.nhnacademy.blog.member.presentation.dto.WithdrawRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -24,10 +29,15 @@ import org.springframework.web.bind.annotation.RestController;
 public class MeController {
 
     private final MeService meService;
+    private final WithdrawalService withdrawalService;
+    private final AuthCookieManager cookieManager;
     private final RequestValidator requestValidator;
 
-    public MeController(MeService meService, RequestValidator requestValidator) {
+    public MeController(MeService meService, WithdrawalService withdrawalService, AuthCookieManager cookieManager,
+                        RequestValidator requestValidator) {
         this.meService = meService;
+        this.withdrawalService = withdrawalService;
+        this.cookieManager = cookieManager;
         this.requestValidator = requestValidator;
     }
 
@@ -54,6 +64,19 @@ public class MeController {
                                @RequestBody PasswordChangeRequest request) {
         requestValidator.validate(request);
         meService.changePassword(member.id(), request.currentPassword(), request.newPassword());
+    }
+
+    /**
+     * 회원 탈퇴 (AUTH-06). `{ password }`로 본인 확인 → 204와 로그인 쿠키 삭제. 비밀번호가 틀리면 401 LOGIN_FAILED,
+     * 15분 안에 5번 틀리면 429(비밀번호 변경과 같은 횟수).
+     */
+    @DeleteMapping("/api/me")
+    @PreAuthorize("isAuthenticated()")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void withdraw(@AuthenticationPrincipal LoginMember member, @RequestBody WithdrawRequest request,
+                         HttpServletResponse response) {
+        withdrawalService.withdraw(member.id(), request.password());
+        cookieManager.clear(response);
     }
 
 }

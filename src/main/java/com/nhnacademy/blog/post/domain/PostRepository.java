@@ -1,6 +1,8 @@
 package com.nhnacademy.blog.post.domain;
 
+import com.nhnacademy.blog.blog.domain.Blog;
 import jakarta.persistence.LockModeType;
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -30,10 +32,21 @@ public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificat
     @Query("update Post p set p.blinded = :blinded, p.updatedAt = p.updatedAt where p.id = :id")
     int changeBlinded(@Param("id") Long id, @Param("blinded") boolean blinded);
 
+    /**
+     * 글을 다른 블로그로 옮긴다 (BLOG-06). 카테고리는 미분류. 작성자가 글을 고친 것이 아니라서 수정 시각은 그대로 둔다.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update Post p set p.blog = :target, p.category = null, p.updatedAt = p.updatedAt where p.id in :ids")
+    int moveTo(@Param("ids") Collection<Long> ids, @Param("target") Blog target);
+
+    /** 블로그의 지우지 않은 글 번호(임시저장·예약 포함). 블로그 삭제·탈퇴에서 함께 지울 글. */
+    @Query("select p.id from Post p where p.blog.id = :blogId and p.deletedAt is null")
+    List<Long> findLiveIdsByBlogId(@Param("blogId") Long blogId);
+
     /** 이 시각 뒤에 발행된 글 수(지운 글 빼고, 관리자 대시보드). */
     @Query("select count(p) from Post p where p.status = com.nhnacademy.blog.post.domain.PostStatus.PUBLISHED"
             + " and p.publishedAt >= :since and p.deletedAt is null")
-    long countPublishedSince(@Param("since") java.time.LocalDateTime since);
+    long countPublishedSince(@Param("since") LocalDateTime since);
 
     /**
      * 글 목록(페이지). 목록 한 줄에 카테고리 이름이 나가므로 카테고리를 함께 읽는다(N+1 방지).

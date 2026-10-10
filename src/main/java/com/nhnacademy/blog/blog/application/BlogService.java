@@ -1,8 +1,11 @@
 package com.nhnacademy.blog.blog.application;
 
+import com.nhnacademy.blog.blog.domain.AccentColor;
 import com.nhnacademy.blog.blog.domain.Blog;
 import com.nhnacademy.blog.blog.domain.BlogAddressRule;
 import com.nhnacademy.blog.blog.domain.BlogRepository;
+import com.nhnacademy.blog.blog.domain.ListLayout;
+import com.nhnacademy.blog.blog.domain.Skin;
 import com.nhnacademy.blog.global.error.BusinessException;
 import com.nhnacademy.blog.global.error.ErrorCode;
 import com.nhnacademy.blog.global.error.FieldErrorDetail;
@@ -23,9 +26,11 @@ public class BlogService {
     private final BlogRepository blogRepository;
     private final MemberRepository memberRepository;
     private final ImageRepository imageRepository;
+    private final SidebarModules sidebarModules;
 
     public BlogService(BlogRepository blogRepository, MemberRepository memberRepository,
-                       ImageRepository imageRepository) {
+                       ImageRepository imageRepository, SidebarModules sidebarModules) {
+        this.sidebarModules = sidebarModules;
         this.blogRepository = blogRepository;
         this.memberRepository = memberRepository;
         this.imageRepository = imageRepository;
@@ -65,8 +70,10 @@ public class BlogService {
             throw new BusinessException(ErrorCode.BLOG_ADDRESS_TAKEN);
         }
         try {
-            return blogRepository.saveAndFlush(
+            Blog blog = blogRepository.saveAndFlush(
                     Blog.open(member, address, name.trim(), blankToNull(description), activeCount == 0));
+            sidebarModules.createDefaults(blog.getId());
+            return blog;
         } catch (DataIntegrityViolationException e) {
             // 확인과 저장 사이에 다른 회원이 같은 주소로 먼저 개설했다
             throw new BusinessException(ErrorCode.BLOG_ADDRESS_TAKEN);
@@ -80,6 +87,18 @@ public class BlogService {
      */
     @Transactional
     public Blog updateInfo(String address, Long ownerId, String name, String description, Long profileImageId) {
+        return update(address, ownerId, name, description, profileImageId, null, null, null);
+    }
+
+    /**
+     * 정보와 꾸미기 (BLOG-02, BLOG-05). 보낸 항목만 바뀐다. 스킨·목록 형태·포인트 색이 정해 둔 값이 아니면 그 칸 400.
+     */
+    @Transactional
+    public Blog update(String address, Long ownerId, String name, String description, Long profileImageId,
+                       String skin, String listLayout, String accentColor) {
+        Skin parsedSkin = parse(Skin.class, "skin", skin);
+        ListLayout parsedLayout = parse(ListLayout.class, "listLayout", listLayout);
+        AccentColor parsedColor = parse(AccentColor.class, "accentColor", accentColor);
         Blog blog = blogRepository.findByAddress(address)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         if (profileImageId != null) {
@@ -89,7 +108,20 @@ public class BlogService {
             blog.changeProfileImage(profileImageId);
         }
         blog.changeInfo(name == null ? null : name.trim(), description);
+        blog.changeDesign(parsedSkin, parsedLayout, parsedColor);
         return blog;
+    }
+
+    private static <E extends Enum<E>> E parse(Class<E> type, String field, String value) {
+        if (value == null) {
+            return null;
+        }
+        for (E constant : type.getEnumConstants()) {
+            if (constant.name().equals(value)) {
+                return constant;
+            }
+        }
+        throw BusinessException.invalidField(field, "정해 둔 값 중 하나를 골라 주세요.");
     }
 
     private void checkAddressRule(String address) {

@@ -23,7 +23,6 @@ import java.time.LocalDateTime;
 @Table(name = "blog")
 public class Blog extends BaseTimeEntity {
 
-    public static final String DEFAULT_SKIN = "BASIC";
     /** 한 회원이 가질 수 있는 활성(삭제되지 않은) 블로그 수 (BLOG-01). */
     public static final int MAX_ACTIVE_PER_MEMBER = 5;
 
@@ -56,8 +55,9 @@ public class Blog extends BaseTimeEntity {
     @Column(name = "is_primary", nullable = false)
     private boolean primary;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "skin", nullable = false, length = 20)
-    private String skin;
+    private Skin skin;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "list_layout", nullable = false, length = 10)
@@ -85,7 +85,7 @@ public class Blog extends BaseTimeEntity {
         this.name = name;
         this.description = description;
         this.primary = primary;
-        this.skin = DEFAULT_SKIN;
+        this.skin = Skin.BASIC;
         this.listLayout = ListLayout.LIST;
         this.accentColor = AccentColor.BLUE;
     }
@@ -109,6 +109,19 @@ public class Blog extends BaseTimeEntity {
         }
     }
 
+    /** 꾸미기 (BLOG-05): 스킨, 메인 글 목록 형태, 포인트 색. null인 것은 그대로 둔다. */
+    public void changeDesign(Skin skin, ListLayout listLayout, AccentColor accentColor) {
+        if (skin != null) {
+            this.skin = skin;
+        }
+        if (listLayout != null) {
+            this.listLayout = listLayout;
+        }
+        if (accentColor != null) {
+            this.accentColor = accentColor;
+        }
+    }
+
     /** 프로필 이미지 바꾸기 (BLOG-02). 주인이 올린 이미지인지는 BlogService가 먼저 본다. */
     public void changeProfileImage(Long profileImageId) {
         this.profileImageId = profileImageId;
@@ -120,6 +133,20 @@ public class Blog extends BaseTimeEntity {
      */
     public void markPrimary(boolean primary) {
         this.primary = primary;
+    }
+
+    /** 이사 대상 정하기 (BLOG-06). 연쇄 이사면 부르는 쪽이 최종 블로그를 넘긴다. */
+    public void moveTo(Blog target) {
+        this.movedToBlog = target;
+    }
+
+    public void cancelMove() {
+        this.movedToBlog = null;
+    }
+
+    /** 블로그 삭제 (BLOG-07). 행은 남아 주소가 영구 예약되고, 이사 연결(moved_to_blog_id)도 그대로다. */
+    public void delete(LocalDateTime now) {
+        this.deletedAt = now;
     }
 
     /** 관리자 이용 제한·해제 (ADMIN-05). 회원은 두고 이 블로그만 숨긴다. 사유는 moderation_log의 최신 RESTRICT_BLOG 행. */
@@ -171,7 +198,7 @@ public class Blog extends BaseTimeEntity {
         return primary;
     }
 
-    public String getSkin() {
+    public Skin getSkin() {
         return skin;
     }
 

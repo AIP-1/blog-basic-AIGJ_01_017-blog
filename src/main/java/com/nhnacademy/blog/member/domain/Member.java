@@ -90,6 +90,18 @@ public class Member extends BaseTimeEntity {
         this.suspendedUntil = null;
     }
 
+    /**
+     * 탈퇴 (AUTH-06). 회원 행은 남기고 로그인 수단(이메일·비밀번호)을 지운다. 이메일이 비면 같은 이메일로 다시 가입할 수 있고,
+     * 탈퇴 회원의 로그인은 없는 계정과 같다. 닉네임은 남아 다른 사람이 쓸 수 없다(UNIQUE).
+     */
+    public void withdraw(LocalDateTime now) {
+        this.status = MemberStatus.WITHDRAWN;
+        this.withdrawnAt = now;
+        this.email = null;
+        this.passwordHash = null;
+        this.suspendedUntil = null;
+    }
+
     public boolean isAdmin() {
         return role == Role.ADMIN;
     }

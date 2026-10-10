@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -34,6 +35,11 @@ public interface BlogRepository extends JpaRepository<Blog, Long>, JpaSpecificat
     @Query("select b from Blog b join fetch b.member"
             + " where b.member.id in :memberIds and b.primary = true and b.deletedAt is null")
     List<Blog> findPrimaryByMemberIds(@Param("memberIds") Collection<Long> memberIds);
+
+    /** 이 블로그를 이사 대상으로 둔 블로그들을 새 최종 블로그로 바꾼다(연쇄 이사는 한 번에 최종 블로그로, BLOG-06). */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update Blog b set b.movedToBlog = :target where b.movedToBlog.id = :blogId")
+    int retarget(@Param("blogId") Long blogId, @Param("target") Blog target);
 
     /** 회원의 블로그 전부(지운 것 포함), 만든 순서 (관리자 회원 상세). */
     List<Blog> findByMemberIdOrderById(Long memberId);
