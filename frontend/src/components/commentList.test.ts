@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Comment } from '../api/types'
-import { afterDelete } from './commentList'
+import { afterDelete, afterEdit } from './commentList'
 
 function comment(id: number, parentId: number | null = null, replies: Comment[] = []): Comment {
   return {
@@ -31,5 +31,22 @@ describe('afterDelete', () => {
   it('살아 있는 부모의 답글을 지우면 부모는 남는다', () => {
     const [parent] = afterDelete([comment(1, null, [comment(3, 1), comment(4, 1)])], comment(3, 1))
     expect(parent.replies.map((r) => r.id)).toEqual([4])
+  })
+})
+
+describe('afterEdit', () => {
+  it('최상위 댓글을 고치면 내용은 바뀌고 답글은 그대로다', () => {
+    const edited = { ...comment(1), content: '고침', updatedAt: '2026-10-11T10:00:00+09:00' }
+    const [left] = afterEdit([comment(1, null, [comment(3, 1)])], edited)
+    expect(left.content).toBe('고침')
+    expect(left.updatedAt).not.toBeNull()
+    expect(left.replies.map((r) => r.id)).toEqual([3])
+  })
+
+  it('답글을 고치면 그 부모 안의 답글만 바뀐다', () => {
+    const edited = { ...comment(3, 1), content: '답 고침' }
+    const [parent, other] = afterEdit([comment(1, null, [comment(3, 1), comment(4, 1)]), comment(2)], edited)
+    expect(parent.replies.map((r) => r.content)).toEqual(['답 고침', 'c4'])
+    expect(other.content).toBe('c2')
   })
 })

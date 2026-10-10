@@ -1,16 +1,15 @@
-import { type FormEvent, useEffect, useRef, useState } from 'react'
-import { ApiError, api, loginUrl, newIdempotencyKey } from '../api/client'
-import { errorMessage, fieldMessages } from '../api/errors'
+import { useEffect, useState } from 'react'
+import { ApiError, api, loginUrl } from '../api/client'
+import { errorMessage } from '../api/errors'
 import type { Comment, CommentList } from '../api/types'
-import { formatDateTime } from '../app/format'
 import type { MeState } from '../app/useMe'
-import AuthorName from './AuthorName'
-import { afterDelete } from './commentList'
-
-const MAX_LENGTH = 1000
+import CommentForm from './CommentForm'
+import CommentItem from './CommentItem'
+import { afterDelete, afterEdit } from './commentList'
 
 /**
- * 글 아래 댓글 (CMT-01, CMT-02, CMT-05). 작성순 20개씩 더보기, 회원은 쓰기·답글(한 단계), 작성자·블로그 주인은 지우기.
+ * 글 아래 댓글 (CMT-01, CMT-02, CMT-03, CMT-05). 작성순 20개씩 더보기, 회원은 쓰기·답글(한 단계),
+ * 작성자는 고치기, 작성자·블로그 주인은 지우기.
  * 비회원에게는 쓰기 칸 대신 로그인 안내를 보여 주고, 로그인하면 이 글로 돌아온다(spec US3 시나리오 6).
  * 답글이 있는 댓글을 지우면 "삭제된 댓글입니다" 자리로 남는다(서버 규칙과 같게 화면도 바꾼다).
  */
@@ -25,6 +24,7 @@ export default function Comments({ postId, me, commentAllowed, onCountChange }: 
   const [totalCount, setTotalCount] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [replyingTo, setReplyingTo] = useState<number | null>(null)
+  const path = `/api/posts/${postId}/comments`
 
   useEffect(() => {
     let active = true
@@ -51,8 +51,7 @@ export default function Comments({ postId, me, commentAllowed, onCountChange }: 
     if (!nextCursor) {
       return
     }
-    const page = await api<CommentList>(
-      `/api/posts/${postId}/comments?cursor=${encodeURIComponent(nextCursor)}`, { allowAnonymous: true })
+    const page = await api<CommentList>(`${path}?cursor=${encodeURIComponent(nextCursor)}`, { allowAnonymous: true })
     setComments((previous) => [...previous, ...page.content])
     setNextCursor(page.nextCursor)
     changeCount(page.totalCount)
@@ -78,6 +77,12 @@ export default function Comments({ postId, me, commentAllowed, onCountChange }: 
     changeCount(totalCount + 1)
   }
 
+  /** 고치기 (CMT-03). 실패하면 오류를 던져 고치는 칸이 그 자리에 보이게 한다 */
+  async function edit(target: Comment, content: string) {
+    const edited = await api<Comment>(`/api/comments/${target.id}`, { method: 'PATCH', body: { content } })
+    setComments((previous) => afterEdit(previous, edited))
+  }
+
   async function remove(target: Comment) {
     if (!window.confirm('이 댓글을 삭제할까요?')) {
       return
@@ -97,16 +102,16 @@ export default function Comments({ postId, me, commentAllowed, onCountChange }: 
       <div>
         {comments.map((comment) => (
           <div key={comment.id}>
-            <CommentItem comment={comment} onDelete={remove}
+            <CommentItem comment={comment} onDelete={remove} onEdit={edit}
                          onReply={me.status === 'member' && commentAllowed && comment.state !== 'DELETED'
                            ? () => setReplyingTo(replyingTo === comment.id ? null : comment.id) : undefined} />
             {comment.replies.map((reply) => (
-              <CommentItem key={reply.id} comment={reply} onDelete={remove} isReply />
+              <CommentItem key={reply.id} comment={reply} onDelete={remove} onEdit={edit} isReply />
             ))}
             {replyingTo === comment.id && (
               <div className="comment reply">
                 <span />
-                <CommentForm postId={postId} parentId={comment.id} onCreated={added} placeholder="답글을 입력하세요"
+                <CommentForm path={path} parentId={comment.id} onCreated={added} placeholder="답글을 입력하세요"
                              onError={setError} />
               </div>
             )}
@@ -121,100 +126,8 @@ export default function Comments({ postId, me, commentAllowed, onCountChange }: 
         <a className="btn" href={loginUrl()} style={{ justifySelf: 'start' }}>로그인하고 댓글 쓰기</a>
       )}
       {commentAllowed && me.status === 'member' && (
-        <CommentForm postId={postId} parentId={null} onCreated={added} placeholder="댓글을 입력하세요"
-                     onError={setError} />
+        <CommentForm path={path} parentId={null} onCreated={added} placeholder="댓글을 입력하세요" onError={setError} />
       )}
     </section>
-  )
-}
-
-/** 댓글·답글 쓰기 칸. 등록 한 번에 연타 방지 키 하나, 실패해 다시 누르면 같은 키, 성공하면 새 키. */
-function CommentForm({ postId, parentId, placeholder, onCreated, onError }: {
-  postId: number
-  parentId: number | null
-  placeholder: string
-  onCreated: (comment: Comment) => void
-  onError: (message: string | null) => void
-}) {
-  const [content, setContent] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  const idempotencyKey = useRef(newIdempotencyKey())
-  // 버튼은 다음 그리기에서야 꺼지므로, 그 사이 두 번째 클릭은 ref로 바로 막는다
-  const inFlight = useRef(false)
-
-  async function submit(event: FormEvent) {
-    event.preventDefault()
-    if (!content.trim()) {
-      onError('댓글 내용을 입력해 주세요.')
-      return
-    }
-    if (inFlight.current) {
-      return
-    }
-    inFlight.current = true
-    setSubmitting(true)
-    onError(null)
-    try {
-      const created = await api<Comment>(`/api/posts/${postId}/comments`, {
-        method: 'POST', body: { content: content.trim(), parentId }, idempotencyKey: idempotencyKey.current,
-      })
-      idempotencyKey.current = newIdempotencyKey()
-      setContent('')
-      onCreated(created)
-    } catch (caught) {
-      onError(fieldMessages(caught).content ?? fieldMessages(caught).parentId ?? errorMessage(caught))
-    } finally {
-      inFlight.current = false
-      setSubmitting(false)
-    }
-  }
-
-  return (
-    <form className="stack" onSubmit={submit}>
-      <textarea value={content} maxLength={MAX_LENGTH} placeholder={placeholder}
-                onChange={(event) => setContent(event.target.value)} />
-      <div className="row between">
-        <span className="small muted num">{content.length}/{MAX_LENGTH}</span>
-        <button className="btn primary" type="submit" disabled={submitting || !content.trim()}>등록</button>
-      </div>
-    </form>
-  )
-}
-
-function CommentItem({ comment, onDelete, onReply, isReply = false }: {
-  comment: Comment
-  onDelete: (comment: Comment) => void
-  onReply?: () => void
-  isReply?: boolean
-}) {
-  const hidden = comment.state === 'SECRET' ? '비밀댓글입니다.'
-    : comment.state === 'BLINDED' ? '관리자가 숨긴 댓글입니다.'
-      : comment.state === 'DELETED' ? '삭제된 댓글입니다.' : null
-  return (
-    <div className={isReply ? 'comment reply' : 'comment'} id={`comment-${comment.id}`}>
-      {!hidden && comment.author?.profileImageUrl
-        ? <img className="avatar" src={comment.author.profileImageUrl} alt="" />
-        : <span className="avatar" />}
-      <div>
-        {hidden
-          ? <p className="gone small">{hidden}</p>
-          : (
-            <>
-              <div className="row small">
-                {comment.author && <AuthorName author={comment.author} bold />}
-                <span className="muted num">{formatDateTime(comment.createdAt)}</span>
-              </div>
-              {comment.blind && <p className="err">관리자가 숨긴 댓글입니다. 사유: {comment.blind.reasonMessage}</p>}
-              <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{comment.content}</p>
-            </>
-          )}
-        <div className="row small">
-          {onReply && <button className="btn ghost small" type="button" onClick={onReply}>답글</button>}
-          {comment.viewer.canDelete && (
-            <button className="btn ghost small" type="button" onClick={() => onDelete(comment)}>삭제</button>
-          )}
-        </div>
-      </div>
-    </div>
   )
 }

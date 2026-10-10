@@ -1,8 +1,8 @@
 package com.nhnacademy.blog.comment.domain;
 
+import com.nhnacademy.blog.blog.domain.Blog;
 import com.nhnacademy.blog.global.entity.BaseTimeEntity;
 import com.nhnacademy.blog.member.domain.Member;
-import com.nhnacademy.blog.post.domain.Post;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -15,25 +15,25 @@ import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 
 /**
- * 댓글. 답글은 1단계까지다. 답글이 있는 댓글을 지우면 '삭제된 댓글입니다'로 보인다.
- * 방명록(Guestbook)과 같은 규칙으로 보이도록 CommentEntry를 따른다.
+ * 방명록 (CMT-04). 글이 아니라 블로그에 달린다는 것 말고는 댓글과 같은 규칙이다: 1~1,000자, 비밀글은 블로그 주인과
+ * 작성자만, 답글은 한 단계, 답글이 있는 글을 지우면 '삭제된 글입니다' 자리로 남는다. 관리자 숨김은 없다(ERD에 칸이 없음).
  */
 @Entity
-@Table(name = "comment")
-public class Comment extends BaseTimeEntity implements CommentEntry {
+@Table(name = "guestbook")
+public class Guestbook extends BaseTimeEntity implements CommentEntry {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** 부모 댓글. NULL 또는 1단계 (CMT-05). */
+    /** 부모 방명록. NULL 또는 1단계. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_id")
-    private Comment parent;
+    private Guestbook parent;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "post_id", nullable = false)
-    private Post post;
+    @JoinColumn(name = "blog_id", nullable = false)
+    private Blog blog;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "member_id", nullable = false)
@@ -45,50 +45,43 @@ public class Comment extends BaseTimeEntity implements CommentEntry {
     @Column(name = "is_secret", nullable = false)
     private boolean secret;
 
-    @Column(name = "is_blinded", nullable = false)
-    private boolean blinded;
-
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
-    protected Comment() {
+    protected Guestbook() {
     }
 
-    private Comment(Post post, Member member, Comment parent, String content, boolean secret) {
-        this.post = post;
+    private Guestbook(Blog blog, Member member, Guestbook parent, String content, boolean secret) {
+        this.blog = blog;
         this.member = member;
         this.parent = parent;
         this.content = content;
         this.secret = secret;
     }
 
-    public static Comment write(Post post, Member member, String content, boolean secret) {
-        return new Comment(post, member, null, content, secret);
+    public static Guestbook write(Blog blog, Member member, String content, boolean secret) {
+        return new Guestbook(blog, member, null, content, secret);
     }
 
-    public static Comment reply(Comment parent, Member member, String content, boolean secret) {
-        return new Comment(parent.getPost(), member, parent, content, secret);
+    public static Guestbook reply(Guestbook parent, Member member, String content, boolean secret) {
+        return new Guestbook(parent.blog, member, parent, content, secret);
     }
 
-    /** 소프트 삭제 (CMT-01, CMT-02). 답글(CMT-05)이 생기면 답글이 있는 댓글은 '삭제된 댓글입니다'로 자리를 남긴다. */
-    public void delete(LocalDateTime now) {
-        this.deletedAt = now;
-    }
-
-    /** 내용 고치기 (CMT-03). 본인인지, 숨긴 댓글이 아닌지는 CommentService가 먼저 본다. */
     public void edit(String content) {
         this.content = content;
     }
 
-    public boolean isDeleted() {
-        return deletedAt != null;
+    /** 소프트 삭제. 답글이 남아 있으면 목록에 자리만 남는다. */
+    public void delete(LocalDateTime now) {
+        this.deletedAt = now;
     }
 
+    @Override
     public Long getId() {
         return id;
     }
 
-    public Comment getParent() {
+    public Guestbook getParent() {
         return parent;
     }
 
@@ -97,24 +90,33 @@ public class Comment extends BaseTimeEntity implements CommentEntry {
         return parent == null ? null : parent.getId();
     }
 
-    public Post getPost() {
-        return post;
+    public Blog getBlog() {
+        return blog;
     }
 
+    @Override
     public Member getMember() {
         return member;
     }
 
+    @Override
     public String getContent() {
         return content;
     }
 
+    @Override
     public boolean isSecret() {
         return secret;
     }
 
+    @Override
     public boolean isBlinded() {
-        return blinded;
+        return false;
+    }
+
+    @Override
+    public boolean isDeleted() {
+        return deletedAt != null;
     }
 
     public LocalDateTime getDeletedAt() {

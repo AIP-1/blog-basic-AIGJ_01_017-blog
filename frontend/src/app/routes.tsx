@@ -4,6 +4,7 @@ import LoginPage from '../pages/auth/LoginPage'
 import SignupPage from '../pages/auth/SignupPage'
 import BlogCreatePage from '../pages/blog/BlogCreatePage'
 import BlogMainPage from '../pages/blog/BlogMainPage'
+import GuestbookPage from '../pages/blog/GuestbookPage'
 import NotFoundPage from '../pages/error/NotFoundPage'
 import MyPage from '../pages/me/MyPage'
 import HomePage from '../pages/home/HomePage'
@@ -34,6 +35,7 @@ export function BlogRoutes() {
       <Route path="/category/:categoryId" element={<BlogMainPage />} />
       <Route path="/tag/:tagName" element={<BlogMainPage />} />
       <Route path="/search" element={<BlogSearchPage />} />
+      <Route path="/guestbook" element={<GuestbookPage />} />
       <Route path="/:postId" element={<PostPage />} />
       <Route path="/manage/*" element={<ManagePage />} />
       <Route path="*" element={<NotFoundPage />} />
