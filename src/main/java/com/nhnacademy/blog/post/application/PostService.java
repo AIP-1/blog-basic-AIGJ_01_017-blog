@@ -24,6 +24,7 @@ import com.nhnacademy.blog.tag.application.TagService;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -140,6 +141,7 @@ public class PostService {
         postThumbnails.requireInBody(command.thumbnailImageId(), body.html());
         post.edit(category, command.title(), body, command.visibility(), command.topic());
         post.changeThumbnail(command.thumbnailImageId());
+        Set<Long> oldTagIds = post.tagIds();
         post.replaceTags(tagService.resolve(blog, command.tagNames()));
         switch (command.status()) {
             case PUBLISHED -> post.publish(LocalDateTime.now(clock));
@@ -149,6 +151,7 @@ public class PostService {
         if (command.commentAllowed() != null) {
             post.changeCommentAllowed(command.commentAllowed());
         }
+        tagService.removeUnused(oldTagIds);
         events.publishEvent(new PostContentChangedEvent(post.getId()));
         return post;
     }
@@ -187,7 +190,10 @@ public class PostService {
         postRepository.deleteLikes(id);
         // 댓글 일괄 수정이 영속성 컨텍스트를 비우므로(clearAutomatically) 글은 그 뒤에 다시 읽어 지운다
         commentRepository.softDeleteByPostId(id, now);
-        postRepository.findById(id).orElseThrow().delete(now);
+        Post post = postRepository.findById(id).orElseThrow();
+        Set<Long> tagIds = post.tagIds();
+        post.delete(now);
+        tagService.removeUnused(tagIds);
         events.publishEvent(new PostDeletedEvent(id));
     }
 

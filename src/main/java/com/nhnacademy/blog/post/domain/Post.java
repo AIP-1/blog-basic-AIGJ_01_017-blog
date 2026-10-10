@@ -224,7 +224,7 @@ public class Post extends BaseTimeEntity {
 
     /**
      * 태그를 이 목록으로 바꾼다. 빠진 태그의 연결 행만 지우고 새 태그의 연결 행만 넣는다(그대로인 태그는 건드리지 않음).
-     * 빠진 태그도 블로그 태그(tag 행)는 남는다.
+     * 빠진 태그가 어느 글에도 남지 않으면 블로그 태그(tag 행)는 TagService.removeUnused가 지운다.
      */
     public void replaceTags(Collection<Tag> newTags) {
         Set<Long> wanted = newTags.stream().map(Tag::getId).collect(Collectors.toSet());
@@ -233,6 +233,11 @@ public class Post extends BaseTimeEntity {
         newTags.stream()
                 .filter(tag -> !current.contains(tag.getId()))
                 .forEach(tag -> postTags.add(PostTag.of(this, tag)));
+    }
+
+    /** 단 태그의 id. 트랜잭션 안에서 불러야 한다(지연 로딩). */
+    public Set<Long> tagIds() {
+        return postTags.stream().map(postTag -> postTag.getTag().getId()).collect(Collectors.toSet());
     }
 
     /** 태그 이름, 가나다순. 트랜잭션 안에서 불러야 한다(지연 로딩). */

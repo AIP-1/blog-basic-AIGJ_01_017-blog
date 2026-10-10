@@ -170,6 +170,61 @@ class PostSettingsIntegrationTest extends IntegrationTestSupport {
         send(delete("/api/tags/999999"), ownerCookies, null).andExpect(status().isNotFound());
     }
 
+    @Test
+    void tagWithNoPostLeftIsRemovedWhenPostsAreDeletedOrUntagged() throws Exception {
+        long first = publishTagged("첫 글", "[\"spring\",\"jpa\"]");
+        long second = publishTagged("둘째 글", "[\"jpa\"]");
+        long springId = tagId("spring");
+
+        // 글을 지우면 그 글에만 있던 태그(spring)가 없어진다. 다른 글에도 단 태그(jpa)는 남는다
+        send(delete("/api/posts/" + first), ownerCookies, null).andExpect(status().isNoContent());
+        send(get("/api/manage/tags"), ownerCookies, null)
+                .andExpect(jsonPath("$[*].name", contains("jpa")))
+                .andExpect(jsonPath("$[0].postCount").value(1));
+        send(get("/api/posts").param("tag", "spring"), null, null).andExpect(status().isNotFound());
+        send(patch("/api/tags/" + springId), ownerCookies, "{\"name\":\"x\"}").andExpect(status().isNotFound());
+        // 보이지 않는 옛 태그 때문에 409가 나지 않는다
+        send(patch("/api/tags/" + tagId("jpa")), ownerCookies, "{\"name\":\"spring\"}")
+                .andExpect(status().isNoContent());
+
+        // 글을 고쳐 태그를 모두 빼도 같다
+        save(second, """
+                {"title":"둘째 글","contentHtml":"<p>본문</p>","visibility":"PUBLIC","status":"PUBLISHED","tagNames":[]}""")
+                .andExpect(status().isOk());
+        send(get("/api/manage/tags"), ownerCookies, null).andExpect(jsonPath("$", hasSize(0)));
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM tag WHERE blog_id = ?", Integer.class,
+                blog.getId())).isZero();
+    }
+
+    @Test
+    void manageTagListIncludesDraftOnlyTagsAndTagPageHidesInvisibleOnes() throws Exception {
+        publishTagged("공개 글", "[\"spring\"]");
+        send(post("/api/posts").header("Idempotency-Key", UUID.randomUUID().toString()), ownerCookies, """
+                {"title":"초안","contentHtml":"<p>본문</p>","visibility":"PUBLIC","status":"DRAFT","tagNames":["draft-only"]}""")
+                .andExpect(status().isCreated());
+        long privatePost = publishTagged("비공개 글", "[\"secret\"]");
+        send(patch("/api/posts/" + privatePost + "/visibility"), ownerCookies, "{\"visibility\":\"PRIVATE\"}")
+                .andExpect(status().isNoContent());
+
+        // 관리 표: 임시저장 글에만 단 태그도 나오고, 발행 글 수가 따로 있다
+        send(get("/api/manage/tags"), ownerCookies, null)
+                .andExpect(jsonPath("$[*].name", contains("draft-only", "secret", "spring")))
+                .andExpect(jsonPath("$[0].postCount").value(1))
+                .andExpect(jsonPath("$[0].publishedCount").value(0))
+                .andExpect(jsonPath("$[1].publishedCount").value(1));
+        send(get("/api/manage/tags"), testMembers.loginCookies(stranger), null).andExpect(status().isForbidden());
+        send(get("/api/manage/tags"), null, null).andExpect(status().isUnauthorized());
+        // 블로그 화면용 목록에는 발행 글의 태그만
+        send(get("/api/tags"), ownerCookies, null).andExpect(jsonPath("$[*].name", contains("secret", "spring")));
+
+        // 태그 주소: 볼 수 있는 글이 없으면 없는 태그와 같이 404
+        send(get("/api/posts").param("tag", "secret"), null, null).andExpect(status().isNotFound());
+        send(get("/api/posts").param("tag", "secret"), ownerCookies, null)
+                .andExpect(status().isOk()).andExpect(jsonPath("$.content", hasSize(1)));
+        send(get("/api/posts").param("tag", "draft-only"), ownerCookies, null).andExpect(status().isNotFound());
+        send(get("/api/posts").param("tag", "spring"), null, null).andExpect(jsonPath("$.content", hasSize(1)));
+    }
+
     // ---------- CMT-06 비밀댓글, CMT-07 댓글 허용 ----------
 
     @Test

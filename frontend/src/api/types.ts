@@ -118,6 +118,17 @@ export interface TagCount {
   postCount: number
 }
 
+/**
+ * 관리 화면 태그 한 줄 (GET /api/manage/tags). postCount는 지우지 않은 글 전부(임시저장·예약 포함),
+ * publishedCount는 블로그 화면에 나오는 발행 글 수. 글이 하나도 남지 않은 태그는 서버가 지운다
+ */
+export interface ManagedTag {
+  id: number
+  name: string
+  postCount: number
+  publishedCount: number
+}
+
 export type SidebarModule =
   | { type: 'PROFILE'; data: { name: string; description: string | null; profileImageUrl: string | null } }
   | { type: 'CATEGORY'; data: CategoryTree }

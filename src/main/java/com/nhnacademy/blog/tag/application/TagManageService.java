@@ -51,12 +51,10 @@ public class TagManageService {
         }
     }
 
-    /** 글과의 연결(post_tag)을 먼저 끊고 태그를 지운다. 글은 그대로다. */
+    /** 태그를 지운다. 글과의 연결(post_tag)은 외래 키의 ON DELETE CASCADE로 DB가 같이 지우고, 글은 그대로다. */
     @Transactional
     public void delete(Blog blog, Long tagId) {
-        Tag tag = find(blog, tagId);
-        tagRepository.unlinkPosts(tag.getId());
-        tagRepository.deleteById(tag.getId());
+        tagRepository.delete(find(blog, tagId));
     }
 
 }

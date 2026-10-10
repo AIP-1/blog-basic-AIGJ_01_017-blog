@@ -2,7 +2,7 @@ import { type DragEvent, type FormEvent, useCallback, useEffect, useState } from
 import { Link } from 'react-router'
 import { ApiError, api } from '../../api/client'
 import { errorMessage, fieldMessages } from '../../api/errors'
-import type { CategoryNode, CategoryTree, TagCount } from '../../api/types'
+import type { CategoryNode, CategoryTree, ManagedTag } from '../../api/types'
 import { type OrderRow, flatten, group, moveBefore, moveInto, moveToRootEnd, toOrderItems } from './categoryOrder'
 
 /**
@@ -171,15 +171,19 @@ export default function CategoriesPage() {
   )
 }
 
-/** 태그와 글 수 (TAG-03), 이름 변경·삭제 (TAG-04). 이름을 누르면 블로그의 태그별 글 목록이다. */
+/**
+ * 태그와 글 수 (TAG-03), 이름 변경·삭제 (TAG-04). 임시저장·예약 글에만 단 태그도 나온다.
+ * 발행 글이 있는 태그는 이름을 누르면 블로그의 태그별 글 목록이다(발행 글이 없으면 그 주소는 404라 링크가 없다).
+ * 글을 지우거나 고쳐 어느 글에도 남지 않은 태그는 서버가 지워 여기서도 사라진다.
+ */
 function TagSection() {
-  const [tags, setTags] = useState<TagCount[] | null>(null)
+  const [tags, setTags] = useState<ManagedTag[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [editing, setEditing] = useState<number | null>(null)
   const [name, setName] = useState('')
 
   const load = useCallback(() => {
-    api<TagCount[]>('/api/tags')
+    api<ManagedTag[]>('/api/manage/tags')
       .then(setTags)
       .catch((caught: unknown) => setError(errorMessage(caught)))
   }, [])
@@ -188,7 +192,7 @@ function TagSection() {
     load()
   }, [load])
 
-  async function rename(event: FormEvent, tag: TagCount) {
+  async function rename(event: FormEvent, tag: ManagedTag) {
     event.preventDefault()
     setError(null)
     try {
@@ -201,7 +205,7 @@ function TagSection() {
     }
   }
 
-  async function remove(tag: TagCount) {
+  async function remove(tag: ManagedTag) {
     if (!window.confirm(`태그 "${tag.name}"을(를) 지울까요? 글 ${tag.postCount}개에서 이 태그만 빠지고 글은 남습니다.`)) {
       return
     }
@@ -238,9 +242,16 @@ function TagSection() {
                           <button className="btn small" type="button" onClick={() => setEditing(null)}>취소</button>
                         </form>
                       )
-                      : <Link to={`/tag/${encodeURIComponent(tag.name)}`}>{tag.name}</Link>}
+                      : tag.publishedCount > 0
+                        ? <Link to={`/tag/${encodeURIComponent(tag.name)}`}>{tag.name}</Link>
+                        : <span>{tag.name}</span>}
                   </td>
-                  <td className="num">{tag.postCount}</td>
+                  <td className="num">
+                    {tag.postCount}
+                    {tag.publishedCount < tag.postCount && (
+                      <span className="muted small"> (발행 {tag.publishedCount})</span>
+                    )}
+                  </td>
                   <td>
                     {editing !== tag.id && (
                       <span className="row nowrap">

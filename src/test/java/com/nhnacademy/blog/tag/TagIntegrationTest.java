@@ -94,7 +94,7 @@ class TagIntegrationTest extends IntegrationTestSupport {
     }
 
     @Test
-    void editingReplacesTagsButKeepsBlogTags() throws Exception {
+    void editingReplacesTagsAndRemovesTagsNoPostUses() throws Exception {
         long id = publish("[\"spring\", \"jpa\"]");
 
         send(put("/api/posts/" + id), body("[\"jpa\", \"mysql\"]")).andExpect(status().isOk());
@@ -102,7 +102,7 @@ class TagIntegrationTest extends IntegrationTestSupport {
         send(get("/api/manage/posts/" + id), null)
                 .andExpect(jsonPath("$.tagNames", contains("jpa", "mysql")));
         assertThat(jdbcTemplate.queryForList("SELECT name FROM tag WHERE blog_id = ? ORDER BY name", String.class,
-                blog.getId())).containsExactly("jpa", "mysql", "spring");
+                blog.getId())).containsExactly("jpa", "mysql");
     }
 
     @Test

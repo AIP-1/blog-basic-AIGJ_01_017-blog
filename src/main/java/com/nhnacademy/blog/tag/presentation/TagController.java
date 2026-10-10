@@ -7,6 +7,7 @@ import com.nhnacademy.blog.global.auth.LoginMembers;
 import com.nhnacademy.blog.global.host.CurrentBlog;
 import com.nhnacademy.blog.tag.application.TagListService;
 import com.nhnacademy.blog.tag.application.TagManageService;
+import com.nhnacademy.blog.tag.presentation.dto.ManagedTagResponse;
 import com.nhnacademy.blog.tag.presentation.dto.TagCountResponse;
 import com.nhnacademy.blog.tag.presentation.dto.TagRenameRequest;
 import java.util.List;
@@ -41,6 +42,13 @@ public class TagController {
     @GetMapping("/api/tags")
     public List<TagCountResponse> tags(@CurrentBlog Blog blog) {
         return tagListService.tags(blog, LoginMembers.currentId()).stream().map(TagCountResponse::from).toList();
+    }
+
+    /** 관리 화면의 태그 표. 임시저장·예약 글에만 단 태그도 나온다(주인만). */
+    @GetMapping("/api/manage/tags")
+    public List<ManagedTagResponse> managed(@CurrentBlog Blog blog, @AuthenticationPrincipal LoginMember member) {
+        blogOwnerGuard.requireOwner(blog, member);
+        return tagListService.managed(blog, member.id()).stream().map(ManagedTagResponse::from).toList();
     }
 
     @PatchMapping("/api/tags/{id}")

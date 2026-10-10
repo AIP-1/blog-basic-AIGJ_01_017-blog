@@ -49,7 +49,8 @@ public class PostQueryService {
 
     /**
      * categoryId: null이면 전체, 0이면 미분류, 그 밖에는 그 카테고리와 하위 카테고리의 글.
-     * tag: 그 이름의 태그가 달린 글(TAG-02, 대소문자 무시). 블로그에 없는 태그면 404.
+     * tag: 그 이름의 태그가 달린 글(TAG-02, 대소문자 무시). 블로그에 없는 태그, 보는 사람이 볼 수 있는 글이 하나도 없는 태그면
+     * 404다(비공개 글에만 단 태그 이름이 드러나지 않게, 태그 목록에서 빠지는 것과 같은 규칙).
      */
     @Transactional(readOnly = true)
     public Page<Post> blogPosts(Blog blog, Long viewerId, Long categoryId, String tag, PageQuery page) {
@@ -59,6 +60,9 @@ public class PostQueryService {
         }
         if (tag != null) {
             condition = condition.and(taggedWith(blog, tag));
+            if (!postRepository.exists(condition)) {
+                throw new BusinessException(ErrorCode.NOT_FOUND);
+            }
         }
         return postRepository.findAll(condition, page.toPageable(LATEST));
     }
