@@ -122,9 +122,9 @@ class AccessControlIntegrationTest extends IntegrationTestSupport {
         mockMvc.perform(get("/api/admin/dashboard").cookie(bCookies))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("FORBIDDEN"));
-        // 관리자는 통과한다(대시보드 API는 아직 없어 404)
+        // 관리자는 통과한다(대시보드는 스텝 18)
         mockMvc.perform(get("/api/admin/dashboard").cookie(testMembers.loginCookies(testMembers.admin())))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isOk());
         mockMvc.perform(get("/api/me").cookie(bCookies)).andExpect(jsonPath("$.role").value("USER"));
     }
 
