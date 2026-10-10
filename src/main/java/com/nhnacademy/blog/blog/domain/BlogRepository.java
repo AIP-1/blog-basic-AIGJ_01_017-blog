@@ -20,6 +20,11 @@ public interface BlogRepository extends JpaRepository<Blog, Long> {
     @Query("select count(b) from Blog b where b.member.id = :memberId and b.deletedAt is null")
     long countActiveByMemberId(@Param("memberId") Long memberId);
 
+    /** 회원의 활성 블로그, 만든 순서. 이사 대상도 함께 읽는다(마이페이지 내 블로그, BLOG-08). */
+    @Query("select b from Blog b left join fetch b.movedToBlog"
+            + " where b.member.id = :memberId and b.deletedAt is null order by b.id")
+    List<Blog> findActiveByMemberId(@Param("memberId") Long memberId);
+
     /** 회원의 대표 블로그(삭제되지 않은 것). */
     @Query("select b from Blog b where b.member.id = :memberId and b.primary = true and b.deletedAt is null")
     Optional<Blog> findPrimaryByMemberId(@Param("memberId") Long memberId);

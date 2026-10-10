@@ -210,6 +210,16 @@ export interface CommentList extends CursorResponse<Comment> {
   totalCount: number
 }
 
+/** 마이페이지 내 블로그 한 줄 (GET /api/me/blogs, BLOG-08). movedTo는 이사한 블로그의 새 주소 */
+export interface MyBlog {
+  id: number
+  address: string
+  name: string
+  isPrimary: boolean
+  movedTo: string | null
+  postCount: number
+}
+
 /** 올린 이미지 (POST /api/images) */
 export interface UploadedImage {
   id: number
