@@ -110,7 +110,9 @@ function BlogProfile({ blog }: { blog: Blog }) {
   return (
     <div className="box">
       <div className="row nowrap">
-        <span className="avatar lg" />
+        {blog.profileImageUrl
+          ? <img className="avatar lg" src={blog.profileImageUrl} alt="" />
+          : <span className="avatar lg" />}
         <div>
           <h2 style={{ fontSize: 20 }}>{blog.name}</h2>
           <div className="small muted">
