@@ -21,7 +21,7 @@ const VISIBILITY_LABEL: Record<ManagedPostSummary['visibility'], string> = {
 /**
  * 내 글 관리 (MNG-01). 상태·카테고리로 거르고 제목으로 찾아 20개씩 본다. 여러 글을 골라 공개 범위를 바꾸거나 지운다.
  * 거르기 조건과 페이지는 주소(?status=&categoryId=&q=&page=)에 둔다. 새로고침해도, 링크를 공유해도 같은 목록이다.
- * 다른 블로그로 옮기기(BLOG-06)와 구독자 공개(SUB-01)는 뒤 스텝이다.
+ * 다른 블로그로 옮기기(BLOG-06)는 뒤 스텝이다.
  */
 export default function ManagePostsPage() {
   const [params, setParams] = useSearchParams()
@@ -33,7 +33,7 @@ export default function ManagePostsPage() {
   const [posts, setPosts] = useState<PageResponse<ManagedPostSummary> | null>(null)
   const [categories, setCategories] = useState<CategoryTree | null>(null)
   const [selected, setSelected] = useState<number[]>([])
-  const [visibility, setVisibility] = useState<'PRIVATE' | 'PUBLIC'>('PRIVATE')
+  const [visibility, setVisibility] = useState<'PRIVATE' | 'PUBLIC' | 'SUBSCRIBERS'>('PRIVATE')
   const [query, setQuery] = useState(q)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -166,9 +166,10 @@ export default function ManagePostsPage() {
           </label>
           <span className="small muted">{selected.length}개 선택</span>
           <select value={visibility} style={{ maxWidth: 160 }} aria-label="바꿀 공개 범위"
-                  onChange={(event) => setVisibility(event.target.value as 'PRIVATE' | 'PUBLIC')}>
+                  onChange={(event) => setVisibility(event.target.value as 'PRIVATE' | 'PUBLIC' | 'SUBSCRIBERS')}>
             <option value="PRIVATE">비공개로</option>
             <option value="PUBLIC">공개로</option>
+            <option value="SUBSCRIBERS">구독자 공개로</option>
           </select>
           <button className="btn" type="button" disabled={selected.length === 0} onClick={applyVisibility}>적용</button>
           <button className="btn danger" type="button" disabled={selected.length === 0} onClick={remove}>삭제</button>

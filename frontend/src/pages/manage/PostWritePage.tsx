@@ -10,7 +10,7 @@ import TagInput from '../../components/editor/TagInput'
 import { AUTO_SAVE_MS, autoSaveNeeded } from '../../components/editor/draft'
 import { effectiveThumbnail, thumbnailChoices } from '../../components/editor/thumbnail'
 
-type Visibility = 'PUBLIC' | 'PRIVATE'
+type Visibility = 'PUBLIC' | 'PRIVATE' | 'SUBSCRIBERS'
 // LOADING: 고칠 글을 불러오는 중. 불러오기 전에 빈 입력값을 자동 저장해 글을 덮지 않도록 저장하지 않는다
 type PostState = 'NEW' | 'LOADING' | ManagedPost['status']
 
@@ -86,14 +86,14 @@ export default function PostWritePage() {
         setCategoryId(post.categoryId === null ? '' : String(post.categoryId))
         setTagNames(post.tagNames)
         setTopic(post.topic ?? '')
-        setVisibility(post.visibility === 'PRIVATE' ? 'PRIVATE' : 'PUBLIC')
+        setVisibility(post.visibility)
         setBlind(post.blind)
         setPostState(post.status)
         setKnownImages(Object.fromEntries(post.images.map((image) => [image.url, image])))
         setThumbnailId(post.thumbnailImageId)
         lastSaved.current = snapshotOf({
           title: post.title, contentHtml: post.contentHtml, categoryId: post.categoryId, tagNames: post.tagNames,
-          topic: post.topic, visibility: post.visibility === 'PRIVATE' ? 'PRIVATE' : 'PUBLIC',
+          topic: post.topic, visibility: post.visibility,
           thumbnailImageId: post.thumbnailImageId,
         })
       })
@@ -329,7 +329,14 @@ export default function PostWritePage() {
               <input type="radio" name="visibility" checked={visibility === 'PRIVATE'}
                      onChange={() => setVisibility('PRIVATE')} /> 비공개
             </label>
+            <label className="row small">
+              <input type="radio" name="visibility" checked={visibility === 'SUBSCRIBERS'}
+                     onChange={() => setVisibility('SUBSCRIBERS')} /> 구독자 공개
+            </label>
           </div>
+          {visibility === 'SUBSCRIBERS' && (
+            <span className="hint">구독한 회원과 나만 본문을 봅니다. 다른 사람에게는 목록에서 빠지고, 링크로 열면 구독 안내가 보입니다.</span>
+          )}
           {errors.visibility && <p className="err">{errors.visibility}</p>}
         </fieldset>
       </form>

@@ -9,6 +9,7 @@ import BlogHeader from '../../components/BlogHeader'
 import Pagination from '../../components/Pagination'
 import { PostItem } from '../../components/PostItem'
 import Sidebar from '../../components/Sidebar'
+import SubscribeButton from '../../components/SubscribeButton'
 import NotFoundPage from '../error/NotFoundPage'
 
 /**
@@ -18,7 +19,7 @@ import NotFoundPage from '../error/NotFoundPage'
  */
 export default function BlogMainPage() {
   const me = useMe()
-  const [blogState] = useBlog()
+  const [blogState, setBlog] = useBlog()
   const { categoryId, tagName } = useParams()
   const [params] = useSearchParams()
   const page = Math.max(Number(params.get('page')) || 1, 1)
@@ -83,7 +84,7 @@ export default function BlogMainPage() {
       <main className="page">
         <div className="cols">
           <div className="stack" style={{ gap: 18 }}>
-            <BlogProfile blog={blog} />
+            <BlogProfile blog={blog} me={me} onBlogChange={setBlog} />
             <h2 style={{ fontSize: 17 }}>
               {tagName !== undefined ? `#${tagName}` : listTitle(categoryId, sidebar)} <span className="muted num">{posts?.totalElements ?? ''}</span>
             </h2>
@@ -106,10 +107,15 @@ export default function BlogMainPage() {
   )
 }
 
-function BlogProfile({ blog }: { blog: Blog }) {
+/** 블로그 위쪽 프로필 상자. 주인이 아니면 구독 버튼(SUB-01)이 있고, 누르면 구독자 수가 바로 바뀐다. */
+function BlogProfile({ blog, me, onBlogChange }: {
+  blog: Blog
+  me: ReturnType<typeof useMe>
+  onBlogChange: (blog: Blog) => void
+}) {
   return (
     <div className="box">
-      <div className="row nowrap">
+      <div className="row nowrap" style={{ flexWrap: 'wrap' }}>
         {blog.profileImageUrl
           ? <img className="avatar lg" src={blog.profileImageUrl} alt="" />
           : <span className="avatar lg" />}
@@ -119,6 +125,13 @@ function BlogProfile({ blog }: { blog: Blog }) {
             {blog.description && <>{blog.description} · </>}구독자 <span className="num">{blog.subscriberCount}</span>명
           </div>
         </div>
+        <span style={{ flex: 1 }} />
+        {!blog.viewer.isOwner && (
+          <SubscribeButton blogId={blog.id} me={me} subscribed={blog.viewer.subscribed}
+                           onChange={(subscribed, subscriberCount) => onBlogChange({
+                             ...blog, subscriberCount, viewer: { ...blog.viewer, subscribed },
+                           })} />
+        )}
       </div>
     </div>
   )
