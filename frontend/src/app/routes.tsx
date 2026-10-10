@@ -11,6 +11,7 @@ import HomePage from '../pages/home/HomePage'
 import ManagePage from '../pages/manage/ManagePage'
 import PostPage from '../pages/post/PostPage'
 import BlogSearchPage from '../pages/search/BlogSearchPage'
+import GlobalSearchPage from '../pages/search/GlobalSearchPage'
 
 /** 플랫폼 주소(blog.com)의 화면 */
 export function PlatformRoutes() {
@@ -21,6 +22,7 @@ export function PlatformRoutes() {
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/blogs/new" element={<BlogCreatePage />} />
       <Route path="/me" element={<MyPage />} />
+      <Route path="/search" element={<GlobalSearchPage />} />
       <Route path="/admin/*" element={<AdminPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
