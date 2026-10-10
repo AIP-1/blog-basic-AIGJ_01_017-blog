@@ -1,22 +1,35 @@
 package com.nhnacademy.blog.blog.application;
 
 import com.nhnacademy.blog.blog.domain.Blog;
+import com.nhnacademy.blog.blog.domain.SidebarModuleType;
 import com.nhnacademy.blog.category.application.CategoryTree;
 import com.nhnacademy.blog.tag.application.TagCount;
 import java.util.List;
 
 /**
- * 사이드바 (BLOG-04). profileImageUrl은 블로그 프로필 이미지의 썸네일 주소, 없으면 null(BLOG-02). 지금은 기본 구성 순서로 블로그 홈 바로가기(이름·소개), 카테고리, 태그(TAG-03), 최근 글, 최근 댓글이다.
- * 순서·표시 설정과 방문자·인기 글·구독 모듈(BLOG-05)은 T086에서 더한다.
+ * 사이드바 (BLOG-04, BLOG-05). modules는 보이는 모듈만 주인이 정한 순서로. 숨긴 모듈의 데이터는 읽지 않아 null이다.
  */
-public record Sidebar(Blog blog, String profileImageUrl, CategoryTree categories, List<TagCount> tags, List<RecentPost> recentPosts,
-                      List<RecentComment> recentComments) {
+public record Sidebar(Blog blog, List<SidebarModuleType> modules, String profileImageUrl, CategoryTree categories,
+                      List<TagCount> tags, List<RecentPost> recentPosts, List<RecentComment> recentComments,
+                      Visitor visitor, List<PopularPost> popularPosts, Subscribe subscribe) {
 
     public record RecentPost(Long id, String title) {
     }
 
     /** content·authorNickname은 state가 NORMAL일 때만 있다. */
     public record RecentComment(Long id, Long postId, String content, String authorNickname, CommentState state) {
+    }
+
+    /** 방문자 수 오늘·어제·누적. 누적은 어제까지 모은 값에 오늘을 더한 것이다. */
+    public record Visitor(long today, long yesterday, long total) {
+    }
+
+    /** 인기 글: 누적 조회수 상위 5개(볼 수 있는 글만). */
+    public record PopularPost(Long id, String title, long viewCount) {
+    }
+
+    /** 구독 버튼과 구독자 수. subscribed는 보는 사람 기준(비회원 false). */
+    public record Subscribe(Long blogId, long subscriberCount, boolean subscribed) {
     }
 
     public enum CommentState {

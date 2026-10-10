@@ -82,14 +82,15 @@ public class SpaForwardController {
 
     private ResponseEntity<Resource> blogPage(HttpServletRequest request) {
         Optional<Blog> found = blogHostResolver.findBlog(request);
-        if (found.isEmpty() || found.get().isDeleted()) {
+        if (found.isEmpty()) {
             return app(HttpStatus.NOT_FOUND);
         }
         Blog blog = found.get();
         Long viewerId = LoginMembers.currentId();
         String path = request.getRequestURI();
 
-        // 글 주소는 글이 어느 블로그에 있는지로 판단한다. 이사 전 블로그에 남은 글은 옛 주소에서 그대로 보인다
+        // 글 주소는 글이 어느 블로그에 있는지로 판단한다. 이사 전 블로그에 남은 글은 옛 주소에서 그대로 보인다.
+        // 옛 블로그가 지워졌어도 옮긴 글은 새 블로그로 301, 옮기지 않은 글은 함께 지워져 404다(BLOG-07)
         var postPath = POST_PATH.matcher(path);
         if (postPath.matches()) {
             Long postId = Long.valueOf(postPath.group(1));
@@ -103,12 +104,16 @@ public class SpaForwardController {
             };
         }
 
-        if (!blogVisibilityPolicy.canView(blog, viewerId)) {
+        // 이사한 블로그는 지워졌어도 새 블로그로 보낸다(spec 블로그 주소·이사·삭제 표 "삭제 여부 무관")
+        if (blog.isDeleted() && !blog.isMoved()) {
+            return app(HttpStatus.NOT_FOUND);
+        }
+        if (!blog.isDeleted() && !blogVisibilityPolicy.canView(blog, viewerId)) {
             return app(HttpStatus.NOT_FOUND);
         }
         if (blog.isMoved()) {
-            // 주인은 옛 블로그 관리 화면을 계속 쓴다 (BLOG-06)
-            if (isManagePath(path) && blog.isOwnedBy(viewerId)) {
+            // 주인은 옛 블로그 관리 화면을 계속 쓴다 (BLOG-06). 지운 블로그의 관리 화면은 없다
+            if (isManagePath(path) && blog.isOwnedBy(viewerId) && !blog.isDeleted()) {
                 return app(HttpStatus.OK);
             }
             Blog target = blog.getMovedToBlog();

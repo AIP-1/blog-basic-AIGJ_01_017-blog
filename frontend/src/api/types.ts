@@ -41,7 +41,15 @@ export interface Blog {
   subscriberCount: number
   viewer: { isOwner: boolean; subscribed: boolean }
   restriction: { reason: string | null; reasonMessage: string | null } | null
+  /** 꾸미기 (BLOG-05) */
+  skin: Skin
+  listLayout: 'LIST' | 'THUMBNAIL'
+  accentColor: AccentColor
 }
+
+export type Skin = 'BASIC' | 'MAGAZINE' | 'NOTE'
+export type AccentColor = 'BLUE' | 'GREEN' | 'ORANGE' | 'PINK' | 'PURPLE' | 'GRAY'
+
 
 /** 홈 인기 글 (GET /api/home/popular). snapshotAt은 순위를 계산한 시각(5분마다) */
 export interface PopularPosts {
@@ -135,6 +143,18 @@ export type SidebarModule =
   | { type: 'TAG'; data: TagCount[] }
   | { type: 'RECENT_POST'; data: { id: number; title: string }[] }
   | { type: 'RECENT_COMMENT'; data: RecentComment[] }
+  | { type: 'VISITOR'; data: { today: number; yesterday: number; total: number } }
+  | { type: 'POPULAR_POST'; data: { id: number; title: string; viewCount: number }[] }
+  | { type: 'SUBSCRIBE'; data: { blogId: number; subscriberCount: number; subscribed: boolean } }
+
+/** 사이드바 모듈 8종 (BLOG-05). 순서와 표시는 주인이 블로그 설정에서 정한다 */
+export type SidebarModuleType = SidebarModule['type']
+
+/** GET·PUT /api/blog/sidebar/modules 한 칸 */
+export interface SidebarModuleItem {
+  moduleType: SidebarModuleType
+  isVisible: boolean
+}
 
 export interface Sidebar {
   modules: SidebarModule[]
