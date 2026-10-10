@@ -1,19 +1,41 @@
-import { type FormEvent, useState } from 'react'
-import { api } from '../../api/client'
+import { type ChangeEvent, type FormEvent, useState } from 'react'
+import { api, uploadFile } from '../../api/client'
 import { type FieldMessages, errorMessage, fieldMessages } from '../../api/errors'
 import type { Blog } from '../../api/types'
 import { PLATFORM_DOMAIN } from '../../app/host'
 
 /**
  * 블로그 설정의 "블로그 정보" (BLOG-02). 주소는 바꿀 수 없어 보여 주기만 한다.
- * 프로필 이미지(스텝 7), 꾸미기·사이드바·이사·삭제(BLOG-05~07, 백로그)는 기능이 생기면 이 화면에 더한다.
+ * 프로필 이미지는 고르는 즉시 올리고(POST /api/images) 미리 보여 준 뒤, 저장을 눌러야 블로그에 반영한다.
+ * 꾸미기·사이드바·이사·삭제(BLOG-05~07, 백로그)는 기능이 생기면 이 화면에 더한다.
  */
 export default function BlogSettingsPage({ blog, onSaved }: { blog: Blog; onSaved: (blog: Blog) => void }) {
   const [name, setName] = useState(blog.name)
   const [description, setDescription] = useState(blog.description ?? '')
+  /** 새로 올린 사진. 저장하기 전까지는 미리 보기만 한다 */
+  const [photo, setPhoto] = useState<{ id: number; thumbnailUrl: string } | null>(null)
+  const [uploading, setUploading] = useState(false)
   const [errors, setErrors] = useState<FieldMessages>({})
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
+
+  async function choosePhoto(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) {
+      return
+    }
+    setUploading(true)
+    setSaved(false)
+    setErrors({})
+    try {
+      setPhoto(await uploadFile<{ id: number; thumbnailUrl: string }>('/api/images', file))
+    } catch (error) {
+      setErrors({ profileImageId: errorMessage(error) })
+    } finally {
+      setUploading(false)
+    }
+  }
 
   async function save(event: FormEvent) {
     event.preventDefault()
@@ -21,8 +43,9 @@ export default function BlogSettingsPage({ blog, onSaved }: { blog: Blog; onSave
     setSaved(false)
     setErrors({})
     try {
-      const updated = await api<Blog>('/api/blog', { method: 'PATCH', body: { name: name.trim(), description } })
+      const updated = await api<Blog>('/api/blog', { method: 'PATCH', body: { name: name.trim(), description, profileImageId: photo?.id } })
       onSaved(updated)
+      setPhoto(null)
       setSaved(true)
     } catch (error) {
       const fields = fieldMessages(error)
@@ -36,6 +59,21 @@ export default function BlogSettingsPage({ blog, onSaved }: { blog: Blog; onSave
     <main className="page">
       <form className="section" onSubmit={save} style={{ maxWidth: 520 }}>
         <h2>블로그 정보</h2>
+        <div className="field">
+          <span className="label">프로필 이미지</span>
+          <div className="row nowrap">
+            {photo || blog.profileImageUrl
+              ? <img className="avatar lg" src={photo?.thumbnailUrl ?? blog.profileImageUrl ?? ''} alt="블로그 프로필 이미지" />
+              : <span className="avatar lg" />}
+            <label className="btn">
+              {uploading ? '올리는 중…' : '이미지 바꾸기'}
+              <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" hidden disabled={uploading}
+                     onChange={choosePhoto} />
+            </label>
+          </div>
+          {photo && <span className="hint">저장을 눌러야 블로그에 반영됩니다.</span>}
+          {errors.profileImageId && <p className="err">{errors.profileImageId}</p>}
+        </div>
         <label className="field">
           <span className="label">주소</span>
           <input type="text" value={`${blog.address}.${PLATFORM_DOMAIN}`} disabled />
@@ -53,7 +91,7 @@ export default function BlogSettingsPage({ blog, onSaved }: { blog: Blog; onSave
         </label>
         {errors.form && <p className="err">{errors.form}</p>}
         <div className="row">
-          <button className="btn primary" type="submit" disabled={saving || !name.trim()}>저장</button>
+          <button className="btn primary" type="submit" disabled={saving || uploading || !name.trim()}>저장</button>
           {saved && <span className="ok">저장했습니다.</span>}
         </div>
       </form>

@@ -5,6 +5,7 @@ import com.nhnacademy.blog.admin.domain.ModerationLogRepository;
 import com.nhnacademy.blog.admin.domain.ModerationTargetType;
 import com.nhnacademy.blog.blog.domain.Blog;
 import com.nhnacademy.blog.global.visibility.PostSpecifications;
+import com.nhnacademy.blog.image.application.ProfileImages;
 import com.nhnacademy.blog.post.domain.PostRepository;
 import com.nhnacademy.blog.subscription.domain.SubscriptionRepository;
 import java.time.Clock;
@@ -22,15 +23,17 @@ public class BlogQueryService {
     private final SubscriptionRepository subscriptionRepository;
     private final ModerationLogRepository moderationLogRepository;
     private final PrimaryBlogAddresses primaryBlogAddresses;
+    private final ProfileImages profileImages;
     private final Clock clock;
 
     public BlogQueryService(PostRepository postRepository, SubscriptionRepository subscriptionRepository,
                             ModerationLogRepository moderationLogRepository,
-                            PrimaryBlogAddresses primaryBlogAddresses, Clock clock) {
+                            PrimaryBlogAddresses primaryBlogAddresses, ProfileImages profileImages, Clock clock) {
         this.postRepository = postRepository;
         this.subscriptionRepository = subscriptionRepository;
         this.moderationLogRepository = moderationLogRepository;
         this.primaryBlogAddresses = primaryBlogAddresses;
+        this.profileImages = profileImages;
         this.clock = clock;
     }
 
@@ -43,7 +46,8 @@ public class BlogQueryService {
         long subscriberCount = subscriptionRepository.countByBlogId(blog.getId());
         boolean subscribed = viewerId != null
                 && subscriptionRepository.existsByMemberIdAndBlogId(viewerId, blog.getId());
-        return new BlogDetail(blog, primaryBlogAddresses.ofOwner(blog, viewerId), postCount, subscriberCount, owner,
+        return new BlogDetail(blog, profileImages.thumbnailUrl(blog.getProfileImageId()),
+                primaryBlogAddresses.ofOwner(blog, viewerId), postCount, subscriberCount, owner,
                 subscribed, owner ? restriction(blog) : null);
     }
 

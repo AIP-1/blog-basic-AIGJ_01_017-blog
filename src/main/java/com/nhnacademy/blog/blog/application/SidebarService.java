@@ -5,6 +5,7 @@ import com.nhnacademy.blog.category.application.CategoryTreeService;
 import com.nhnacademy.blog.comment.domain.Comment;
 import com.nhnacademy.blog.comment.domain.CommentRepository;
 import com.nhnacademy.blog.global.visibility.PostSpecifications;
+import com.nhnacademy.blog.image.application.ProfileImages;
 import com.nhnacademy.blog.post.domain.Post;
 import com.nhnacademy.blog.post.domain.PostRepository;
 import com.nhnacademy.blog.tag.application.TagListService;
@@ -32,14 +33,17 @@ public class SidebarService {
     private final TagListService tagListService;
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;
+    private final ProfileImages profileImages;
     private final Clock clock;
 
     public SidebarService(CategoryTreeService categoryTreeService, TagListService tagListService,
-                          PostRepository postRepository, CommentRepository commentRepository, Clock clock) {
+                          PostRepository postRepository, CommentRepository commentRepository,
+                          ProfileImages profileImages, Clock clock) {
         this.categoryTreeService = categoryTreeService;
         this.tagListService = tagListService;
         this.postRepository = postRepository;
         this.commentRepository = commentRepository;
+        this.profileImages = profileImages;
         this.clock = clock;
     }
 
@@ -47,7 +51,8 @@ public class SidebarService {
     @Transactional(readOnly = true)
     public Sidebar sidebar(Blog blog, Long viewerId) {
         LocalDateTime now = LocalDateTime.now(clock);
-        return new Sidebar(blog, categoryTreeService.tree(blog, viewerId), tagListService.tags(blog, viewerId),
+        return new Sidebar(blog, profileImages.thumbnailUrl(blog.getProfileImageId()),
+                categoryTreeService.tree(blog, viewerId), tagListService.tags(blog, viewerId),
                 recentPosts(blog, viewerId, now), recentComments(blog, viewerId, now));
     }
 

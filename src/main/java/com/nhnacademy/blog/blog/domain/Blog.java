@@ -36,7 +36,7 @@ public class Blog extends BaseTimeEntity {
     @JoinColumn(name = "moved_to_blog_id")
     private Blog movedToBlog;
 
-    /** image.id. 이미지 엔티티는 스텝 7에서 만든다. */
+    /** image.id. 주인이 올린 이미지만 된다(BlogService). 화면에는 그 이미지의 썸네일을 보인다. */
     @Column(name = "profile_image_id")
     private Long profileImageId;
 
@@ -107,6 +107,11 @@ public class Blog extends BaseTimeEntity {
         if (description != null) {
             this.description = description.isBlank() ? null : description;
         }
+    }
+
+    /** 프로필 이미지 바꾸기 (BLOG-02). 주인이 올린 이미지인지는 BlogService가 먼저 본다. */
+    public void changeProfileImage(Long profileImageId) {
+        this.profileImageId = profileImageId;
     }
 
     /**
