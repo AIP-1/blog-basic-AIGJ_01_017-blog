@@ -13,6 +13,9 @@ import com.nhnacademy.blog.IntegrationTestSupport;
 import com.nhnacademy.blog.blog.domain.Blog;
 import com.nhnacademy.blog.comment.domain.Comment;
 import com.nhnacademy.blog.comment.domain.CommentRepository;
+import com.nhnacademy.blog.image.domain.Image;
+import com.nhnacademy.blog.image.domain.ImageRepository;
+import com.nhnacademy.blog.member.domain.MemberRepository;
 import com.nhnacademy.blog.member.domain.Member;
 import com.nhnacademy.blog.post.domain.Post;
 import com.nhnacademy.blog.post.domain.Visibility;
@@ -52,6 +55,12 @@ class CommentIntegrationTest extends IntegrationTestSupport {
 
     @Autowired
     JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    ImageRepository imageRepository;
+
+    @Autowired
+    MemberRepository memberRepository;
 
     Member owner;
     Member reader;
@@ -102,6 +111,25 @@ class CommentIntegrationTest extends IntegrationTestSupport {
         // 대표 블로그가 이용 제한되면 볼 수 없는 블로그라 링크도 없다
         testBlogs.restrict(readerBlog);
         list(post, null, null).andExpect(jsonPath("$.content[0].author.primaryBlogAddress").doesNotExist());
+    }
+
+    @Test
+    void authorsCarryTheirProfilePhotoInCommentsAndPostDetail() throws Exception {
+        String readerPhoto = setProfilePhoto(reader);
+        String ownerPhoto = setProfilePhoto(owner);
+        Member noPhoto = testMembers.create();
+        write(reader, post, "{\"content\":\"사진 있는 사람\"}", UUID.randomUUID().toString())
+                .andExpect(jsonPath("$.author.profileImageUrl").value(readerPhoto));
+        write(noPhoto, post, "{\"content\":\"사진 없는 사람\"}", UUID.randomUUID().toString());
+
+        // 댓글 옆 동그라미와 글쓴이 줄에 회원 프로필 사진(AUTH-05)이 보인다. 사진이 없으면 null
+        list(post, null, null)
+                .andExpect(jsonPath("$.content[0].author.profileImageUrl").value(readerPhoto))
+                .andExpect(jsonPath("$.content[1].author.profileImageUrl").doesNotExist());
+        mockMvc.perform(get("/api/posts/" + post.getId()).header(HttpHeaders.HOST, TestBlogs.host(blog)))
+                .andExpect(jsonPath("$.author.profileImageUrl").value(ownerPhoto));
+        mockMvc.perform(get("/api/blog").header(HttpHeaders.HOST, TestBlogs.host(blog)))
+                .andExpect(jsonPath("$.owner.profileImageUrl").value(ownerPhoto));
     }
 
     @Test
@@ -225,6 +253,17 @@ class CommentIntegrationTest extends IntegrationTestSupport {
 
         remove(elsewhere, reader).andExpect(status().isNotFound());
         assertThat(commentRepository.findById(elsewhere.getId()).orElseThrow().isDeleted()).isFalse();
+    }
+
+    /** 파일 없이 이미지 행만 만들어 회원 프로필 사진으로 건다. 썸네일 주소를 돌려준다. */
+    private String setProfilePhoto(Member member) {
+        String thumbnail = "/uploads/t_member" + member.getId() + ".png";
+        Image image = imageRepository.save(Image.uploaded(member.getId(), "/uploads/member" + member.getId() + ".png",
+                thumbnail, "a.png", "image/png", 10));
+        Member found = memberRepository.findById(member.getId()).orElseThrow();
+        found.changeProfileImage(image.getId());
+        memberRepository.save(found);
+        return thumbnail;
     }
 
     private int commentCount(Post target) {

@@ -47,7 +47,8 @@ public class BlogQueryService {
         boolean subscribed = viewerId != null
                 && subscriptionRepository.existsByMemberIdAndBlogId(viewerId, blog.getId());
         return new BlogDetail(blog, profileImages.thumbnailUrl(blog.getProfileImageId()),
-                primaryBlogAddresses.ofOwner(blog, viewerId), postCount, subscriberCount, owner,
+                primaryBlogAddresses.ofOwner(blog, viewerId),
+                profileImages.thumbnailUrl(blog.getMember().getProfileImageId()), postCount, subscriberCount, owner,
                 subscribed, owner ? restriction(blog) : null);
     }
 

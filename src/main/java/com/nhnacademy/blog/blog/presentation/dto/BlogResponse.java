@@ -25,7 +25,8 @@ public record BlogResponse(Long id, String address, String name, String descript
                 : new Restriction(detail.restriction().reason(), detail.restriction().reasonMessage());
         return new BlogResponse(blog.getId(), blog.getAddress(), blog.getName(), blog.getDescription(),
                 detail.profileImageUrl(),
-                MemberSummaryResponse.of(blog.getMember(), detail.ownerPrimaryBlogAddress()), blog.getSkin(),
+                MemberSummaryResponse.of(blog.getMember(), detail.ownerPrimaryBlogAddress(),
+                        detail.ownerProfileImageUrl()), blog.getSkin(),
                 blog.getListLayout().name(), blog.getAccentColor().name(), detail.postCount(),
                 detail.subscriberCount(), new Viewer(detail.owner(), detail.subscribed()), restriction);
     }

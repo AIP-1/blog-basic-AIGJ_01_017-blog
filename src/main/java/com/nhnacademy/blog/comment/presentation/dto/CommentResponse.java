@@ -23,7 +23,8 @@ public record CommentResponse(Long id, Long parentId, MemberSummaryResponse auth
         Comment comment = view.comment();
         boolean shows = view.showsContent();
         return new CommentResponse(comment.getId(), comment.getParent() == null ? null : comment.getParent().getId(),
-                shows ? MemberSummaryResponse.of(comment.getMember(), view.authorPrimaryBlogAddress()) : null,
+                shows ? MemberSummaryResponse.of(comment.getMember(), view.authorPrimaryBlogAddress(),
+                        view.authorProfileImageUrl()) : null,
                 shows ? comment.getContent() : null, comment.isSecret(), view.state().name(),
                 DateTimes.toOffset(comment.getCreatedAt()),
                 comment.getUpdatedAt().equals(comment.getCreatedAt()) ? null : DateTimes.toOffset(comment.getUpdatedAt()),

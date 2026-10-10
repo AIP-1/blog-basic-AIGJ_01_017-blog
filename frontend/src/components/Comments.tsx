@@ -192,7 +192,9 @@ function CommentItem({ comment, onDelete, onReply, isReply = false }: {
       : comment.state === 'DELETED' ? '삭제된 댓글입니다.' : null
   return (
     <div className={isReply ? 'comment reply' : 'comment'} id={`comment-${comment.id}`}>
-      <span className="avatar" />
+      {!hidden && comment.author?.profileImageUrl
+        ? <img className="avatar" src={comment.author.profileImageUrl} alt="" />
+        : <span className="avatar" />}
       <div>
         {hidden
           ? <p className="gone small">{hidden}</p>

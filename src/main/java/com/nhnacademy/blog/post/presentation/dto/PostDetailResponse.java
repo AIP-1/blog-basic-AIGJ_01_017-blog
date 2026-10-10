@@ -45,7 +45,8 @@ public record PostDetailResponse(Long id, BlogRef blog, String title, String con
                 post.getTopic() == null ? null : post.getTopic().name(), post.getVisibility().name(),
                 DateTimes.toOffset(post.getPublishedAt()), DateTimes.toOffset(editedAt(post)), post.getViewCount(),
                 post.getLikeCount(), post.getCommentCount(), post.isCommentAllowed(),
-                MemberSummaryResponse.of(blog.getMember(), view.authorPrimaryBlogAddress()),
+                MemberSummaryResponse.of(blog.getMember(), view.authorPrimaryBlogAddress(),
+                        view.authorProfileImageUrl()),
                 new Viewer(view.owner(), liked, false), view.blind(), neighbor(view.prev()), neighbor(view.next()));
     }
 
