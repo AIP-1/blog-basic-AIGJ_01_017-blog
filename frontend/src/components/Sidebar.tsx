@@ -7,12 +7,16 @@ import SubscribeButton from './SubscribeButton'
 /**
  * 사이드바 (BLOG-04, BLOG-05). 서버가 준 모듈을 받은 순서대로 그린다(순서와 보일 모듈은 주인이 블로그 설정에서 정한다).
  * 사용자가 쓴 글자(이름, 제목, 댓글)는 React가 글자 그대로 넣는다(HTML로 해석하지 않음).
- * 구독 모듈의 버튼은 로그인 상태(me)가 있어야 그린다.
+ * 구독 모듈의 버튼은 로그인 상태(me)가 있어야 그리고, 블로그 주인에게는 그리지 않는다(자기 블로그는 구독할 수 없다).
  */
-export default function Sidebar({ modules, me }: { modules: SidebarModule[]; me?: MeState }) {
+export default function Sidebar({ modules, me, isOwner = false }: {
+  modules: SidebarModule[]
+  me?: MeState
+  isOwner?: boolean
+}) {
   return (
     <aside className="sidebar" aria-label="사이드바">
-      {modules.map((module) => <SidebarItem key={module.type} module={module} me={me} />)}
+      {modules.map((module) => <SidebarItem key={module.type} module={module} me={isOwner ? undefined : me} />)}
     </aside>
   )
 }

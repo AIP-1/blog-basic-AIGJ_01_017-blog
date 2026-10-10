@@ -103,7 +103,8 @@ export default function BlogMainPage() {
                           href={(number) => `${basePath}?page=${number}`} />
             )}
           </div>
-          {sidebar && <Sidebar modules={sidebar.modules} me={me} />}
+          {sidebar && <Sidebar modules={sidebar.modules} me={me}
+                                    isOwner={blogState.status === 'ok' && blogState.blog.viewer.isOwner} />}
         </div>
       </main>
     </div>

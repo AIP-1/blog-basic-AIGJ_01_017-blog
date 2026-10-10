@@ -84,7 +84,8 @@ export default function BlogSearchPage() {
                           href={(number) => `/search?${new URLSearchParams({ q, page: String(number) })}`} />
             )}
           </div>
-          {sidebar && <Sidebar modules={sidebar.modules} me={me} />}
+          {sidebar && <Sidebar modules={sidebar.modules} me={me}
+                                    isOwner={blogState.status === 'ok' && blogState.blog.viewer.isOwner} />}
         </div>
       </main>
     </div>

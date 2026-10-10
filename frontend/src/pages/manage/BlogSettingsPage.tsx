@@ -96,7 +96,7 @@ export default function BlogSettingsPage({ blog, onSaved }: { blog: Blog; onSave
           {saved && <span className="ok">저장했습니다.</span>}
         </div>
       </form>
-      <DesignSection key={`design-${blog.skin}-${blog.accentColor}-${blog.listLayout}`} blog={blog} onSaved={onSaved} />
+      <DesignSection blog={blog} onSaved={onSaved} />
       <SidebarSection />
       <MoveSection blog={blog} />
       <DeleteSection blog={blog} />
