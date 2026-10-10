@@ -60,7 +60,7 @@ export default function ManagePage() {
           <NavLink to="/manage" end>관리 홈</NavLink>
           <NavLink to="/manage/write">글쓰기</NavLink>
           <NavLink to="/manage/posts" end>글 관리</NavLink>
-          <NavLink to="/manage/categories">카테고리</NavLink>
+          <NavLink to="/manage/categories">카테고리·태그</NavLink>
           <div className="sec">설정</div>
           <NavLink to="/manage/settings">블로그 설정</NavLink>
         </nav>

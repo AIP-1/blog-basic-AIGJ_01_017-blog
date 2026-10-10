@@ -1,12 +1,14 @@
 import { type FormEvent, useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router'
 import { ApiError, api } from '../../api/client'
 import { errorMessage, fieldMessages } from '../../api/errors'
-import type { CategoryNode, CategoryTree } from '../../api/types'
+import type { CategoryNode, CategoryTree, TagCount } from '../../api/types'
 
 /**
- * 카테고리 관리 (CAT-01). 추가·이름 변경·삭제. 지우면 그 카테고리의 글은 미분류로 옮겨진다.
+ * 카테고리·태그 관리 (CAT-01, TAG-03). 카테고리 추가·이름 변경·삭제. 지우면 그 카테고리의 글은 미분류로 옮겨진다.
  * 하위 카테고리(CAT-03, 스텝 9)는 최상위 카테고리의 [하위 추가]로 만든다. 2단계까지라 하위에는 그 버튼이 없다.
- * 드래그로 순서·상하위 바꾸기(CAT-04)와 태그 관리(TAG-04)는 백로그다.
+ * 아래 태그 표는 이 블로그의 태그와 글 수다(주인이 보므로 비공개 글도 센다).
+ * 드래그로 순서·상하위 바꾸기(CAT-04)와 태그 이름 변경·삭제(TAG-04)는 백로그다.
  */
 export default function CategoriesPage() {
   const [tree, setTree] = useState<CategoryTree | null>(null)
@@ -62,7 +64,45 @@ export default function CategoriesPage() {
           이름은 1~30자. 카테고리를 지우면 그 안의 글은 미분류가 됩니다. 하위 카테고리가 있으면 하위부터 지워 주세요.
         </span>
       </section>
+      <TagSection />
     </main>
+  )
+}
+
+/** 태그와 글 수 (TAG-03, GET /api/tags). 글 수가 많은 순이고, 이름을 누르면 블로그의 태그별 글 목록이다. */
+function TagSection() {
+  const [tags, setTags] = useState<TagCount[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    api<TagCount[]>('/api/tags')
+      .then(setTags)
+      .catch((caught: unknown) => setError(errorMessage(caught)))
+  }, [])
+
+  return (
+    <section className="section" style={{ maxWidth: 560 }}>
+      <h2>태그</h2>
+      {error && <p className="err" role="alert">{error}</p>}
+      {tags && tags.length === 0 && <p className="small muted">아직 태그가 없습니다. 글쓰기에서 태그를 달면 여기에 보입니다.</p>}
+      {tags && tags.length > 0 && (
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr><th>태그</th><th className="num">글 수</th></tr>
+            </thead>
+            <tbody>
+              {tags.map((tag) => (
+                <tr key={tag.id}>
+                  <td><Link to={`/tag/${encodeURIComponent(tag.name)}`}>{tag.name}</Link></td>
+                  <td className="num">{tag.postCount}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
   )
 }
 
