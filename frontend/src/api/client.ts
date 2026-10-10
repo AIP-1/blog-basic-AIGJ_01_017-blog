@@ -48,7 +48,22 @@ const UNKNOWN_ERROR: ErrorBody = {
   message: '일시적인 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.',
 }
 
+/**
+ * 로그인한 채로 정지된 회원(ADMIN-02)이 받은 정지 사유. 서버는 정지 회원의 API 요청마다 403 MEMBER_SUSPENDED를 주고
+ * 로그인 쿠키를 지운다. 한 화면이 API 여러 개를 동시에 부르면 모두 403이 되므로, 사유는 여기 한 번 적어 두고(useMe가 읽음)
+ * 읽기 요청(GET)은 쿠키가 지워진 상태로 한 번 더 보내 비회원으로 화면을 그린다.
+ */
+let suspension: Record<string, unknown> | null = null
+
+export function suspensionDetail(): Record<string, unknown> | null {
+  return suspension
+}
+
 export async function api<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  return request<T>(path, options, true)
+}
+
+async function request<T>(path: string, options: RequestOptions, retryIfSuspended: boolean): Promise<T> {
   const method = options.method ?? 'GET'
   const headers: Record<string, string> = { Accept: 'application/json' }
   if (method !== 'GET') {
@@ -75,7 +90,15 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
   }
 
   const error = new ApiError(response.status, await readError(response))
-  if (response.status === 401 && !options.allowAnonymous) {
+  if (error.code === 'MEMBER_SUSPENDED' && path !== '/api/auth/login') {
+    suspension = error.detail ?? {}
+    // 내 정보(/api/me)는 그대로 실패시켜 useMe가 안내를 띄우게 하고, 다른 읽기는 비회원으로 다시 받는다
+    if (retryIfSuspended && method === 'GET' && path !== '/api/me') {
+      return request<T>(path, options, false)
+    }
+  }
+  // 정지 안내를 띄워야 하면 로그인 화면으로 보내지 않는다
+  if (response.status === 401 && !options.allowAnonymous && !suspension) {
     redirectToLogin()
   }
   throw error

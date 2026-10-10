@@ -2,6 +2,7 @@ package com.nhnacademy.blog.post.application;
 
 import com.nhnacademy.blog.blog.application.PrimaryBlogAddresses;
 import com.nhnacademy.blog.blog.domain.Blog;
+import com.nhnacademy.blog.image.application.ProfileImages;
 import com.nhnacademy.blog.global.error.BusinessException;
 import com.nhnacademy.blog.global.error.ErrorCode;
 import com.nhnacademy.blog.global.visibility.PostAccess;
@@ -29,14 +30,17 @@ public class PostReadService {
     private final PostVisibilityPolicy postVisibilityPolicy;
     private final PostService postService;
     private final PrimaryBlogAddresses primaryBlogAddresses;
+    private final ProfileImages profileImages;
     private final Clock clock;
 
     public PostReadService(PostRepository postRepository, PostVisibilityPolicy postVisibilityPolicy,
-                           PostService postService, PrimaryBlogAddresses primaryBlogAddresses, Clock clock) {
+                           PostService postService, PrimaryBlogAddresses primaryBlogAddresses,
+                           ProfileImages profileImages, Clock clock) {
         this.postRepository = postRepository;
         this.postVisibilityPolicy = postVisibilityPolicy;
         this.postService = postService;
         this.primaryBlogAddresses = primaryBlogAddresses;
+        this.profileImages = profileImages;
         this.clock = clock;
     }
 
@@ -45,7 +49,8 @@ public class PostReadService {
         Post post = readable(blog, postId, viewerId);
         boolean owner = blog.isOwnedBy(viewerId);
         Map<String, String> blind = owner && post.isBlinded() ? postService.blindReason(post) : null;
-        return new PostView(post, post.tagNames(), owner, primaryBlogAddresses.ofOwner(blog, viewerId), blind,
+        return new PostView(post, post.tagNames(), owner, primaryBlogAddresses.ofOwner(blog, viewerId),
+                profileImages.thumbnailUrl(blog.getMember().getProfileImageId()), blind,
                 neighbor(blog, post, viewerId, false), neighbor(blog, post, viewerId, true));
     }
 

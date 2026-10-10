@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { ApiError, api, newIdempotencyKey } from './client'
+import { ApiError, api, newIdempotencyKey, suspensionDetail } from './client'
 
 const assign = vi.fn()
 
@@ -101,5 +101,41 @@ describe('api', () => {
 
     const error = (await api('/api/posts').catch((e: unknown) => e)) as ApiError
     expect(error.code).toBe('INTERNAL_ERROR')
+  })
+})
+
+// 정지 사유는 모듈 변수에 남으므로 이 묶음은 파일 맨 끝에 둔다(앞 테스트의 401 이동에 영향 없게)
+describe('로그인한 채로 정지된 회원 (ADMIN-02)', () => {
+  const suspended = jsonResponse(403, {
+    code: 'MEMBER_SUSPENDED', message: '이용이 정지된 계정입니다.',
+    detail: { reason: 'SPAM', reasonMessage: '스팸', suspendedUntil: null },
+  })
+
+  it('읽기 요청은 사유를 적어 두고 쿠키가 지워진 상태로 한 번 더 보내 비회원 응답을 받는다', async () => {
+    const fetch = vi.fn().mockResolvedValueOnce(suspended).mockResolvedValueOnce(jsonResponse(200, { id: 1 }))
+    vi.stubGlobal('fetch', fetch)
+
+    await expect(api('/api/posts/1', { allowAnonymous: true })).resolves.toEqual({ id: 1 })
+    expect(fetch).toHaveBeenCalledTimes(2)
+    expect(suspensionDetail()).toEqual({ reason: 'SPAM', reasonMessage: '스팸', suspendedUntil: null })
+  })
+
+  it('내 정보는 다시 보내지 않고 실패시켜 useMe가 안내를 띄운다', async () => {
+    const fetch = vi.fn().mockResolvedValue(jsonResponse(403, {
+      code: 'MEMBER_SUSPENDED', message: '이용이 정지된 계정입니다.', detail: {},
+    }))
+    vi.stubGlobal('fetch', fetch)
+
+    await expect(api('/api/me', { allowAnonymous: true })).rejects.toBeInstanceOf(ApiError)
+    expect(fetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('정지 안내를 띄울 때는 401이어도 로그인 화면으로 보내지 않는다', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(401, {
+      code: 'UNAUTHORIZED', message: '로그인이 필요합니다.',
+    })))
+
+    await expect(api('/api/manage/posts')).rejects.toBeInstanceOf(ApiError)
+    expect(assign).not.toHaveBeenCalled()
   })
 })

@@ -4,7 +4,7 @@ import { ApiError, api, redirectToLogin } from '../../api/client'
 import { type FieldMessages, errorMessage, fieldMessages } from '../../api/errors'
 import type { Blog } from '../../api/types'
 import { PLATFORM_DOMAIN, blogUrl } from '../../app/host'
-import { useMe } from '../../app/useMe'
+import { shouldRedirectToLogin, useMe } from '../../app/useMe'
 import { FROM_WRITE } from '../../app/writeLink'
 import PlatformHeader from '../../components/PlatformHeader'
 
@@ -31,10 +31,10 @@ export default function BlogCreatePage() {
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
-    if (me.status === 'anonymous') {
+    if (shouldRedirectToLogin(me)) {
       redirectToLogin()
     }
-  }, [me.status])
+  }, [me])
 
   async function checkAddress() {
     setAddressOk(false)

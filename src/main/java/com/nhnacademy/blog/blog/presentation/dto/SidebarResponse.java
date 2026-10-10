@@ -26,7 +26,7 @@ public record SidebarResponse(List<Module> modules) {
     public static SidebarResponse from(Sidebar sidebar) {
         Blog blog = sidebar.blog();
         return new SidebarResponse(List.of(
-                new Module("PROFILE", new Profile(blog.getName(), blog.getDescription(), null)),
+                new Module("PROFILE", new Profile(blog.getName(), blog.getDescription(), sidebar.profileImageUrl())),
                 new Module("CATEGORY", CategoryTreeResponse.from(sidebar.categories())),
                 new Module("TAG", sidebar.tags().stream().map(TagCountResponse::from).toList()),
                 new Module("RECENT_POST", sidebar.recentPosts().stream()

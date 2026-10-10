@@ -3,10 +3,10 @@ import { Link, useNavigate, useSearchParams } from 'react-router'
 import { ApiError, api } from '../../api/client'
 import { errorMessage } from '../../api/errors'
 import type { Me, SuspensionDetail } from '../../api/types'
-import { formatDateTime } from '../../app/format'
 import { safeRedirect } from '../../app/host'
 import { useMe } from '../../app/useMe'
 import PlatformHeader from '../../components/PlatformHeader'
+import SuspensionNotice from '../../components/SuspensionNotice'
 
 /**
  * 로그인 (AUTH-01, AUTH-03, ADMIN-02). 로그인이 필요한 화면에서 오면 redirect에 원래 주소가 붙고,
@@ -74,15 +74,7 @@ export default function LoginPage() {
               : '고르지 않으면 브라우저를 닫거나 30분 동안 아무것도 하지 않을 때 로그아웃됩니다.'}
           </span>
           {error && <p className="err">{error}</p>}
-          {suspension && (
-            <div className="box danger" role="alert">
-              <b>이용이 정지된 계정입니다</b>
-              {suspension.reasonMessage && <span>사유: {suspension.reasonMessage}</span>}
-              <span className="num">
-                {suspension.suspendedUntil ? `정지 기한: ${formatDateTime(suspension.suspendedUntil)}까지` : '영구 정지'}
-              </span>
-            </div>
-          )}
+          {suspension && <SuspensionNotice suspension={suspension} />}
           <button className="btn primary" type="submit" disabled={submitting}>로그인</button>
           <div className="row between small"><span /><Link to="/signup">회원가입</Link></div>
         </form>

@@ -9,10 +9,12 @@ import java.util.Map;
  *
  * @param state                    NORMAL, SECRET(비밀댓글을 남이 봄), DELETED(지웠지만 답글이 있음), BLINDED(관리자가 숨김)
  * @param authorPrimaryBlogAddress 작성자의 대표 블로그 주소. 없거나 볼 수 없으면 null
+ * @param authorProfileImageUrl    작성자의 회원 프로필 사진 썸네일 주소. 없으면 null
  * @param blind                    작성자가 자기 숨긴 댓글을 볼 때만 사유
  * @param replies                  답글(CMT-05, 작성순). 답글 자신은 빈 목록이다
  */
-public record CommentView(Comment comment, State state, String authorPrimaryBlogAddress, boolean canDelete,
+public record CommentView(Comment comment, State state, String authorPrimaryBlogAddress,
+                          String authorProfileImageUrl, boolean canDelete,
                           Map<String, String> blind, List<CommentView> replies) {
 
     public enum State {
@@ -25,7 +27,7 @@ public record CommentView(Comment comment, State state, String authorPrimaryBlog
 
     /** 답글을 붙인 새 값. 답글에는 답글이 없다(한 단계). */
     public CommentView withReplies(List<CommentView> children) {
-        return new CommentView(comment, state, authorPrimaryBlogAddress, canDelete, blind, children);
+        return new CommentView(comment, state, authorPrimaryBlogAddress, authorProfileImageUrl, canDelete, blind, children);
     }
 
     /** 내용과 작성자를 보여 줘도 되는가. */

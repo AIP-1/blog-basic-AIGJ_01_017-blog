@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { redirectToLogin } from '../../api/client'
-import { useMe } from '../../app/useMe'
+import { shouldRedirectToLogin, useMe } from '../../app/useMe'
 import ErrorPage from '../../components/ErrorPage'
 import PlatformHeader from '../../components/PlatformHeader'
 
@@ -13,11 +13,14 @@ export default function AdminPage() {
   const me = useMe()
 
   useEffect(() => {
-    if (me.status === 'anonymous') {
+    if (shouldRedirectToLogin(me)) {
       redirectToLogin()
     }
-  }, [me.status])
+  }, [me])
 
+  if (me.status === 'anonymous' && me.suspension) {
+    return <div className="app"><PlatformHeader me={me} /></div>
+  }
   if (me.status !== 'member') {
     return null
   }

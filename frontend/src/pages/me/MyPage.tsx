@@ -4,7 +4,7 @@ import { ApiError, api, redirectToLogin, uploadFile } from '../../api/client'
 import { type FieldMessages, errorMessage, fieldMessages } from '../../api/errors'
 import type { Me, MyBlog } from '../../api/types'
 import { PLATFORM_DOMAIN, blogUrl } from '../../app/host'
-import { useMe } from '../../app/useMe'
+import { shouldRedirectToLogin, useMe } from '../../app/useMe'
 import PlatformHeader from '../../components/PlatformHeader'
 
 const PASSWORD_RULE = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/
@@ -23,10 +23,10 @@ export default function MyPage() {
   const me = saved ?? (meState.status === 'member' ? meState.me : null)
 
   useEffect(() => {
-    if (meState.status === 'anonymous') {
+    if (shouldRedirectToLogin(meState)) {
       redirectToLogin()
     }
-  }, [meState.status])
+  }, [meState])
 
   return (
     <div className="app">

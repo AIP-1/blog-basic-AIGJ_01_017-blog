@@ -11,6 +11,7 @@ import com.nhnacademy.blog.global.auth.LoginMember;
 import com.nhnacademy.blog.global.error.BusinessException;
 import com.nhnacademy.blog.global.error.ErrorCode;
 import com.nhnacademy.blog.global.web.TimeIdCursor;
+import com.nhnacademy.blog.image.application.ProfileImages;
 import com.nhnacademy.blog.member.domain.Member;
 import com.nhnacademy.blog.member.domain.MemberRepository;
 import com.nhnacademy.blog.post.application.PostReadService;
@@ -48,17 +49,20 @@ public class CommentService {
     private final ModerationLogRepository moderationLogRepository;
     private final PostReadService postReadService;
     private final PrimaryBlogAddresses primaryBlogAddresses;
+    private final ProfileImages profileImages;
     private final Clock clock;
 
     public CommentService(CommentRepository commentRepository, PostRepository postRepository,
                           MemberRepository memberRepository, ModerationLogRepository moderationLogRepository,
-                          PostReadService postReadService, PrimaryBlogAddresses primaryBlogAddresses, Clock clock) {
+                          PostReadService postReadService, PrimaryBlogAddresses primaryBlogAddresses,
+                          ProfileImages profileImages, Clock clock) {
         this.commentRepository = commentRepository;
         this.postRepository = postRepository;
         this.memberRepository = memberRepository;
         this.moderationLogRepository = moderationLogRepository;
         this.postReadService = postReadService;
         this.primaryBlogAddresses = primaryBlogAddresses;
+        this.profileImages = profileImages;
         this.clock = clock;
     }
 
@@ -94,15 +98,19 @@ public class CommentService {
                         cb.isNull(root.get("deletedAt"))),
                 query -> query.sortBy(WRITTEN_ORDER).project("member").all());
 
-        Map<Long, String> addresses = primaryBlogAddresses.of(
-                Stream.concat(parents.stream(), replies.stream())
-                        .map(comment -> comment.getMember().getId()).distinct().toList(), viewerId);
+        List<Member> authors = Stream.concat(parents.stream(), replies.stream())
+                .map(Comment::getMember).distinct().toList();
+        Map<Long, String> addresses = primaryBlogAddresses.of(authors.stream().map(Member::getId).toList(), viewerId);
+        Map<Long, String> photos = profileImages.thumbnailUrls(
+                authors.stream().map(Member::getProfileImageId).toList());
         Map<Long, List<CommentView>> repliesByParent = replies.stream().collect(Collectors.groupingBy(
                 reply -> reply.getParent().getId(), LinkedHashMap::new,
-                Collectors.mapping(reply -> view(reply, blog, viewerId, addresses.get(reply.getMember().getId())),
+                Collectors.mapping(reply -> view(reply, blog, viewerId, addresses.get(reply.getMember().getId()),
+                        photos.get(reply.getMember().getProfileImageId())),
                         Collectors.toList())));
         List<CommentView> views = parents.stream()
-                .map(parent -> view(parent, blog, viewerId, addresses.get(parent.getMember().getId()))
+                .map(parent -> view(parent, blog, viewerId, addresses.get(parent.getMember().getId()),
+                        photos.get(parent.getMember().getProfileImageId()))
                         .withReplies(repliesByParent.getOrDefault(parent.getId(), List.of())))
                 .toList();
         return new CommentPage(views, commentRepository.countByPostIdAndDeletedAtIsNull(post.getId()));
@@ -139,7 +147,7 @@ public class CommentService {
                 (root, query, cb) -> cb.equal(root.get("id"), comment.getId()),
                 query -> query.project("member").first()).orElseThrow();
         return view(saved, blog, member.id(), primaryBlogAddresses.of(List.of(member.id()), member.id())
-                .get(member.id()));
+                .get(member.id()), profileImages.thumbnailUrl(saved.getMember().getProfileImageId()));
     }
 
     /**
@@ -180,12 +188,12 @@ public class CommentService {
         postRepository.addCommentCount(comment.getPost().getId(), -1);
     }
 
-    private CommentView view(Comment comment, Blog blog, Long viewerId, String authorAddress) {
+    private CommentView view(Comment comment, Blog blog, Long viewerId, String authorAddress, String authorPhoto) {
         boolean author = comment.isWrittenBy(viewerId);
         boolean blogOwner = blog.isOwnedBy(viewerId);
         if (comment.isDeleted()) {
             // 답글이 남아 자리만 있는 부모. 누구에게나 내용·작성자 없이, 다시 지울 것도 없다
-            return new CommentView(comment, CommentView.State.DELETED, null, false, null, List.of());
+            return new CommentView(comment, CommentView.State.DELETED, null, null, false, null, List.of());
         }
         CommentView.State state;
         Map<String, String> blind = null;
@@ -198,7 +206,7 @@ public class CommentService {
         } else {
             state = CommentView.State.NORMAL;
         }
-        return new CommentView(comment, state, authorAddress, author || blogOwner, blind, List.of());
+        return new CommentView(comment, state, authorAddress, authorPhoto, author || blogOwner, blind, List.of());
     }
 
     private Map<String, String> blindReason(Comment comment) {

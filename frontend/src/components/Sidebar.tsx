@@ -19,7 +19,9 @@ function SidebarItem({ module }: { module: SidebarModule }) {
       return (
         <div className="box">
           <div className="row nowrap">
-            <span className="avatar lg" />
+            {module.data.profileImageUrl
+              ? <img className="avatar lg" src={module.data.profileImageUrl} alt="" />
+              : <span className="avatar lg" />}
             <div>
               <Link to="/"><b>{module.data.name}</b></Link>
               {module.data.description && <div className="small muted">{module.data.description}</div>}

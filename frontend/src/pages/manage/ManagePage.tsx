@@ -2,11 +2,12 @@ import { useEffect } from 'react'
 import { Link, NavLink, Route, Routes } from 'react-router'
 import { redirectToLogin } from '../../api/client'
 import type { Blog } from '../../api/types'
-import { platformUrl } from '../../app/host'
+import { blogUrl, platformUrl } from '../../app/host'
 import { useBlog } from '../../app/useBlog'
-import { useMe } from '../../app/useMe'
+import { shouldRedirectToLogin, useMe } from '../../app/useMe'
 import LogoutButton from '../../components/LogoutButton'
 import ErrorPage from '../../components/ErrorPage'
+import SuspensionNotice from '../../components/SuspensionNotice'
 import NotFoundPage from '../error/NotFoundPage'
 import BlogSettingsPage from './BlogSettingsPage'
 import CategoriesPage from './CategoriesPage'
@@ -23,11 +24,14 @@ export default function ManagePage() {
   const [blogState, setBlog] = useBlog()
 
   useEffect(() => {
-    if (me.status === 'anonymous') {
+    if (shouldRedirectToLogin(me)) {
       redirectToLogin()
     }
-  }, [me.status])
+  }, [me])
 
+  if (me.status === 'anonymous' && me.suspension) {
+    return <main className="page narrow"><SuspensionNotice suspension={me.suspension} /></main>
+  }
   if (blogState.status === 'notFound') {
     return <NotFoundPage />
   }
@@ -50,7 +54,10 @@ export default function ManagePage() {
         <span className="chip">관리</span>
         <span className="grow" />
         <Link className="btn" to="/">블로그 보기</Link>
+        {me.me.primaryBlog && me.me.primaryBlog.address !== blog.address
+          && <a className="btn" href={blogUrl(me.me.primaryBlog.address)}>내 블로그</a>}
         <a className="btn" href={platformUrl('/me')} title={me.me.nickname}>마이페이지</a>
+        {me.me.role === 'ADMIN' && <a className="btn" href={platformUrl('/admin')}>서비스 관리</a>}
         <LogoutButton />
       </header>
       {blog.restriction && <RestrictionNotice blog={blog} />}
@@ -60,7 +67,7 @@ export default function ManagePage() {
           <NavLink to="/manage" end>관리 홈</NavLink>
           <NavLink to="/manage/write">글쓰기</NavLink>
           <NavLink to="/manage/posts" end>글 관리</NavLink>
-          <NavLink to="/manage/categories">카테고리</NavLink>
+          <NavLink to="/manage/categories">카테고리·태그</NavLink>
           <div className="sec">설정</div>
           <NavLink to="/manage/settings">블로그 설정</NavLink>
         </nav>

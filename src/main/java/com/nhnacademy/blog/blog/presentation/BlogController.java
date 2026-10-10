@@ -71,7 +71,8 @@ public class BlogController {
                                @RequestBody BlogUpdateRequest request) {
         blogOwnerGuard.requireOwner(blog, member);
         requestValidator.validate(request);
-        Blog updated = blogService.updateInfo(blog.getAddress(), request.name(), request.description());
+        Blog updated = blogService.updateInfo(blog.getAddress(), member.id(), request.name(), request.description(),
+                request.profileImageId());
         return BlogResponse.from(blogQueryService.detail(updated, member.id()));
     }
 

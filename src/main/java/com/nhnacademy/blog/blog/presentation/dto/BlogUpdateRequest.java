@@ -5,7 +5,8 @@ import jakarta.validation.constraints.Size;
 
 /**
  * 블로그 정보 수정 (BLOG-02). 보낸 항목만 바꾼다. 주소는 바꿀 수 없어 받지 않는다.
- * 소개를 지우려면 빈 문자열을 보낸다. 프로필 이미지(스텝 7)와 꾸미기(BLOG-05, 백로그)는 기능이 생기면 더한다.
+ * 소개를 지우려면 빈 문자열을 보낸다. profileImageId는 주인이 올린 이미지(POST /api/images)의 id다.
+ * 꾸미기(BLOG-05, 백로그)는 기능이 생기면 더한다.
  */
 public record BlogUpdateRequest(
         @Size(min = 1, max = 50, message = "블로그 이름은 1~50자입니다.")
@@ -13,5 +14,7 @@ public record BlogUpdateRequest(
         String name,
 
         @Size(max = 500, message = "소개는 500자까지입니다.")
-        String description) {
+        String description,
+
+        Long profileImageId) {
 }

@@ -6,6 +6,7 @@ import com.nhnacademy.blog.blog.domain.BlogRepository;
 import com.nhnacademy.blog.global.error.BusinessException;
 import com.nhnacademy.blog.global.error.ErrorCode;
 import com.nhnacademy.blog.global.error.FieldErrorDetail;
+import com.nhnacademy.blog.image.domain.ImageRepository;
 import com.nhnacademy.blog.member.domain.Member;
 import com.nhnacademy.blog.member.domain.MemberRepository;
 import java.util.List;
@@ -21,10 +22,13 @@ public class BlogService {
 
     private final BlogRepository blogRepository;
     private final MemberRepository memberRepository;
+    private final ImageRepository imageRepository;
 
-    public BlogService(BlogRepository blogRepository, MemberRepository memberRepository) {
+    public BlogService(BlogRepository blogRepository, MemberRepository memberRepository,
+                       ImageRepository imageRepository) {
         this.blogRepository = blogRepository;
         this.memberRepository = memberRepository;
+        this.imageRepository = imageRepository;
     }
 
     /** 개설 화면에서 주소를 입력할 때 미리 확인한다. 실제 개설에서도 같은 순서로 다시 본다. */
@@ -70,13 +74,20 @@ public class BlogService {
     }
 
     /**
-     * 이름·소개 수정 (BLOG-02). 주인 검사는 컨트롤러가 먼저 했다.
+     * 이름·소개·프로필 이미지 수정 (BLOG-02). 주인 검사는 컨트롤러가 먼저 했다. null인 항목은 그대로 둔다.
+     * 프로필 이미지는 주인이 올린 이미지만 된다. 남이 올렸거나 없는 이미지 번호면 400(회원 프로필 사진과 같은 규칙).
      * 응답에 주인 정보가 필요해 주인을 함께 읽는 findByAddress로 다시 읽는다.
      */
     @Transactional
-    public Blog updateInfo(String address, String name, String description) {
+    public Blog updateInfo(String address, Long ownerId, String name, String description, Long profileImageId) {
         Blog blog = blogRepository.findByAddress(address)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        if (profileImageId != null) {
+            imageRepository.findById(profileImageId)
+                    .filter(image -> ownerId.equals(image.getUploaderId()))
+                    .orElseThrow(() -> BusinessException.invalidField("profileImageId", "이미지를 찾을 수 없습니다."));
+            blog.changeProfileImage(profileImageId);
+        }
         blog.changeInfo(name == null ? null : name.trim(), description);
         return blog;
     }
