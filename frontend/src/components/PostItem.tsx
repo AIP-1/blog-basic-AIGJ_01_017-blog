@@ -13,7 +13,7 @@ export function PostItem({ post, owner }: { post: PostSummary; owner: boolean })
         </div>
         {post.summary && <p>{post.summary}</p>}
         <div className="meta">
-          <span>{post.category?.name ?? '미분류'}</span>
+          <Link to={`/category/${post.category?.id ?? 0}`}>{post.category?.name ?? '미분류'}</Link>
           <span>{formatDate(post.publishedAt)}</span>
           <span>공감 {post.likeCount}</span>
           <span>댓글 {post.commentCount}</span>

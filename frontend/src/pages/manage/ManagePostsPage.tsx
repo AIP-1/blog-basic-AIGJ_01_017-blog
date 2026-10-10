@@ -140,7 +140,6 @@ export default function ManagePostsPage() {
             <option value="">전체 상태</option>
             <option value="PUBLISHED">발행</option>
             <option value="DRAFT">임시저장</option>
-            <option value="SCHEDULED">예약</option>
           </select>
           <select value={categoryId} style={{ maxWidth: 160 }} aria-label="카테고리"
                   onChange={(event) => filter('categoryId', event.target.value)}>
@@ -222,7 +221,9 @@ function PostRow({ post, checked, onToggle }: { post: ManagedPostSummary; checke
         </span>
       </td>
       <td data-label="공개">{VISIBILITY_LABEL[post.visibility]}</td>
-      <td data-label="카테고리">{post.category?.name ?? '미분류'}</td>
+      <td data-label="카테고리">
+        <Link to={`?categoryId=${post.category?.id ?? 0}`} title="이 카테고리 글만 보기">{post.category?.name ?? '미분류'}</Link>
+      </td>
       <td className="num" data-label="날짜">{date}</td>
     </tr>
   )
