@@ -226,3 +226,10 @@ export interface UploadedImage {
   url: string
   thumbnailUrl: string
 }
+
+/** 전체 검색의 블로그 한 줄 (GET /api/search?type=blog, SRCH-02) */
+export interface FoundBlog {
+  blog: { id: number; address: string; name: string; description: string | null; profileImageUrl: string | null }
+  owner: MemberSummary
+  subscriberCount: number
+}

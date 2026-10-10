@@ -32,7 +32,14 @@ public class CurrentBlogArgumentResolver implements HandlerMethodArgumentResolve
     @Override
     public Blog resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
                                 NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
-        HttpServletRequest request = webRequest.getNativeRequest(HttpServletRequest.class);
+        return resolve(webRequest.getNativeRequest(HttpServletRequest.class));
+    }
+
+    /**
+     * 요청 Host의 블로그. 없거나, 보는 사람이 볼 수 없거나, 이사해서 남이 옛 주소로 부르면 404.
+     * 같은 경로가 플랫폼 주소와 블로그 주소에서 다른 일을 하는 API(GET /api/search)가 직접 부를 때도 쓴다.
+     */
+    public Blog resolve(HttpServletRequest request) {
         Long viewerId = LoginMembers.currentId();
         Blog blog = blogHostResolver.findBlog(request)
                 .filter(found -> blogVisibilityPolicy.canView(found, viewerId))

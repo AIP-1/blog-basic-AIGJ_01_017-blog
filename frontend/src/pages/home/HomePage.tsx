@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react'
 import { api } from '../../api/client'
 import { errorMessage } from '../../api/errors'
 import type { CursorResponse, PopularPosts, PostSummary, Topic } from '../../api/types'
-import { formatDateTime, formatTime } from '../../app/format'
+import { formatTime } from '../../app/format'
 import { blogUrl } from '../../app/host'
 import { useMe } from '../../app/useMe'
 import PlatformHeader from '../../components/PlatformHeader'
+import PlatformPostItem from '../../components/PlatformPostItem'
 
 /**
  * 플랫폼 홈. 인기 글(HOME-02) 10개, 주제별 글(HOME-03) 6개, 모든 블로그의 최신 글(HOME-01) 20개씩 더보기.
@@ -59,22 +60,7 @@ export default function HomePage() {
           {error && <p className="err">{error}</p>}
           {loaded && posts.length === 0 && <p className="muted">아직 글이 없습니다.</p>}
           <div className="post-list">
-            {posts.map((post) => (
-              <article key={post.id} className={post.thumbnailUrl ? 'post-item has-thumb' : 'post-item'}>
-                <div className="stack" style={{ gap: 2 }}>
-                  <h3><a href={blogUrl(post.blog.address, `/${post.id}`)}>{post.title}</a></h3>
-                  {post.summary && <p>{post.summary}</p>}
-                  <div className="meta">
-                    <a href={blogUrl(post.blog.address)}>{post.blog.name}</a>
-                    <span>{formatDateTime(post.publishedAt)}</span>
-                    <span>공감 {post.likeCount}</span>
-                    <span>댓글 {post.commentCount}</span>
-                  </div>
-                </div>
-                {/* 썸네일은 플랫폼 주소에서도 같은 서버의 /uploads라 그대로 연다 */}
-                {post.thumbnailUrl && <img className="thumb" src={post.thumbnailUrl} alt="" loading="lazy" />}
-              </article>
-            ))}
+            {posts.map((post) => <PlatformPostItem key={post.id} post={post} />)}
           </div>
           {nextCursor && <button className="btn" type="button" style={{ justifySelf: 'center' }}
                                  onClick={() => load(nextCursor)}>더보기</button>}
