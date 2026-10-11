@@ -1,12 +1,12 @@
 package com.nhnacademy.blog.global.config;
 
-import com.nhnacademy.blog.global.auth.AuthCookieManager;
-import com.nhnacademy.blog.global.auth.AuthProperties;
-import com.nhnacademy.blog.global.auth.CsrfHeaderFilter;
-import com.nhnacademy.blog.global.auth.JwtAuthenticationFilter;
-import com.nhnacademy.blog.global.auth.JwtTokenProvider;
+import com.nhnacademy.blog.auth.application.AuthProperties;
+import com.nhnacademy.blog.auth.application.JwtTokenProvider;
+import com.nhnacademy.blog.auth.domain.TokenStore;
+import com.nhnacademy.blog.auth.presentation.AuthCookieManager;
+import com.nhnacademy.blog.auth.presentation.CsrfHeaderFilter;
+import com.nhnacademy.blog.auth.presentation.JwtAuthenticationFilter;
 import com.nhnacademy.blog.global.auth.SuspensionDetails;
-import com.nhnacademy.blog.global.auth.TokenStore;
 import com.nhnacademy.blog.global.error.ErrorCode;
 import com.nhnacademy.blog.global.error.ErrorResponseWriter;
 import com.nhnacademy.blog.member.domain.MemberRepository;

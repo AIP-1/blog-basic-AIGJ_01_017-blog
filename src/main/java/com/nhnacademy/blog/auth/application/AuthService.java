@@ -2,7 +2,6 @@ package com.nhnacademy.blog.auth.application;
 
 import com.nhnacademy.blog.auth.domain.Emails;
 import com.nhnacademy.blog.auth.domain.PasswordRule;
-import com.nhnacademy.blog.global.auth.AttemptLimiter;
 import com.nhnacademy.blog.global.auth.SuspensionDetails;
 import com.nhnacademy.blog.global.error.BusinessException;
 import com.nhnacademy.blog.global.error.ErrorCode;

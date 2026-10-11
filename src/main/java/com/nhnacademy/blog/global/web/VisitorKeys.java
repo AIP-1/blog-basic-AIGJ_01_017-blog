@@ -1,6 +1,5 @@
 package com.nhnacademy.blog.global.web;
 
-import com.nhnacademy.blog.global.auth.AuthProperties;
 import com.nhnacademy.blog.global.auth.LoginMembers;
 import com.nhnacademy.blog.global.host.DomainProperties;
 import jakarta.servlet.http.Cookie;
@@ -10,6 +9,7 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
@@ -28,11 +28,12 @@ public class VisitorKeys {
     private static final Duration COOKIE_TTL = Duration.ofDays(365);
 
     private final DomainProperties domainProperties;
-    private final AuthProperties authProperties;
+    /** 로그인 쿠키와 같은 Secure 설정(app.auth.cookie-secure). 인증 설정 객체 대신 값 하나만 받는다(인증 경계, 스텝 19b). */
+    private final boolean cookieSecure;
 
-    public VisitorKeys(DomainProperties domainProperties, AuthProperties authProperties) {
+    public VisitorKeys(DomainProperties domainProperties, @Value("${app.auth.cookie-secure}") boolean cookieSecure) {
         this.domainProperties = domainProperties;
-        this.authProperties = authProperties;
+        this.cookieSecure = cookieSecure;
     }
 
     /** 지금 요청한 사람의 키. 쿠키가 없거나 망가진 비회원에게는 새 쿠키를 응답에 싣는다. */
@@ -72,7 +73,7 @@ public class VisitorKeys {
                 .domain(domainProperties.cookieDomain())
                 .path("/")
                 .httpOnly(true)
-                .secure(authProperties.cookieSecure())
+                .secure(cookieSecure)
                 .sameSite("Lax")
                 .maxAge(COOKIE_TTL)
                 .build();

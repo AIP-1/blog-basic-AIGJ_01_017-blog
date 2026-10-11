@@ -3,7 +3,6 @@ package com.nhnacademy.blog.auth.application;
 import com.nhnacademy.blog.auth.domain.EmailVerification;
 import com.nhnacademy.blog.auth.domain.EmailVerificationRepository;
 import com.nhnacademy.blog.auth.domain.Emails;
-import com.nhnacademy.blog.global.auth.AttemptLimiter;
 import com.nhnacademy.blog.global.error.BusinessException;
 import com.nhnacademy.blog.global.error.ErrorCode;
 import com.nhnacademy.blog.global.error.RetryAfterDetail;

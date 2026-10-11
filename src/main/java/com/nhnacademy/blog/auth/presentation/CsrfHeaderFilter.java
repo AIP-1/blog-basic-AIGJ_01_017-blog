@@ -1,4 +1,4 @@
-package com.nhnacademy.blog.global.auth;
+package com.nhnacademy.blog.auth.presentation;
 
 import com.nhnacademy.blog.global.error.ErrorCode;
 import com.nhnacademy.blog.global.error.ErrorResponseWriter;

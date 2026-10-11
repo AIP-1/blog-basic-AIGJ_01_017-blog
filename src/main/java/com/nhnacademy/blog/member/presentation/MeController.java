@@ -1,6 +1,6 @@
 package com.nhnacademy.blog.member.presentation;
 
-import com.nhnacademy.blog.global.auth.AuthCookieManager;
+import com.nhnacademy.blog.auth.presentation.LoginSessions;
 import com.nhnacademy.blog.global.auth.LoginMember;
 import com.nhnacademy.blog.global.web.RequestValidator;
 import com.nhnacademy.blog.member.application.MeService;
@@ -9,6 +9,7 @@ import com.nhnacademy.blog.member.presentation.dto.MeResponse;
 import com.nhnacademy.blog.member.presentation.dto.MeUpdateRequest;
 import com.nhnacademy.blog.member.presentation.dto.PasswordChangeRequest;
 import com.nhnacademy.blog.member.presentation.dto.WithdrawRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -30,14 +31,14 @@ public class MeController {
 
     private final MeService meService;
     private final WithdrawalService withdrawalService;
-    private final AuthCookieManager cookieManager;
+    private final LoginSessions loginSessions;
     private final RequestValidator requestValidator;
 
-    public MeController(MeService meService, WithdrawalService withdrawalService, AuthCookieManager cookieManager,
+    public MeController(MeService meService, WithdrawalService withdrawalService, LoginSessions loginSessions,
                         RequestValidator requestValidator) {
         this.meService = meService;
         this.withdrawalService = withdrawalService;
-        this.cookieManager = cookieManager;
+        this.loginSessions = loginSessions;
         this.requestValidator = requestValidator;
     }
 
@@ -67,16 +68,16 @@ public class MeController {
     }
 
     /**
-     * 회원 탈퇴 (AUTH-06). `{ password }`로 본인 확인 → 204와 로그인 쿠키 삭제. 비밀번호가 틀리면 401 LOGIN_FAILED,
+     * 회원 탈퇴 (AUTH-06). `{ password }`로 본인 확인 → 204와 로그인 끝내기(토큰 막기, 쿠키 삭제). 비밀번호가 틀리면 401 LOGIN_FAILED,
      * 15분 안에 5번 틀리면 429(비밀번호 변경과 같은 횟수).
      */
     @DeleteMapping("/api/me")
     @PreAuthorize("isAuthenticated()")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void withdraw(@AuthenticationPrincipal LoginMember member, @RequestBody WithdrawRequest request,
-                         HttpServletResponse response) {
+                         HttpServletRequest httpRequest, HttpServletResponse response) {
         withdrawalService.withdraw(member.id(), request.password());
-        cookieManager.clear(response);
+        loginSessions.end(httpRequest, response);
     }
 
 }
