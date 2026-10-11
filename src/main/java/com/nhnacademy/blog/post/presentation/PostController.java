@@ -1,6 +1,7 @@
 package com.nhnacademy.blog.post.presentation;
 
 import com.nhnacademy.blog.blog.domain.Blog;
+import com.nhnacademy.blog.bookmark.application.BookmarkService;
 import com.nhnacademy.blog.global.auth.LoginMembers;
 import com.nhnacademy.blog.global.error.BusinessException;
 import com.nhnacademy.blog.global.host.CurrentBlog;
@@ -39,16 +40,18 @@ public class PostController {
     private final PostReadService postReadService;
     private final PostThumbnails postThumbnails;
     private final LikeService likeService;
+    private final BookmarkService bookmarkService;
     private final ViewService viewService;
     private final VisitorKeys visitorKeys;
 
     public PostController(PostQueryService postQueryService, PostReadService postReadService,
-                          PostThumbnails postThumbnails, LikeService likeService, ViewService viewService,
-                          VisitorKeys visitorKeys) {
+                          PostThumbnails postThumbnails, LikeService likeService, BookmarkService bookmarkService,
+                          ViewService viewService, VisitorKeys visitorKeys) {
         this.postQueryService = postQueryService;
         this.postReadService = postReadService;
         this.postThumbnails = postThumbnails;
         this.likeService = likeService;
+        this.bookmarkService = bookmarkService;
         this.viewService = viewService;
         this.visitorKeys = visitorKeys;
     }
@@ -86,7 +89,8 @@ public class PostController {
     @GetMapping("/api/posts/{id}")
     public PostDetailResponse post(@CurrentBlog Blog blog, @PathVariable Long id) {
         Long viewerId = LoginMembers.currentId();
-        return PostDetailResponse.from(postReadService.detail(blog, id, viewerId), likeService.likes(id, viewerId));
+        return PostDetailResponse.from(postReadService.detail(blog, id, viewerId), likeService.likes(id, viewerId),
+                bookmarkService.bookmarked(id, viewerId));
     }
 
     /**

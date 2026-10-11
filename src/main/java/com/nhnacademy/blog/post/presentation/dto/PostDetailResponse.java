@@ -13,7 +13,7 @@ import java.util.Map;
 
 /**
  * PostDetail (contracts/rest-api.md 주요 응답 객체). GET /api/posts/{id}.
- * viewer.bookmarked는 저장(백로그) 전이라 false다.
+ * viewer.bookmarked는 보는 사람이 이 글을 저장했나(SOC-03, 스텝 20).
  * updatedAt은 발행 뒤 고친 적이 없으면 null이다.
  */
 public record PostDetailResponse(Long id, BlogRef blog, String title, String contentHtml, CategoryRef category,
@@ -35,7 +35,7 @@ public record PostDetailResponse(Long id, BlogRef blog, String title, String con
     }
 
     /** liked: 보는 사람이 이 글에 공감했나(SOC-01). 공감 기능(reaction)이 알려 준다. */
-    public static PostDetailResponse from(PostView view, boolean liked) {
+    public static PostDetailResponse from(PostView view, boolean liked, boolean bookmarked) {
         Post post = view.post();
         Blog blog = post.getBlog();
         Category category = post.getCategory();
@@ -47,7 +47,7 @@ public record PostDetailResponse(Long id, BlogRef blog, String title, String con
                 post.getLikeCount(), post.getCommentCount(), post.isCommentAllowed(),
                 MemberSummaryResponse.of(blog.getMember(), view.authorPrimaryBlogAddress(),
                         view.authorProfileImageUrl()),
-                new Viewer(view.owner(), liked, false), view.blind(), neighbor(view.prev()), neighbor(view.next()));
+                new Viewer(view.owner(), liked, bookmarked), view.blind(), neighbor(view.prev()), neighbor(view.next()));
     }
 
     /**
