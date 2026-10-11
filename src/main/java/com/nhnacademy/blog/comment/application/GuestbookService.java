@@ -109,7 +109,7 @@ public class GuestbookService {
         return commentViews.one(written, blog, member.id());
     }
 
-    /** 고치기 전 확인: 없음 404 → 비회원 401 → 본인이 아님 403. */
+    /** 고치기 전 확인: 없음 404 → 비회원 401 → 본인이 아님 403 → 차단된 회원 403. */
     @Transactional(readOnly = true)
     public void checkEditable(Blog blog, Long id, LoginMember member) {
         editable(blog, id, member);
@@ -118,6 +118,7 @@ public class GuestbookService {
     @Transactional
     public CommentView edit(Blog blog, Long id, LoginMember member, String content) {
         Guestbook guestbook = editable(blog, id, member);
+        spamGuard.requireNoBannedWord(blog, content);
         guestbook.edit(content.trim());
         guestbookRepository.flush();
         return commentViews.one(guestbook, blog, member.id());
@@ -149,6 +150,8 @@ public class GuestbookService {
         if (!guestbook.isWrittenBy(member.id())) {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
+        // 차단된 회원은 전에 쓴 방명록도 고칠 수 없다(MNG-04, 2026-10-11 지원 결정)
+        spamGuard.requireNotBlocked(blog, member.id());
         return guestbook;
     }
 

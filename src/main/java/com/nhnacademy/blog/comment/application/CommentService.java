@@ -177,10 +177,14 @@ public class CommentService {
         editable(blog, commentId, member);
     }
 
-    /** 내용 고치기 (CMT-03). 글의 수정 시각이나 댓글 수는 바뀌지 않는다. 고친 시각은 댓글의 updatedAt으로 보인다. */
+    /**
+     * 내용 고치기 (CMT-03). 글의 수정 시각이나 댓글 수는 바뀌지 않는다. 고친 시각은 댓글의 updatedAt으로 보인다.
+     * 고친 내용도 새로 쓸 때처럼 금칙어를 검사한다(MNG-04, 2026-10-11 지원 결정).
+     */
     @Transactional
     public CommentView edit(Blog blog, Long commentId, LoginMember member, String content) {
         Comment comment = editable(blog, commentId, member);
+        spamGuard.requireNoBannedWord(comment.getPost().getBlog(), content);
         comment.edit(content.trim());
         // updatedAt(@LastModifiedDate)이 응답에 들어가도록 UPDATE를 먼저 보낸다
         commentRepository.flush();
@@ -192,6 +196,8 @@ public class CommentService {
         if (!comment.isWrittenBy(member.id()) || comment.isBlinded()) {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
+        // 차단된 회원은 전에 쓴 댓글도 고칠 수 없다(MNG-04, 2026-10-11 지원 결정). 지우기는 그대로 된다
+        spamGuard.requireNotBlocked(comment.getPost().getBlog(), member.id());
         return comment;
     }
 

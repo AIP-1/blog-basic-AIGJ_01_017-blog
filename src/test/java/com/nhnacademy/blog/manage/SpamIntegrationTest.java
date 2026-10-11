@@ -122,6 +122,37 @@ class SpamIntegrationTest extends IntegrationTestSupport {
     }
 
     @Test
+    void editsAreCheckedLikeNewWrites() throws Exception {
+        String host = TestBlogs.host(blog);
+        long comment = idOf(send(post("/api/posts/" + post + "/comments").header("Idempotency-Key", UUID.randomUUID().toString()),
+                host, spammerCookies, "{\"content\":\"깨끗한 댓글\"}").andExpect(status().isCreated()));
+        long guestbook = idOf(send(post("/api/guestbook").header("Idempotency-Key", UUID.randomUUID().toString()), host,
+                spammerCookies, "{\"content\":\"깨끗한 방명록\"}").andExpect(status().isCreated()));
+
+        // 깨끗하게 쓴 뒤 고쳐서 금칙어를 넣을 수 없다
+        send(post("/api/manage/banned-words"), host, ownerCookies, "{\"word\":\"카지노\"}").andExpect(status().isCreated());
+        send(patch("/api/comments/" + comment), host, spammerCookies, "{\"content\":\"카지노 홍보\"}")
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("BANNED_WORD"));
+        send(patch("/api/guestbook/" + guestbook), host, spammerCookies, "{\"content\":\"카지노 홍보\"}")
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("BANNED_WORD"));
+        send(patch("/api/comments/" + comment), host, spammerCookies, "{\"content\":\"고친 댓글\"}")
+                .andExpect(status().isOk());
+
+        // 차단되면 전에 쓴 댓글·방명록도 고칠 수 없다(지우기는 된다)
+        send(post("/api/manage/blocked-members"), host, ownerCookies, "{\"memberId\":" + spammer.getId() + "}")
+                .andExpect(status().isCreated());
+        send(patch("/api/comments/" + comment), host, spammerCookies, "{\"content\":\"다시 고침\"}")
+                .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("BLOCKED_BY_BLOG"));
+        send(patch("/api/guestbook/" + guestbook), host, spammerCookies, "{\"content\":\"다시 고침\"}")
+                .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("BLOCKED_BY_BLOG"));
+        send(delete("/api/comments/" + comment), host, spammerCookies, null).andExpect(status().isNoContent());
+    }
+
+    private long idOf(ResultActions result) throws Exception {
+        return ((Number) JsonPath.read(result.andReturn().getResponse().getContentAsString(), "$.id")).longValue();
+    }
+
+    @Test
     void atMostOneHundredBannedWords() throws Exception {
         for (int i = 0; i < 100; i++) {
             jdbcTemplate.update("INSERT INTO blog_banned_word (blog_id, word) VALUES (?, ?)", blog.getId(), "w" + i);
