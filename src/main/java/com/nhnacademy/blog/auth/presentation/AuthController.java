@@ -48,9 +48,11 @@ public class AuthController {
 
     /** 로그인 유지(rememberMe)를 고르면 14일, 아니면 브라우저를 닫거나 30분 동안 요청이 없으면 끝난다 (AUTH-03). */
     @PostMapping("/api/auth/login")
-    public MeResponse login(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
-        Member member = authService.login(request.email(), request.password());
+    public MeResponse login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest,
+                            HttpServletResponse response) {
+        Member member = authService.login(request.email(), request.password(), cookieManager.deviceToken(httpRequest));
         cookieManager.login(response, member, request.keepLoggedIn());
+        cookieManager.issueDevice(response, member.getId());
         return MeResponse.from(meService.me(member.getId()));
     }
 

@@ -1,6 +1,7 @@
 package com.nhnacademy.blog.auth.presentation;
 
 import com.nhnacademy.blog.auth.application.AuthProperties;
+import com.nhnacademy.blog.auth.application.DeviceTokens;
 import com.nhnacademy.blog.auth.application.JwtTokenProvider;
 import com.nhnacademy.blog.auth.domain.IssuedToken;
 import com.nhnacademy.blog.auth.domain.TokenStore;
@@ -27,7 +28,12 @@ import org.springframework.stereotype.Component;
 @Component
 public class AuthCookieManager {
 
+    private final DeviceTokens deviceTokens;
+
     public static final String ACCESS_COOKIE = "access_token";
+    /** 기기 쿠키 (T055b). */
+    public static final String DEVICE_COOKIE = "device";
+    private static final Duration DEVICE_TTL = Duration.ofDays(365);
     public static final String REFRESH_COOKIE = "refresh_token";
 
     private final JwtTokenProvider tokenProvider;
@@ -36,7 +42,9 @@ public class AuthCookieManager {
     private final DomainProperties domainProperties;
 
     public AuthCookieManager(JwtTokenProvider tokenProvider, TokenStore tokenStore, AuthProperties authProperties,
-                             DomainProperties domainProperties) {
+                             DomainProperties domainProperties,
+                             DeviceTokens deviceTokens) {
+        this.deviceTokens = deviceTokens;
         this.tokenProvider = tokenProvider;
         this.tokenStore = tokenStore;
         this.authProperties = authProperties;
@@ -67,6 +75,18 @@ public class AuthCookieManager {
                 .flatMap(token -> tokenProvider.parse(token, TokenType.REFRESH))
                 .ifPresent(claims -> tokenStore.deleteRefresh(claims.id()));
         clear(response);
+    }
+
+    /** 이 브라우저의 기기 쿠키 값(T055b). 없으면 null. */
+    public String deviceToken(HttpServletRequest request) {
+        return readCookie(request, DEVICE_COOKIE).orElse(null);
+    }
+
+    /**
+     * 로그인에 성공한 브라우저에 새 기기 쿠키를 준다(1년). 로그아웃해도 남는다(이 브라우저가 "전에 로그인한 브라우저"라는 표시라서).
+     */
+    public void issueDevice(HttpServletResponse response, Long memberId) {
+        addCookie(response, DEVICE_COOKIE, deviceTokens.issue(memberId), DEVICE_TTL);
     }
 
     /** 쿠키만 지운다. 정지·탈퇴 회원이나 망가진 토큰일 때 쓴다. */
