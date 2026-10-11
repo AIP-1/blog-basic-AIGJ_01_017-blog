@@ -132,7 +132,8 @@ class RankingIntegrationTest extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.items[0].rank").value(1))
                 .andReturn().getResponse().getContentAsString();
         assertThat((String) JsonPath.read(ranking, "$.snapshotAt")).isEqualTo(JsonPath.read(home, "$.snapshotAt"));
-        assertThat((Integer) JsonPath.read(ranking, "$.items[0].post.id")).isEqualTo((int) post);
+        // 다른 테스트의 글이 더 위일 수 있어 순위 안에 있는지만 본다
+        assertThat((List<Integer>) JsonPath.read(ranking, "$.items[*].post.id")).contains((int) post);
         send(get("/api/ranking/posts").param("snapshotAt", "2020-01-01T00:00:00+09:00"), "blog.test", null, null)
                 .andExpect(status().isConflict());
     }

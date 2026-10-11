@@ -109,11 +109,15 @@ class KeepLoggedInIntegrationTest extends IntegrationTestSupport {
                 .andReturn();
     }
 
-    /** 응답의 Set-Cookie 가운데 브라우저를 닫아도 남는 것(Max-Age가 있는 것)만 다음 요청에 보낸다. */
+    /**
+     * 응답의 Set-Cookie 가운데 브라우저를 닫아도 남는 로그인 쿠키(Max-Age가 있는 것)만 다음 요청에 보낸다.
+     * 기기 쿠키(T055b)도 1년 남지만 로그인 상태를 주지 않으므로 여기서는 뺀다.
+     */
     private Cookie[] cookiesSurvivingRestart(MvcResult login) {
         List<String> setCookies = login.getResponse().getHeaders(HttpHeaders.SET_COOKIE);
         return setCookies.stream()
                 .filter(header -> header.contains("Max-Age="))
+                .filter(header -> !header.startsWith(AuthCookieManager.DEVICE_COOKIE + "="))
                 .map(header -> HttpCookie.parse(header).getFirst())
                 .map(parsed -> new Cookie(parsed.getName(), parsed.getValue()))
                 .toArray(Cookie[]::new);
