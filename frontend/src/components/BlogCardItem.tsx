@@ -11,7 +11,7 @@ export default function BlogCardItem({ card, showRank = true, children }: {
 }) {
   const photo = card.blog.profileImageUrl ?? card.owner.profileImageUrl
   return (
-    <div className="rank">
+    <div className="blog-card">
       {showRank && <b>{card.rank}</b>}
       {photo ? <img className="avatar" src={photo} alt="" /> : <span className="avatar" />}
       <span className="stack" style={{ gap: 0 }}>
