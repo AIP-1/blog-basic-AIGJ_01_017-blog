@@ -45,7 +45,9 @@ export default function ManageHomePage({ blog }: { blog: Blog }) {
               <ul className="small" style={{ paddingLeft: 18, margin: 0 }}>
                 {summary.recentComments.map((comment) => (
                   <li key={comment.id}>
-                    {comment.author?.nickname ?? '알 수 없음'} · {comment.content ?? '(내용 없음)'}
+                    {comment.state === 'NORMAL'
+                      ? <>{comment.author?.nickname} · {comment.content}</>
+                      : <span className="muted">{HIDDEN[comment.state]}</span>}
                     {comment.post && <> — <Link to={`/${comment.post.id}#comment-${comment.id}`}>{comment.post.title}</Link></>}
                   </li>
                 ))}
@@ -72,6 +74,9 @@ export default function ManageHomePage({ blog }: { blog: Blog }) {
     </main>
   )
 }
+
+/** 내용이 가려진 댓글의 문구 (댓글 화면과 같음) */
+const HIDDEN = { SECRET: '비밀댓글입니다.', BLINDED: '관리자가 숨긴 댓글입니다.', DELETED: '삭제된 댓글입니다.' } as const
 
 function Stat({ label, value }: { label: string; value: number }) {
   return (
