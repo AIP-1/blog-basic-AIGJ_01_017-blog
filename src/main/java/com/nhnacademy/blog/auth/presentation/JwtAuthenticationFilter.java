@@ -1,5 +1,12 @@
-package com.nhnacademy.blog.global.auth;
+package com.nhnacademy.blog.auth.presentation;
 
+import com.nhnacademy.blog.auth.application.AuthProperties;
+import com.nhnacademy.blog.auth.application.JwtTokenProvider;
+import com.nhnacademy.blog.auth.domain.TokenClaims;
+import com.nhnacademy.blog.auth.domain.TokenStore;
+import com.nhnacademy.blog.auth.domain.TokenType;
+import com.nhnacademy.blog.global.auth.LoginMember;
+import com.nhnacademy.blog.global.auth.SuspensionDetails;
 import com.nhnacademy.blog.global.error.BusinessException;
 import com.nhnacademy.blog.global.error.ErrorCode;
 import com.nhnacademy.blog.global.error.ErrorResponseWriter;

@@ -1,4 +1,4 @@
-package com.nhnacademy.blog.global.auth;
+package com.nhnacademy.blog.auth.domain;
 
 import com.nhnacademy.blog.member.domain.Role;
 import java.time.Instant;

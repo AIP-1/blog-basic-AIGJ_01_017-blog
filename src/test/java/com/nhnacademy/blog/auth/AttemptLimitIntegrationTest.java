@@ -1,4 +1,4 @@
-package com.nhnacademy.blog.global.auth;
+package com.nhnacademy.blog.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;

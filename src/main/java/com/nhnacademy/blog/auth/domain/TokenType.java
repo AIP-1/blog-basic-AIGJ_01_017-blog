@@ -1,4 +1,4 @@
-package com.nhnacademy.blog.global.auth;
+package com.nhnacademy.blog.auth.domain;
 
 public enum TokenType {
     ACCESS,

@@ -1,4 +1,4 @@
-package com.nhnacademy.blog.global.auth;
+package com.nhnacademy.blog.auth.application;
 
 import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;

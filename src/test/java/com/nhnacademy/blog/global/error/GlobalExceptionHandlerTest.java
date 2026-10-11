@@ -9,7 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.nhnacademy.blog.IntegrationTestSupport;
-import com.nhnacademy.blog.global.auth.CsrfHeaderFilter;
+import com.nhnacademy.blog.auth.presentation.CsrfHeaderFilter;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;

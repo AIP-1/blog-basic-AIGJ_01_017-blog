@@ -1,10 +1,9 @@
-package com.nhnacademy.blog.global.auth;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+package com.nhnacademy.blog.auth;
 
 import com.nhnacademy.blog.IntegrationTestSupport;
+import com.nhnacademy.blog.auth.application.JwtTokenProvider;
+import com.nhnacademy.blog.auth.domain.TokenType;
+import com.nhnacademy.blog.auth.presentation.AuthCookieManager;
 import com.nhnacademy.blog.support.TestMembers;
 import jakarta.servlet.http.Cookie;
 import java.time.Duration;
@@ -14,6 +13,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.test.web.servlet.MockMvc;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * 로그인 유지를 고르지 않으면 30분 동안 아무 요청이 없을 때 로그아웃된다 (AUTH-03, R-03).

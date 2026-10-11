@@ -7,7 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.nhnacademy.blog.IntegrationTestSupport;
-import com.nhnacademy.blog.global.auth.AuthCookieManager;
+import com.nhnacademy.blog.auth.presentation.AuthCookieManager;
 import com.nhnacademy.blog.member.domain.Member;
 import com.nhnacademy.blog.support.TestMembers;
 import jakarta.servlet.http.Cookie;

@@ -1,5 +1,8 @@
-package com.nhnacademy.blog.global.auth;
+package com.nhnacademy.blog.auth.application;
 
+import com.nhnacademy.blog.auth.domain.IssuedToken;
+import com.nhnacademy.blog.auth.domain.TokenClaims;
+import com.nhnacademy.blog.auth.domain.TokenType;
 import com.nhnacademy.blog.member.domain.Role;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;

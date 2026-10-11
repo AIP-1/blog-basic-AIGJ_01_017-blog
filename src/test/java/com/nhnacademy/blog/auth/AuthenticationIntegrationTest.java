@@ -1,13 +1,4 @@
-package com.nhnacademy.blog.global.auth;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.nullValue;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+package com.nhnacademy.blog.auth;
 
 import com.nhnacademy.blog.IntegrationTestSupport;
 import com.nhnacademy.blog.admin.domain.ModerationAction;
@@ -15,6 +6,8 @@ import com.nhnacademy.blog.admin.domain.ModerationLog;
 import com.nhnacademy.blog.admin.domain.ModerationLogRepository;
 import com.nhnacademy.blog.admin.domain.ModerationTargetType;
 import com.nhnacademy.blog.admin.domain.SanctionReason;
+import com.nhnacademy.blog.auth.presentation.AuthCookieManager;
+import com.nhnacademy.blog.auth.presentation.CsrfHeaderFilter;
 import com.nhnacademy.blog.member.domain.Member;
 import com.nhnacademy.blog.support.TestMembers;
 import jakarta.servlet.http.Cookie;
@@ -28,6 +21,14 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.nullValue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * 로그인 쿠키, 관리자 영역, CSRF 헤더, 정지·탈퇴 회원 차단 (T007, T008).

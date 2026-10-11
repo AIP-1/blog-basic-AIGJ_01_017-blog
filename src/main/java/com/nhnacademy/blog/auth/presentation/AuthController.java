@@ -4,7 +4,6 @@ import com.nhnacademy.blog.auth.application.AuthService;
 import com.nhnacademy.blog.auth.presentation.dto.LoginRequest;
 import com.nhnacademy.blog.auth.presentation.dto.NicknameAvailabilityResponse;
 import com.nhnacademy.blog.auth.presentation.dto.SignupRequest;
-import com.nhnacademy.blog.global.auth.AuthCookieManager;
 import com.nhnacademy.blog.member.application.MeService;
 import com.nhnacademy.blog.member.domain.Member;
 import com.nhnacademy.blog.member.presentation.dto.MeResponse;

@@ -1,9 +1,9 @@
 package com.nhnacademy.blog.member.application;
 
+import com.nhnacademy.blog.auth.application.CredentialService;
 import com.nhnacademy.blog.blog.application.BlogDeletionService;
 import com.nhnacademy.blog.blog.domain.Blog;
 import com.nhnacademy.blog.blog.domain.BlogRepository;
-import com.nhnacademy.blog.global.auth.AttemptLimiter;
 import com.nhnacademy.blog.global.error.BusinessException;
 import com.nhnacademy.blog.global.error.ErrorCode;
 import com.nhnacademy.blog.member.domain.Member;
@@ -11,7 +11,6 @@ import com.nhnacademy.blog.member.domain.MemberRepository;
 import com.nhnacademy.blog.member.domain.MemberTraceCleaner;
 import java.time.Clock;
 import java.time.LocalDateTime;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,19 +27,17 @@ public class WithdrawalService {
     private final BlogRepository blogRepository;
     private final BlogDeletionService blogDeletionService;
     private final MemberTraceCleaner memberTraceCleaner;
-    private final PasswordEncoder passwordEncoder;
-    private final AttemptLimiter attemptLimiter;
+    private final CredentialService credentialService;
     private final Clock clock;
 
     public WithdrawalService(MemberRepository memberRepository, BlogRepository blogRepository,
                              BlogDeletionService blogDeletionService, MemberTraceCleaner memberTraceCleaner,
-                             PasswordEncoder passwordEncoder, AttemptLimiter attemptLimiter, Clock clock) {
+                             CredentialService credentialService, Clock clock) {
         this.memberRepository = memberRepository;
         this.blogRepository = blogRepository;
         this.blogDeletionService = blogDeletionService;
         this.memberTraceCleaner = memberTraceCleaner;
-        this.passwordEncoder = passwordEncoder;
-        this.attemptLimiter = attemptLimiter;
+        this.credentialService = credentialService;
         this.clock = clock;
     }
 
@@ -59,19 +56,11 @@ public class WithdrawalService {
     }
 
     /**
-     * 본인 확인. 비밀번호가 틀리면 401 LOGIN_FAILED. 비밀번호 변경과 같은 횟수 제한(15분 5번, R-17)을 같이 써서
-     * 탈퇴 화면으로 비밀번호를 무작정 맞혀 보는 것도 막는다.
+     * 본인 확인(인증의 입구 CredentialService). 비밀번호가 틀리면 401 LOGIN_FAILED이고, 비밀번호 변경과 같은 횟수 제한을 쓴다.
+     * 소셜로만 가입해 비밀번호가 없는 회원의 재인증은 스텝 20(T099)에서 더하고, 그 전에는 본인 확인 실패다.
      */
     private void confirm(Member member, String password) {
-        if (member.getPasswordHash() == null) {
-            throw new BusinessException(ErrorCode.LOGIN_FAILED);
-        }
-        attemptLimiter.attempt("password-change:" + member.getId(), () -> {
-            if (password == null || !passwordEncoder.matches(password, member.getPasswordHash())) {
-                throw new BusinessException(ErrorCode.LOGIN_FAILED);
-            }
-            return null;
-        }, e -> true);
+        credentialService.verifyCurrentPassword(member, password, () -> new BusinessException(ErrorCode.LOGIN_FAILED));
     }
 
 }

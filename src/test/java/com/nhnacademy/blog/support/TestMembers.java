@@ -1,6 +1,6 @@
 package com.nhnacademy.blog.support;
 
-import com.nhnacademy.blog.global.auth.AuthCookieManager;
+import com.nhnacademy.blog.auth.presentation.AuthCookieManager;
 import com.nhnacademy.blog.member.domain.Member;
 import com.nhnacademy.blog.member.domain.MemberRepository;
 import jakarta.servlet.http.Cookie;
