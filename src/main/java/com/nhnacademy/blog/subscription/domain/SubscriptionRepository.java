@@ -13,6 +13,10 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
 
     long countByBlogId(Long blogId);
 
+    /** 회원이 구독한 블로그 번호들(추천 블로그에서 빼려고, SUB-06). */
+    @Query("select s.blog.id from Subscription s where s.member.id = :memberId")
+    List<Long> findBlogIdsByMemberId(@Param("memberId") Long memberId);
+
     /**
      * 구독 넣기 (SUB-01). 이미 있으면 넣지 않는다. 넣은 행 수(0 또는 1)라 새로 구독했는지 알 수 있다(알림은 새 구독에만).
      * "있나 보고 넣기"를 두 번에 나누면 연타한 두 요청이 둘 다 넣으려다 하나가 UNIQUE 오류가 난다(공감과 같은 방법).

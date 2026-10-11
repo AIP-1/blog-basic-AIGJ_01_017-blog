@@ -41,6 +41,10 @@ public interface BlogRepository extends JpaRepository<Blog, Long>, JpaSpecificat
     @Query("update Blog b set b.movedToBlog = :target where b.movedToBlog.id = :blogId")
     int retarget(@Param("blogId") Long blogId, @Param("target") Blog target);
 
+    /** 여러 블로그를 주인과 함께(순위·추천 목록). */
+    @Query("select b from Blog b join fetch b.member where b.id in :ids")
+    List<Blog> findAllWithMemberByIdIn(@Param("ids") Collection<Long> ids);
+
     /** 회원의 블로그 전부(지운 것 포함), 만든 순서 (관리자 회원 상세). */
     List<Blog> findByMemberIdOrderById(Long memberId);
 
