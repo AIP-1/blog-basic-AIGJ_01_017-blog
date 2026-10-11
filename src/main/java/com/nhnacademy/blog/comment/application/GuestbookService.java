@@ -7,6 +7,7 @@ import com.nhnacademy.blog.global.auth.LoginMember;
 import com.nhnacademy.blog.global.error.BusinessException;
 import com.nhnacademy.blog.global.error.ErrorCode;
 import com.nhnacademy.blog.global.web.PageQuery;
+import com.nhnacademy.blog.manage.application.SpamGuard;
 import com.nhnacademy.blog.member.domain.MemberRepository;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
@@ -28,6 +29,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class GuestbookService {
 
+    private final SpamGuard spamGuard;
+
     public static final int PAGE_SIZE = 20;
 
     /** 최신순. 같은 시각이면 나중에 쓴 것(id가 큰 것)이 위. */
@@ -40,7 +43,9 @@ public class GuestbookService {
     private final Clock clock;
 
     public GuestbookService(GuestbookRepository guestbookRepository, MemberRepository memberRepository,
-                            CommentViews commentViews, Clock clock) {
+                            CommentViews commentViews, Clock clock,
+                            SpamGuard spamGuard) {
+        this.spamGuard = spamGuard;
         this.guestbookRepository = guestbookRepository;
         this.memberRepository = memberRepository;
         this.commentViews = commentViews;
@@ -82,9 +87,17 @@ public class GuestbookService {
         }
     }
 
+    /** 쓸 수 있나: 비회원 401 → 이 블로그에서 차단된 회원 403(MNG-04). 입력 검증(400)은 그다음이다. */
+    @Transactional(readOnly = true)
+    public void requireWritable(Blog blog, LoginMember member) {
+        requireMember(member);
+        spamGuard.requireNotBlocked(blog, member.id());
+    }
+
     @Transactional
     public CommentView write(Blog blog, LoginMember member, String content, Long parentId, boolean secret) {
-        requireMember(member);
+        requireWritable(blog, member);
+        spamGuard.requireNoBannedWord(blog, content);
         var author = memberRepository.getReferenceById(member.id());
         Guestbook saved = guestbookRepository.save(parentId == null
                 ? Guestbook.write(blog, author, content.trim(), secret)
