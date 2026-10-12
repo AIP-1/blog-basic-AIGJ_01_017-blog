@@ -40,6 +40,18 @@ app:
     # 개발에서 Mailpit으로 받아 보려면 config/application-dev.yml(git 제외, 틀은 .example)에서 smtp로 바꾼다
     sender: log
     from: "now-log <no-reply@now-log.java21.net>"
+  oauth:
+    # 카카오·구글 로그인 앱 키 (T099). 비밀 값이라 여기에는 두지 않는다.
+    # 개발: config/application-dev.yml(git 제외, 틀은 .example), 운영: APP_OAUTH_KAKAO_CLIENT_ID 같은 환경 변수.
+    # 비어 있으면 그 제공사 버튼은 "지금은 쓸 수 없습니다"로 돌아온다
+    kakao:
+      client-id: ""
+      client-secret: ""
+      redirect-uri: ""
+    google:
+      client-id: ""
+      client-secret: ""
+      redirect-uri: ""
   upload:
     dir: ${APP_UPLOAD_DIR:./uploads}
   domain:

@@ -1,10 +1,15 @@
 package com.nhnacademy.blog.auth.application;
 
 import com.nhnacademy.blog.auth.domain.PasswordRule;
+import com.nhnacademy.blog.auth.domain.SocialAccountRepository;
 import com.nhnacademy.blog.global.error.BusinessException;
 import com.nhnacademy.blog.global.error.ErrorCode;
 import com.nhnacademy.blog.member.domain.Member;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.function.Supplier;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -12,17 +17,54 @@ import org.springframework.stereotype.Service;
  * 본인 확인과 비밀번호 바꾸기 (인증의 입구, 스텝 19b). 회원 기능(비밀번호 변경 AUTH-05, 탈퇴 AUTH-06)은 비밀번호 해시나
  * 시도 횟수 제한을 직접 다루지 않고 이것만 부른다. 지금 비밀번호 확인은 어디서 하든 같은 횟수 제한(회원별 15분 5번, R-17)을
  * 같이 쓴다. 그래야 비밀번호 변경은 막혀도 탈퇴 화면으로 무작정 맞혀 보는 길이 생기지 않는다.
- * 스텝 20의 소셜 재인증(탈퇴용)도 여기에 더한다.
+ * 소셜 로그인(스텝 20, T099·T100)으로 연결된 소셜 계정 목록과, 소셜로 가입한 회원의 탈퇴 본인 확인(소셜 재인증)도 여기다.
  */
 @Service
 public class CredentialService {
 
+    static final Duration REAUTH_TTL = Duration.ofMinutes(10);
+    private static final String REAUTH_PREFIX = "oauth:reauth:";
+
     private final PasswordEncoder passwordEncoder;
     private final AttemptLimiter attemptLimiter;
+    private final SocialAccountRepository socialAccountRepository;
+    private final StringRedisTemplate redis;
 
-    public CredentialService(PasswordEncoder passwordEncoder, AttemptLimiter attemptLimiter) {
+    public CredentialService(PasswordEncoder passwordEncoder, AttemptLimiter attemptLimiter,
+                             SocialAccountRepository socialAccountRepository, StringRedisTemplate redis) {
         this.passwordEncoder = passwordEncoder;
         this.attemptLimiter = attemptLimiter;
+        this.socialAccountRepository = socialAccountRepository;
+        this.redis = redis;
+    }
+
+    /** 마이페이지에 보일 연결된 소셜 계정(OWN-03). provider는 KAKAO·GOOGLE, linkedAt은 연동한 때. 연동한 순서다. */
+    public record LinkedSocial(String provider, LocalDateTime linkedAt) {
+    }
+
+    public List<LinkedSocial> socialAccounts(Long memberId) {
+        return socialAccountRepository.findByMemberIdOrderByCreatedAtAscIdAsc(memberId).stream()
+                .map(account -> new LinkedSocial(account.getProvider().name(), account.getCreatedAt()))
+                .toList();
+    }
+
+    /**
+     * 탈퇴 본인 확인 (AUTH-06). password가 있으면 지금 비밀번호(틀리면 401 LOGIN_FAILED, 비밀번호 변경과 같은 횟수 제한),
+     * 없으면 10분 안에 소셜로 다시 로그인해 남긴 확인 표시를 쓴다(한 번만). 둘 다 아니면 401 LOGIN_FAILED.
+     */
+    public void verifyForWithdrawal(Member member, String password) {
+        if (password != null && !password.isEmpty()) {
+            verifyCurrentPassword(member, password, () -> new BusinessException(ErrorCode.LOGIN_FAILED));
+            return;
+        }
+        if (!Boolean.TRUE.equals(redis.delete(REAUTH_PREFIX + member.getId()))) {
+            throw new BusinessException(ErrorCode.LOGIN_FAILED);
+        }
+    }
+
+    /** 연결된 소셜 계정으로 다시 로그인했다(SocialAuthService의 reauth). 10분 안에 탈퇴하면 비밀번호 대신 쓴다. */
+    void markSocialReauthenticated(Long memberId) {
+        redis.opsForValue().set(REAUTH_PREFIX + memberId, "1", REAUTH_TTL);
     }
 
     /** 이메일 가입 회원인가(비밀번호가 있나). 소셜로만 가입한 회원은 false. */

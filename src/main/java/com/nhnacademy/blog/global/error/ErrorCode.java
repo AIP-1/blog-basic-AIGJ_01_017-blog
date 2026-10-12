@@ -12,6 +12,7 @@ public enum ErrorCode {
     INVALID_VERIFICATION_CODE(HttpStatus.BAD_REQUEST, "인증 코드가 맞지 않습니다."),
     VERIFICATION_EXPIRED(HttpStatus.BAD_REQUEST, "인증 코드가 만료되었습니다. 다시 요청해 주세요."),
     RESET_TOKEN_INVALID(HttpStatus.BAD_REQUEST, "재설정 링크가 올바르지 않거나 만료되었습니다."),
+    SOCIAL_SIGNUP_EXPIRED(HttpStatus.BAD_REQUEST, "소셜 가입 시간이 지났습니다. 소셜 로그인을 다시 해 주세요."),
     BLOG_ADDRESS_INVALID(HttpStatus.BAD_REQUEST, "블로그 주소를 확인해 주세요."),
     UNSUPPORTED_IMAGE(HttpStatus.BAD_REQUEST, "jpg, png, gif, webp 이미지만 올릴 수 있습니다. 파일 이름의 확장자도 실제 형식과 같아야 합니다."),
     IMAGE_TOO_LARGE(HttpStatus.BAD_REQUEST, "10MB 이하 이미지만 올릴 수 있습니다."),
