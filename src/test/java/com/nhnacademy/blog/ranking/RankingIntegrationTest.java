@@ -55,8 +55,9 @@ class RankingIntegrationTest extends IntegrationTestSupport {
 
     @BeforeEach
     void clearCaches() {
-        cacheManager.getCache(BloggerRanking.CACHE).clear();
-        cacheManager.getCache(PopularRanking.CACHE).clear();
+        // clear()는 지우기를 기다리지 않는다(Spring Data Redis 4). 다 지운 뒤 돌아오는 invalidate()를 쓴다
+        cacheManager.getCache(BloggerRanking.CACHE).invalidate();
+        cacheManager.getCache(PopularRanking.CACHE).invalidate();
     }
 
     @Test
