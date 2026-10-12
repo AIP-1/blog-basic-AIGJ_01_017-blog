@@ -1,10 +1,12 @@
 import { type ChangeEvent, type FormEvent, useEffect, useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import MeTabs from '../../components/MeTabs'
 import { ApiError, api, redirectToLogin, uploadFile } from '../../api/client'
 import { type FieldMessages, errorMessage, fieldMessages } from '../../api/errors'
 import type { Me, MyBlog } from '../../api/types'
+import { formatDate } from '../../app/format'
 import { PLATFORM_DOMAIN, blogUrl } from '../../app/host'
+import { SOCIAL_PROVIDERS, providerName, socialAuthorizeUrl, socialErrorMessage } from '../../app/social'
 import { shouldRedirectToLogin, useMe } from '../../app/useMe'
 import PlatformHeader from '../../components/PlatformHeader'
 
@@ -15,7 +17,7 @@ const MAX_BLOGS = 5
 /**
  * 마이페이지 (AUTH-05, BLOG-08). 플랫폼 주소의 /me에서 프로필 사진·닉네임·비밀번호를 바꾸고,
  * 내 블로그 목록과 대표 블로그, 새 블로그 만들기(활성 5개까지, BLOG-01)로 가는 입구를 둔다(스텝 13 보완).
- * 소셜 연동(OWN-03), 탈퇴(AUTH-06)는 뒤 스텝이다.
+ * 카카오·구글 계정 연동·해제(OWN-03, T100)와 탈퇴(AUTH-06)로 가는 입구도 여기다.
  */
 export default function MyPage() {
   const meState = useMe()
@@ -42,6 +44,7 @@ export default function MyPage() {
             {me.hasPassword
               ? <PasswordSection />
               : <p className="small muted">소셜 계정으로 가입해 비밀번호가 없습니다.</p>}
+            <SocialSection me={me} onChanged={setMe} />
             <section className="section">
               <h2>회원 탈퇴</h2>
               <p className="small muted" style={{ margin: 0 }}>블로그·글·댓글이 모두 삭제되고 되돌릴 수 없습니다.</p>
@@ -231,5 +234,55 @@ function PasswordSection() {
       {done && <p className="small" role="status">비밀번호를 바꿨습니다.</p>}
       <button className="btn primary" type="submit" disabled={!currentPassword || !newPassword}>변경</button>
     </form>
+  )
+}
+
+/**
+ * 소셜 계정 연동 (OWN-03, T100). 제공사마다 하나씩 연결하고 해제한다. 연결은 서버의 authorize?mode=link로 화면을 옮기고,
+ * 끝나면 서버가 /me?linked=google 또는 /me?error=…로 돌려보낸다. 로그인 수단이 하나도 남지 않으면 해제는 409다.
+ */
+function SocialSection({ me, onChanged }: { me: Me; onChanged: (me: Me) => void }) {
+  const [params, setParams] = useSearchParams()
+  const linked = params.get('linked')
+  const [error, setError] = useState<string | null>(socialErrorMessage(params.get('error')))
+  const [busy, setBusy] = useState(false)
+
+  async function unlink(path: string) {
+    setBusy(true)
+    setError(null)
+    setParams({}, { replace: true })
+    try {
+      await api(`/api/me/social/${path}`, { method: 'DELETE' })
+      onChanged(await api<Me>('/api/me'))
+    } catch (caught) {
+      setError(caught instanceof ApiError && caught.code === 'LAST_LOGIN_METHOD'
+        ? '로그인 수단이 하나도 남지 않아 해제할 수 없습니다.'
+        : errorMessage(caught))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <section className="section" aria-label="소셜 계정 연동">
+      <h3>소셜 계정 연동</h3>
+      <p className="small muted" style={{ margin: 0 }}>다른 소셜 계정도 연결해 두면 로그인 수단을 잃었을 때 대비할 수 있어요.</p>
+      {SOCIAL_PROVIDERS.map((provider) => {
+        const account = me.socialAccounts.find((social) => social.provider === provider.key)
+        return (
+          <div key={provider.path} className="row between">
+            <span>
+              <b>{provider.name}</b>{' '}
+              <span className="small muted">{account ? `연결됨 ${formatDate(account.linkedAt)}` : '연결 안 됨'}</span>
+            </span>
+            {account
+              ? <button className="btn" type="button" disabled={busy} onClick={() => unlink(provider.path)}>해제</button>
+              : <a className="btn" href={socialAuthorizeUrl(provider.path, 'link')}>연결</a>}
+          </div>
+        )
+      })}
+      {linked && !error && <p className="ok">{providerName(linked)} 계정을 연결했습니다.</p>}
+      {error && <p className="err" role="alert">{error}</p>}
+    </section>
   )
 }

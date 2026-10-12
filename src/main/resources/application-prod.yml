@@ -7,6 +7,18 @@ server:
   forward-headers-strategy: native
 
 spring:
+  # 메일 발송 SMTP (T088). Gmail: 2단계 인증을 켠 계정의 앱 비밀번호(16자리)
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
@@ -27,6 +39,23 @@ app:
       username: ${RECOMMEND_DB_USERNAME:}
       password: ${RECOMMEND_DB_PASSWORD:}
     ollama-url: ${OLLAMA_URL:}
+  mail:
+    # 메일 계정(MAIL_PASSWORD)이 있으면 deploy.sh가 smtp로, 없으면 log(서버 로그에만)로 정한다.
+    # Gmail은 보낸 사람이 그 Gmail 주소여야 한다
+    sender: ${APP_MAIL_SENDER:log}
+    from: "now-log <${MAIL_USERNAME:no-reply@now-log.java21.net}>"
+  oauth:
+    # 카카오·구글 로그인 (T099). 키가 비어 있으면 그 제공사 버튼은 "지금은 쓸 수 없습니다"로 돌아온다.
+    # 리다이렉트 URI는 제공사 콘솔에 등록한 주소와 같아야 한다
+    kakao:
+      client-id: ${KAKAO_CLIENT_ID:}
+      client-secret: ${KAKAO_CLIENT_SECRET:}
+      redirect-uri: http://now-log.java21.net/api/auth/oauth/kakao/callback
+    google:
+      # 구글은 리다이렉트 URI가 https여야 한다. 학교 nginx가 https를 받기 전까지는 키를 넣어도 쓸 수 없다
+      client-id: ${GOOGLE_CLIENT_ID:}
+      client-secret: ${GOOGLE_CLIENT_SECRET:}
+      redirect-uri: https://now-log.java21.net/api/auth/oauth/google/callback
   upload:
     dir: ${APP_UPLOAD_DIR}
   domain:

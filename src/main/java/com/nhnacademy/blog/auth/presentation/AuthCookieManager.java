@@ -35,6 +35,9 @@ public class AuthCookieManager {
     public static final String DEVICE_COOKIE = "device";
     private static final Duration DEVICE_TTL = Duration.ofDays(365);
     public static final String REFRESH_COOKIE = "refresh_token";
+    /** 소셜 로그인 state (T099). 시작한 브라우저와 끝내는 브라우저가 같은지 본다. */
+    public static final String OAUTH_STATE_COOKIE = "oauth_state";
+    private static final String OAUTH_PATH = "/api/auth/oauth";
 
     private final JwtTokenProvider tokenProvider;
     private final TokenStore tokenStore;
@@ -87,6 +90,29 @@ public class AuthCookieManager {
      */
     public void issueDevice(HttpServletResponse response, Long memberId) {
         addCookie(response, DEVICE_COOKIE, deviceTokens.issue(memberId), DEVICE_TTL);
+    }
+
+    /**
+     * 소셜 로그인 state 쿠키 (T099). 블로그 주소와 나눌 필요가 없어 지금 주소(플랫폼)에만 두고(Domain 없음),
+     * /api/auth/oauth 아래에만 보낸다. 제공사에서 돌아오는 이동은 다른 사이트에서 오는 GET이라 SameSite=Lax여야 따라온다.
+     */
+    public void issueOAuthState(HttpServletResponse response, String state, Duration maxAge) {
+        response.addHeader(HttpHeaders.SET_COOKIE, oauthStateCookie(state, maxAge));
+    }
+
+    public void clearOAuthState(HttpServletResponse response) {
+        response.addHeader(HttpHeaders.SET_COOKIE, oauthStateCookie("", Duration.ZERO));
+    }
+
+    private String oauthStateCookie(String value, Duration maxAge) {
+        return ResponseCookie.from(OAUTH_STATE_COOKIE, value)
+                .path(OAUTH_PATH)
+                .httpOnly(true)
+                .secure(authProperties.cookieSecure())
+                .sameSite("Lax")
+                .maxAge(maxAge)
+                .build()
+                .toString();
     }
 
     /** 쿠키만 지운다. 정지·탈퇴 회원이나 망가진 토큰일 때 쓴다. */

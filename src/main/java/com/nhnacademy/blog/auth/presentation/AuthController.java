@@ -4,6 +4,7 @@ import com.nhnacademy.blog.auth.application.AuthService;
 import com.nhnacademy.blog.auth.presentation.dto.LoginRequest;
 import com.nhnacademy.blog.auth.presentation.dto.NicknameAvailabilityResponse;
 import com.nhnacademy.blog.auth.presentation.dto.SignupRequest;
+import com.nhnacademy.blog.global.host.BlogHostResolver;
 import com.nhnacademy.blog.member.application.MeService;
 import com.nhnacademy.blog.member.domain.Member;
 import com.nhnacademy.blog.member.presentation.dto.MeResponse;
@@ -30,11 +31,14 @@ public class AuthController {
     private final AuthService authService;
     private final MeService meService;
     private final AuthCookieManager cookieManager;
+    private final BlogHostResolver hostResolver;
 
-    public AuthController(AuthService authService, MeService meService, AuthCookieManager cookieManager) {
+    public AuthController(AuthService authService, MeService meService, AuthCookieManager cookieManager,
+                          BlogHostResolver hostResolver) {
         this.authService = authService;
         this.meService = meService;
         this.cookieManager = cookieManager;
+        this.hostResolver = hostResolver;
     }
 
     /** 가입하면 바로 로그인된다(로그인 유지는 고르지 않은 상태). */
@@ -46,11 +50,15 @@ public class AuthController {
         return MeResponse.from(meService.me(member.getId()));
     }
 
-    /** 로그인 유지(rememberMe)를 고르면 14일, 아니면 브라우저를 닫거나 30분 동안 요청이 없으면 끝난다 (AUTH-03). */
+    /**
+     * 로그인 유지(rememberMe)를 고르면 14일, 아니면 브라우저를 닫거나 30분 동안 요청이 없으면 끝난다 (AUTH-03).
+     * 이 이메일이 틀린 횟수로 막히면 그 이메일로 재설정 링크가 든 안내 메일이 간다(T088).
+     */
     @PostMapping("/api/auth/login")
     public MeResponse login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest,
                             HttpServletResponse response) {
-        Member member = authService.login(request.email(), request.password(), cookieManager.deviceToken(httpRequest));
+        Member member = authService.login(request.email(), request.password(), cookieManager.deviceToken(httpRequest),
+                PasswordResetController.linkBase(hostResolver, httpRequest));
         cookieManager.login(response, member, request.keepLoggedIn());
         cookieManager.issueDevice(response, member.getId());
         return MeResponse.from(meService.me(member.getId()));

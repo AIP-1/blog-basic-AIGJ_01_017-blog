@@ -40,7 +40,8 @@ public class MeService {
         String profileImageUrl = member.getProfileImageId() == null ? null
                 : imageRepository.findById(member.getProfileImageId()).map(Image::getThumbnailPath).orElse(null);
         return new MeResult(member, blogRepository.findPrimaryByMemberId(memberId).orElse(null), profileImageUrl,
-                notificationRepository.countByReceiverIdAndReadAtIsNull(memberId));
+                notificationRepository.countByReceiverIdAndReadAtIsNull(memberId),
+                credentialService.socialAccounts(memberId));
     }
 
     /**

@@ -1,13 +1,15 @@
 package com.nhnacademy.blog.member.presentation.dto;
 
 import com.nhnacademy.blog.blog.domain.Blog;
+import com.nhnacademy.blog.global.web.DateTimes;
 import com.nhnacademy.blog.member.application.MeResult;
 import com.nhnacademy.blog.member.domain.Member;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 /**
  * Me (contracts/rest-api.md 주요 응답 객체). GET /api/me, 가입, 로그인이 같이 쓴다.
- * 프로필 이미지는 회원정보 수정(스텝 9)에서 채웠다. 소셜 연동(백로그), 알림(백로그)은 기능이 생기면 채운다.
+ * email은 소셜로 가입한 회원이면 null, hasPassword는 이메일 가입 회원만 true, socialAccounts는 연결된 소셜 계정(T100).
  */
 public record MeResponse(Long id, String email, String nickname, String profileImageUrl, String role,
                          boolean hasPassword, BlogRef primaryBlog, List<SocialAccount> socialAccounts,
@@ -21,14 +23,17 @@ public record MeResponse(Long id, String email, String nickname, String profileI
 
     }
 
-    public record SocialAccount(String provider, String linkedAt) {
+    public record SocialAccount(String provider, OffsetDateTime linkedAt) {
     }
 
     public static MeResponse from(MeResult result) {
         Member member = result.member();
         return new MeResponse(member.getId(), member.getEmail(), member.getNickname(), result.profileImageUrl(),
                 member.getRole().name(), member.getPasswordHash() != null, BlogRef.from(result.primaryBlog()),
-                List.of(), result.unreadNotificationCount());
+                result.socialAccounts().stream()
+                        .map(account -> new SocialAccount(account.provider(), DateTimes.toOffset(account.linkedAt())))
+                        .toList(),
+                result.unreadNotificationCount());
     }
 
 }
