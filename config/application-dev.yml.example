@@ -12,6 +12,8 @@
 
 app:
   oauth:
+    # 콜백(리다이렉트 URI)은 localhost여도 된다. 서버가 코드를 받은 뒤 로그인을 시작한 blog.test 주소로 다시 보내
+    # 거기서 로그인 쿠키를 준다. 구글은 https가 아니면 localhost만 받으므로 개발에서는 localhost로 둔다.
     # 카카오 developers → 내 애플리케이션 → 앱 키의 REST API 키, 클라이언트 시크릿(활성화 ON)
     kakao:
       client-id: ""
