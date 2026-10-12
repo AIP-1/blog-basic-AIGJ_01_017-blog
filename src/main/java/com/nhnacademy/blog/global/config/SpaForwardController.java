@@ -169,7 +169,8 @@ public class SpaForwardController {
                     .append("\">\n");
         }
         if (preview.imagePath() != null) {
-            tags.append(meta("og:image", blogAddressResolver.blogUrl(request, blog, preview.imagePath())));
+            // 이미지는 블로그 경로가 아니라 /uploads/…에서 나간다(스텝 21)
+            tags.append(meta("og:image", blogAddressResolver.platformUrl(request, preview.imagePath())));
         }
         tags.append("<meta name=\"twitter:card\" content=\"")
                 .append(preview.imagePath() != null ? "summary_large_image" : "summary").append("\">\n");

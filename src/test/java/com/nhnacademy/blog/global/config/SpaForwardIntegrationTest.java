@@ -200,7 +200,7 @@ class SpaForwardIntegrationTest extends IntegrationTestSupport {
                 .contains("<meta property=\"og:title\" content=\"&lt;b&gt;제목&quot;&gt;&lt;script&gt;alert(1)&lt;/script&gt;\">")
                 .contains("<meta property=\"og:description\" content=\"요약 &amp; 소개\">")
                 .contains("<meta property=\"og:url\" content=\"" + TestBlogs.url(blog, "/" + post.getId()) + "\">")
-                .contains("<meta property=\"og:image\" content=\"" + TestBlogs.url(blog, "/uploads/t_og-" + blog.getAddress() + ".png") + "\">")
+                .contains("<meta property=\"og:image\" content=\"http://blog.test/uploads/t_og-" + blog.getAddress() + ".png\">")
                 .contains("<meta property=\"og:site_name\" content=\"" + blog.getName() + "\">")
                 .contains("<title>&lt;b&gt;제목")
                 // 사용자가 쓴 글자가 태그로 끼어들지 않는다
