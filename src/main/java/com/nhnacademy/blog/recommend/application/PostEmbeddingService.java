@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 /**
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Service;
  * 임베딩 서버(Ollama)가 꺼져 있거나 실패해도 예외를 밖으로 던지지 않고 경고만 남긴다. 추천은 부가 기능이라
  * 글 쓰기나 서버 시작을 막지 않는다. 그 글은 임베딩이 없어 추천이 빈 배열이 된다.
  */
+@ConditionalOnProperty(name = "app.recommend.enabled", havingValue = "true", matchIfMissing = true)
 @Service
 public class PostEmbeddingService {
 

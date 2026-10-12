@@ -2,6 +2,7 @@ package com.nhnacademy.blog.recommend.application;
 
 import com.nhnacademy.blog.post.application.PostContentChangedEvent;
 import com.nhnacademy.blog.post.application.PostDeletedEvent;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
@@ -16,6 +17,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
  *   <li>{@code @Async}: 다른 스레드에서 돈다. 글 저장 응답이 임베딩 계산(수백 ms~수 초)을 기다리지 않는다.</li>
  * </ul>
  */
+@ConditionalOnProperty(name = "app.recommend.enabled", havingValue = "true", matchIfMissing = true)
 @Component
 public class PostEmbeddingListener {
 

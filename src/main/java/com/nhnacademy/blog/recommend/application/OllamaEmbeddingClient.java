@@ -3,6 +3,7 @@ package com.nhnacademy.blog.recommend.application;
 import com.nhnacademy.blog.recommend.config.RecommendProperties;
 import java.net.http.HttpClient;
 import java.util.List;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
@@ -12,6 +13,7 @@ import org.springframework.web.client.RestClient;
  * Ollama의 임베딩 API를 부른다 (R-02). POST {ollama}/api/embed { model, input } → { embeddings: [[...]] }.
  * bge-m3는 정규화된(길이 1) 1024차원 벡터를 준다.
  */
+@ConditionalOnProperty(name = "app.recommend.enabled", havingValue = "true", matchIfMissing = true)
 @Component
 public class OllamaEmbeddingClient implements EmbeddingClient {
 

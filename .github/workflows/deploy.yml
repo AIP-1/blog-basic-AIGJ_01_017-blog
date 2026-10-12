@@ -1,0 +1,68 @@
+# main에 병합되면 테스트 → 앱 이미지 빌드 → 실습 서버로 보내 deploy/deploy.sh 실행.
+# Actions 탭의 "Run workflow"로 손으로 다시 돌릴 수도 있다.
+# 값은 저장소 Settings → Secrets and variables → Actions의 Repository secrets에서 온다.
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# 배포가 겹치지 않게 하나씩
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      # Testcontainers가 러너의 docker로 MySQL·Redis·PostgreSQL을 띄운다
+      - run: ./mvnw -B test
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 앱 이미지 빌드
+        run: |
+          docker build -t aigj017/now-log:latest .
+          docker save aigj017/now-log:latest | gzip > now-log.tar.gz
+
+      - name: 서버로 이미지·스크립트 보내기 (~/now-log)
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.SSH_ADDRESS }}
+          port: ${{ secrets.SSH_PORT }}
+          username: ${{ secrets.SSH_ID }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          source: now-log.tar.gz,deploy/deploy.sh
+          target: now-log
+          strip_components: 0
+
+      - name: 서버에서 실행
+        uses: appleboy/ssh-action@v1
+        env:
+          DB_ADDRESS: ${{ secrets.DB_ADDRESS }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        with:
+          host: ${{ secrets.SSH_ADDRESS }}
+          port: ${{ secrets.SSH_PORT }}
+          username: ${{ secrets.SSH_ID }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          envs: DB_ADDRESS,DB_PORT,DB_NAME,DB_USERNAME,DB_PASSWORD,REDIS_PASSWORD,JWT_SECRET
+          command_timeout: 10m
+          script: bash ~/now-log/deploy/deploy.sh
