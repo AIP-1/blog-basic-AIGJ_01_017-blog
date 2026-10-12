@@ -17,7 +17,7 @@ const MAX_BLOGS = 5
 /**
  * 마이페이지 (AUTH-05, BLOG-08). 플랫폼 주소의 /me에서 프로필 사진·닉네임·비밀번호를 바꾸고,
  * 내 블로그 목록과 대표 블로그, 새 블로그 만들기(활성 5개까지, BLOG-01)로 가는 입구를 둔다(스텝 13 보완).
- * 카카오·구글 계정 연동·해제(OWN-03, T100)와 탈퇴(AUTH-06)로 가는 입구도 여기다.
+ * 카카오 계정 연동·해제(OWN-03, T100)와 탈퇴(AUTH-06)로 가는 입구도 여기다.
  */
 export default function MyPage() {
   const meState = useMe()
@@ -238,8 +238,8 @@ function PasswordSection() {
 }
 
 /**
- * 소셜 계정 연동 (OWN-03, T100). 제공사마다 하나씩 연결하고 해제한다. 연결은 서버의 authorize?mode=link로 화면을 옮기고,
- * 끝나면 서버가 /me?linked=google 또는 /me?error=…로 돌려보낸다. 로그인 수단이 하나도 남지 않으면 해제는 409다.
+ * 소셜 계정 연동 (OWN-03, T100). 카카오 계정 하나를 연결하고 해제한다. 연결은 서버의 authorize?mode=link로 화면을 옮기고,
+ * 끝나면 서버가 /me?linked=kakao 또는 /me?error=…로 돌려보낸다. 로그인 수단이 하나도 남지 않으면 해제는 409다.
  */
 function SocialSection({ me, onChanged }: { me: Me; onChanged: (me: Me) => void }) {
   const [params, setParams] = useSearchParams()
@@ -266,7 +266,7 @@ function SocialSection({ me, onChanged }: { me: Me; onChanged: (me: Me) => void 
   return (
     <section className="section" aria-label="소셜 계정 연동">
       <h3>소셜 계정 연동</h3>
-      <p className="small muted" style={{ margin: 0 }}>다른 소셜 계정도 연결해 두면 로그인 수단을 잃었을 때 대비할 수 있어요.</p>
+      <p className="small muted" style={{ margin: 0 }}>카카오 계정을 연결해 두면 비밀번호를 잊었을 때도 카카오로 로그인할 수 있어요.</p>
       {SOCIAL_PROVIDERS.map((provider) => {
         const account = me.socialAccounts.find((social) => social.provider === provider.key)
         return (
