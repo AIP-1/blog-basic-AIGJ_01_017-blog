@@ -16,15 +16,16 @@ spring:
       # 실습 서버에 직접 띄운 Redis(docker-compose.prod.yml, 8465)
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:8465}
-      password: ${REDIS_PASSWORD:}
+      password: ${REDIS_PASSWORD}
 
 app:
   recommend:
+    # 실습 서버에 직접 띄운 PostgreSQL(pgvector)(docker-compose.prod.yml, 8466)
     datasource:
-      url: ${RECOMMEND_DB_URL}
-      username: ${RECOMMEND_DB_USERNAME}
+      url: ${RECOMMEND_DB_URL:jdbc:postgresql://localhost:8466/recommend}
+      username: ${RECOMMEND_DB_USERNAME:blog}
       password: ${RECOMMEND_DB_PASSWORD}
-    # 실습 서버에 직접 띄운 Ollama(docker-compose.prod.yml, 8468)
+    # 실습 서버에  직접 띄운 Ollama(docker-compose.prod.yml, 8468)
     ollama-url: ${OLLAMA_URL:http://localhost:8468}
   upload:
     dir: ${APP_UPLOAD_DIR}

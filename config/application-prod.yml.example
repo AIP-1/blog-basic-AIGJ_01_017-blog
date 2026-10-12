@@ -25,12 +25,11 @@ spring:
 
 app:
   recommend:
-    # 학교에서 받은 PostgreSQL. DB nhnacademy를 여러 학생이 같이 쓰고, 내 것은 스키마 cf_u31_d2다.
-    # currentSchema 뒤의 public은 지우지 않는다: pgvector의 vector 타입이 public 스키마에 있으면
-    # 그 스키마도 찾아봐야 post_embedding 표를 만들 수 있다. 표는 맨 앞 스키마(cf_u31_d2)에 생긴다.
+    # 실습 서버에 직접 띄운 PostgreSQL(pgvector) (docker-compose.prod.yml). 학교 PostgreSQL은 pgvector 설치 권한이 없어 쓰지 않는다.
+    # 비밀번호는 .env의 POSTGRES_PASSWORD와 같게
     datasource:
-      url: jdbc:postgresql://s3.java21.net:8000/nhnacademy?currentSchema=cf_u31_d2,public
-      username: cf_u31_d2
+      url: jdbc:postgresql://localhost:8466/recommend
+      username: blog
       password: ""
     # 실습 서버에 직접 띄운 Ollama (docker-compose.prod.yml)
     ollama-url: http://localhost:8468
