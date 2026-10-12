@@ -122,7 +122,7 @@ class LikeIntegrationTest extends IntegrationTestSupport {
     }
 
     private ResultActions send(MockHttpServletRequestBuilder request, Cookie[] cookies) throws Exception {
-        request.header(HttpHeaders.HOST, TestBlogs.host(blog)).header("X-Requested-With", "XMLHttpRequest");
+        request.header(TestBlogs.HEADER, blog.getAddress()).header("X-Requested-With", "XMLHttpRequest");
         if (cookies != null) {
             request.cookie(cookies);
         }

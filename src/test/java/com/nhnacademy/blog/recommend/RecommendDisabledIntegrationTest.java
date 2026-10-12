@@ -54,16 +54,16 @@ class RecommendDisabledIntegrationTest extends IntegrationTestSupport {
         long publicPost = publish(blog, owner, "PUBLIC");
         long privatePost = publish(blog, owner, "PRIVATE");
 
-        mockMvc.perform(get("/api/posts/" + publicPost + "/similar").header(HttpHeaders.HOST, TestBlogs.host(blog)))
+        mockMvc.perform(get("/api/posts/" + publicPost + "/similar").header(TestBlogs.HEADER, blog.getAddress()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
-        mockMvc.perform(get("/api/posts/" + privatePost + "/similar").header(HttpHeaders.HOST, TestBlogs.host(blog)))
+        mockMvc.perform(get("/api/posts/" + privatePost + "/similar").header(TestBlogs.HEADER, blog.getAddress()))
                 .andExpect(status().isNotFound());
     }
 
     private long publish(Blog blog, Cookie[] cookies, String visibility) throws Exception {
         String response = mockMvc.perform(post("/api/posts")
-                        .header(HttpHeaders.HOST, TestBlogs.host(blog))
+                        .header(TestBlogs.HEADER, blog.getAddress())
                         .header("X-Requested-With", "XMLHttpRequest")
                         .header("Idempotency-Key", UUID.randomUUID().toString())
                         .contentType(MediaType.APPLICATION_JSON)

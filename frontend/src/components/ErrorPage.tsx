@@ -1,6 +1,6 @@
 import { Link } from 'react-router'
 import { loginUrl } from '../api/client'
-import { parseHost, platformUrl } from '../app/host'
+import { parseLocation, platformUrl } from '../app/host'
 
 const MESSAGES = {
   401: { title: '로그인이 필요합니다', body: '로그인하면 보던 화면으로 돌아옵니다.' },
@@ -24,7 +24,7 @@ export default function ErrorPage({ status, message }: { status: keyof typeof ME
         {status === 401
           ? <a className="btn primary" href={loginUrl()}>로그인</a>
           : <a className="btn" href={platformUrl('/')}>홈으로</a>}
-        {status === 403 && parseHost(window.location.hostname).kind === 'blog'
+        {status === 403 && parseLocation(window.location.pathname).kind === 'blog'
           && <Link className="btn" to="/">이 블로그 처음으로</Link>}
       </div>
     </main>

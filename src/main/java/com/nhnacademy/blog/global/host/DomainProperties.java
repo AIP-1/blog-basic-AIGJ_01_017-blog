@@ -3,18 +3,9 @@ package com.nhnacademy.blog.global.host;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * 플랫폼 주소 설정. 블로그 주소는 {address}.{platform}이고, 로그인 쿠키는 .{platform}에 둔다.
+ * 플랫폼 주소 설정. 블로그 주소는 {platform}/@{address} 경로다(스텝 21, 2026-10-12 지원 결정).
+ * 로그인·방문 쿠키는 이 주소 하나에서만 쓰므로 Domain을 따로 두지 않는다.
  */
 @ConfigurationProperties(prefix = "app.domain")
 public record DomainProperties(String platform) {
-
-    /** 모든 블로그 주소가 함께 받는 쿠키 도메인. */
-    public String cookieDomain() {
-        return "." + platform;
-    }
-
-    public String blogHost(String address) {
-        return address + "." + platform;
-    }
-
 }

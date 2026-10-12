@@ -142,7 +142,7 @@ class GlobalSearchIntegrationTest extends IntegrationTestSupport {
 
         post(aliceBlog, word + " 앨리스", "본문", Visibility.PUBLIC, 1);
         post(bobBlog, word + " 밥", "본문", Visibility.PUBLIC, 1);
-        mockMvc.perform(get("/api/search").param("q", word).header(HttpHeaders.HOST, TestBlogs.host(aliceBlog)))
+        mockMvc.perform(get("/api/search").param("q", word).header(TestBlogs.HEADER, aliceBlog.getAddress()))
                 .andExpect(jsonPath("$.content", hasSize(1)))
                 .andExpect(jsonPath("$.content[0].blog.address").value(aliceBlog.getAddress()));
     }

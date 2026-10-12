@@ -192,7 +192,7 @@ class ImageUploadIntegrationTest extends IntegrationTestSupport {
         String url = JsonPath.read(uploaded, "$.url");
         String thumbnailUrl = JsonPath.read(uploaded, "$.thumbnailUrl");
         mockMvc.perform(post("/api/posts")
-                        .header("Host", TestBlogs.host(blog))
+                        .header(TestBlogs.HEADER, blog.getAddress())
                         .header("X-Requested-With", "XMLHttpRequest")
                         .header("Idempotency-Key", UUID.randomUUID().toString())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -201,7 +201,7 @@ class ImageUploadIntegrationTest extends IntegrationTestSupport {
                         .cookie(cookies))
                 .andExpect(status().isCreated());
 
-        mockMvc.perform(get("/api/posts").header("Host", TestBlogs.host(blog)))
+        mockMvc.perform(get("/api/posts").header(TestBlogs.HEADER, blog.getAddress()))
                 .andExpect(jsonPath("$.content[0].thumbnailUrl").value(thumbnailUrl));
     }
 

@@ -34,19 +34,19 @@ class CurrentBlogIntegrationTest extends IntegrationTestSupport {
     void subdomainResolvesToBlog() throws Exception {
         Blog blog = testBlogs.create(testMembers.create());
 
-        mockMvc.perform(get("/api/test/blog").header("Host", TestBlogs.host(blog) + ":8080"))
+        mockMvc.perform(get("/api/test/blog").header(TestBlogs.HEADER, blog.getAddress().toUpperCase()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.address").value(blog.getAddress()));
     }
 
     @Test
     void platformOrUnknownAddressIsNotFound() throws Exception {
-        mockMvc.perform(get("/api/test/blog").header("Host", "blog.test"))
+        mockMvc.perform(get("/api/test/blog"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("NOT_FOUND"));
-        mockMvc.perform(get("/api/test/blog").header("Host", "nobody-here.blog.test"))
+        mockMvc.perform(get("/api/test/blog").header(TestBlogs.HEADER, "nobody-here"))
                 .andExpect(status().isNotFound());
-        mockMvc.perform(get("/api/test/blog").header("Host", "admin.blog.test"))
+        mockMvc.perform(get("/api/test/blog").header(TestBlogs.HEADER, "admin"))
                 .andExpect(status().isNotFound());
     }
 
@@ -56,7 +56,7 @@ class CurrentBlogIntegrationTest extends IntegrationTestSupport {
         Blog blog = testBlogs.create(owner);
         testBlogs.delete(blog);
 
-        mockMvc.perform(get("/api/test/blog").header("Host", TestBlogs.host(blog))
+        mockMvc.perform(get("/api/test/blog").header(TestBlogs.HEADER, blog.getAddress())
                         .cookie(testMembers.loginCookies(owner)))
                 .andExpect(status().isNotFound());
     }
@@ -67,15 +67,15 @@ class CurrentBlogIntegrationTest extends IntegrationTestSupport {
         Blog restricted = testBlogs.create(owner);
         testBlogs.restrict(restricted);
 
-        mockMvc.perform(get("/api/test/blog").header("Host", TestBlogs.host(restricted)))
+        mockMvc.perform(get("/api/test/blog").header(TestBlogs.HEADER, restricted.getAddress()))
                 .andExpect(status().isNotFound());
-        mockMvc.perform(get("/api/test/blog").header("Host", TestBlogs.host(restricted))
+        mockMvc.perform(get("/api/test/blog").header(TestBlogs.HEADER, restricted.getAddress())
                         .cookie(testMembers.loginCookies(owner)))
                 .andExpect(status().isOk());
 
         Blog suspendedOwners = testBlogs.create(testMembers.create());
         testBlogs.suspendOwner(suspendedOwners);
-        mockMvc.perform(get("/api/test/blog").header("Host", TestBlogs.host(suspendedOwners)))
+        mockMvc.perform(get("/api/test/blog").header(TestBlogs.HEADER, suspendedOwners.getAddress()))
                 .andExpect(status().isNotFound());
     }
 
@@ -85,9 +85,9 @@ class CurrentBlogIntegrationTest extends IntegrationTestSupport {
         Blog oldBlog = testBlogs.create(owner);
         testBlogs.move(oldBlog, testBlogs.create(owner));
 
-        mockMvc.perform(get("/api/test/blog").header("Host", TestBlogs.host(oldBlog)))
+        mockMvc.perform(get("/api/test/blog").header(TestBlogs.HEADER, oldBlog.getAddress()))
                 .andExpect(status().isNotFound());
-        mockMvc.perform(get("/api/test/blog").header("Host", TestBlogs.host(oldBlog))
+        mockMvc.perform(get("/api/test/blog").header(TestBlogs.HEADER, oldBlog.getAddress())
                         .cookie(testMembers.loginCookies(owner)))
                 .andExpect(status().isOk());
     }
@@ -108,13 +108,13 @@ class CurrentBlogIntegrationTest extends IntegrationTestSupport {
 
     @Test
     void missingBlogIs404BeforeLoginCheck() throws Exception {
-        mockMvc.perform(put("/api/test/blog/settings").header("Host", "nobody-here.blog.test")
+        mockMvc.perform(put("/api/test/blog/settings").header(TestBlogs.HEADER, "nobody-here")
                         .header(CsrfHeaderFilter.HEADER, CsrfHeaderFilter.EXPECTED_VALUE))
                 .andExpect(status().isNotFound());
     }
 
     private MockHttpServletRequestBuilder settings(Blog blog) {
-        return put("/api/test/blog/settings").header("Host", TestBlogs.host(blog))
+        return put("/api/test/blog/settings").header(TestBlogs.HEADER, blog.getAddress())
                 .header(CsrfHeaderFilter.HEADER, CsrfHeaderFilter.EXPECTED_VALUE);
     }
 

@@ -27,7 +27,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * 글. id가 곧 글 주소 번호다({address}.blog.com/{id}). 이사하면 blog가 바뀐다.
+ * 글. id가 곧 글 주소 번호다(blog.com/@{address}/{id}). 이사하면 blog가 바뀐다.
  */
 @Entity
 @Table(name = "post")

@@ -1,8 +1,8 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
-  /** 플랫폼 주소. 개발 blog.test, 운영 blog.com */
-  readonly VITE_PLATFORM_DOMAIN?: string
+  /** 블로그 주소는 같은 출처의 /@주소 경로라(스텝 21) 플랫폼 주소 설정이 따로 없다 */
+  readonly MODE: string
 }
 
 interface ImportMeta {

@@ -5,7 +5,7 @@ import { ApiError, api, redirectToLogin, uploadFile } from '../../api/client'
 import { type FieldMessages, errorMessage, fieldMessages } from '../../api/errors'
 import type { Me, MyBlog } from '../../api/types'
 import { formatDate } from '../../app/format'
-import { PLATFORM_DOMAIN, blogUrl } from '../../app/host'
+import { blogDisplayAddress, blogUrl } from '../../app/host'
 import { SOCIAL_PROVIDERS, providerName, socialAuthorizeUrl, socialErrorMessage } from '../../app/social'
 import { shouldRedirectToLogin, useMe } from '../../app/useMe'
 import PlatformHeader from '../../components/PlatformHeader'
@@ -100,7 +100,7 @@ function MyBlogsSection({ onPrimaryChanged }: { onPrimaryChanged: (me: Me) => vo
                   {blog.isPrimary && <span className="chip brand">대표</span>}
                 </div>
                 <span className="small muted">
-                  {blog.address}.{PLATFORM_DOMAIN} · 글 {blog.postCount}
+                  {blogDisplayAddress(blog.address)} · 글 {blog.postCount}
                   {blog.movedTo && ` · ${blog.movedTo}(으)로 이사함`}
                 </span>
               </div>

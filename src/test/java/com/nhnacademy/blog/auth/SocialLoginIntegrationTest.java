@@ -77,8 +77,8 @@ class SocialLoginIntegrationTest extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.code").value("SOCIAL_SIGNUP_EXPIRED"));
 
         // 다음부터는 같은 카카오 계정이면 그 회원으로 로그인하고, 돌아갈 곳으로 간다
-        Flow again = flow("kakao", "login", "http://alpha.blog.test/12", kakaoId, new Cookie[0]);
-        assertThat(again.location()).isEqualTo("http://alpha.blog.test/12");
+        Flow again = flow("kakao", "login", "http://blog.test/@alpha/12", kakaoId, new Cookie[0]);
+        assertThat(again.location()).isEqualTo("http://blog.test/@alpha/12");
         assertThat(again.loginCookies()).isNotEmpty();
         mockMvc.perform(get("/api/me").cookie(again.loginCookies()))
                 .andExpect(jsonPath("$.nickname").value(nickname));

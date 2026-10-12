@@ -74,7 +74,7 @@ class CategoryIntegrationTest extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.sortOrder").value(0));
         create(ownerCookies, "{\"name\":\"여행\"}").andExpect(jsonPath("$.sortOrder").value(1));
 
-        mockMvc.perform(get("/api/categories").header(HttpHeaders.HOST, TestBlogs.host(blog)))
+        mockMvc.perform(get("/api/categories").header(TestBlogs.HEADER, blog.getAddress()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.categories[*].name", contains("개발", "여행")));
     }
@@ -91,7 +91,7 @@ class CategoryIntegrationTest extends IntegrationTestSupport {
         Member other = testMembers.create();
         Blog otherBlog = testBlogs.create(other);
         mockMvc.perform(post("/api/categories")
-                        .header(HttpHeaders.HOST, TestBlogs.host(otherBlog))
+                        .header(TestBlogs.HEADER, otherBlog.getAddress())
                         .header("X-Requested-With", "XMLHttpRequest")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Java\"}")
@@ -123,7 +123,7 @@ class CategoryIntegrationTest extends IntegrationTestSupport {
         // 상위와 같은 이름의 하위는 된다(자리가 다르다)
         create(ownerCookies, "{\"name\":\"개발\",\"parentId\":" + parent + "}").andExpect(status().isCreated());
 
-        mockMvc.perform(get("/api/categories").header(HttpHeaders.HOST, TestBlogs.host(blog)))
+        mockMvc.perform(get("/api/categories").header(TestBlogs.HEADER, blog.getAddress()))
                 .andExpect(jsonPath("$.categories[*].name", contains("개발", "여행")))
                 .andExpect(jsonPath("$.categories[0].children[*].name", contains("Spring", "JPA", "개발")))
                 .andExpect(jsonPath("$.categories[1].children").isEmpty());
@@ -169,12 +169,12 @@ class CategoryIntegrationTest extends IntegrationTestSupport {
         testPosts.published(blog, child, Visibility.PRIVATE, LocalDateTime.now());
 
         mockMvc.perform(get("/api/posts").param("categoryId", parent.getId().toString())
-                        .header(HttpHeaders.HOST, TestBlogs.host(blog)))
+                        .header(TestBlogs.HEADER, blog.getAddress()))
                 .andExpect(jsonPath("$.totalElements").value(2));
         mockMvc.perform(get("/api/posts").param("categoryId", child.getId().toString())
-                        .header(HttpHeaders.HOST, TestBlogs.host(blog)))
+                        .header(TestBlogs.HEADER, blog.getAddress()))
                 .andExpect(jsonPath("$.totalElements").value(1));
-        mockMvc.perform(get("/api/categories").header(HttpHeaders.HOST, TestBlogs.host(blog)))
+        mockMvc.perform(get("/api/categories").header(TestBlogs.HEADER, blog.getAddress()))
                 .andExpect(jsonPath("$.categories[0].postCount").value(2))
                 .andExpect(jsonPath("$.categories[0].children[0].postCount").value(1));
     }
@@ -230,7 +230,7 @@ class CategoryIntegrationTest extends IntegrationTestSupport {
         assertThat(jdbcTemplate.queryForList(
                 "SELECT CAST(updated_at AS CHAR) FROM post WHERE blog_id = ?", String.class, blog.getId()))
                 .allSatisfy(updatedAt -> assertThat(updatedAt).startsWith("2026-01-01 00:00:00"));
-        mockMvc.perform(get("/api/categories").header(HttpHeaders.HOST, TestBlogs.host(blog)).cookie(ownerCookies))
+        mockMvc.perform(get("/api/categories").header(TestBlogs.HEADER, blog.getAddress()).cookie(ownerCookies))
                 .andExpect(jsonPath("$.uncategorizedCount").value(2))
                 .andExpect(jsonPath("$.categories").isEmpty());
     }
@@ -263,7 +263,7 @@ class CategoryIntegrationTest extends IntegrationTestSupport {
         Number id = JsonPath.read(body, "$.id");
 
         mockMvc.perform(get("/api/posts").param("categoryId", id.toString())
-                        .header(HttpHeaders.HOST, TestBlogs.host(blog)))
+                        .header(TestBlogs.HEADER, blog.getAddress()))
                 .andExpect(status().isOk());
     }
 
@@ -273,7 +273,7 @@ class CategoryIntegrationTest extends IntegrationTestSupport {
 
     private ResultActions perform(MockHttpServletRequestBuilder request, Cookie[] cookies, String body)
             throws Exception {
-        request.header(HttpHeaders.HOST, TestBlogs.host(blog)).header("X-Requested-With", "XMLHttpRequest");
+        request.header(TestBlogs.HEADER, blog.getAddress()).header("X-Requested-With", "XMLHttpRequest");
         if (body != null) {
             request.contentType(MediaType.APPLICATION_JSON).content(body);
         }

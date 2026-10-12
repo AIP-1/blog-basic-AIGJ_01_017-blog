@@ -121,7 +121,7 @@ class ManageCommentIntegrationTest extends IntegrationTestSupport {
     }
 
     private ResultActions list(Member member, String type, Integer page) throws Exception {
-        var request = get("/api/manage/comments").header(HttpHeaders.HOST, TestBlogs.host(blog));
+        var request = get("/api/manage/comments").header(TestBlogs.HEADER, blog.getAddress());
         if (type != null) {
             request.param("type", type);
         }

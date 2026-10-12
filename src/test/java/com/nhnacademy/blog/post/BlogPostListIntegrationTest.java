@@ -148,7 +148,7 @@ class BlogPostListIntegrationTest extends IntegrationTestSupport {
     }
 
     private ResultActions list(Cookie[] cookies, String query) throws Exception {
-        var request = get("/api/posts" + query).header(HttpHeaders.HOST, TestBlogs.host(blog));
+        var request = get("/api/posts" + query).header(TestBlogs.HEADER, blog.getAddress());
         return mockMvc.perform(cookies == null ? request : request.cookie(cookies));
     }
 

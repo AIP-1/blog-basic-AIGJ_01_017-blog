@@ -86,11 +86,11 @@ class RankingIntegrationTest extends IntegrationTestSupport {
         }
         testBlogs.restrict(blogB);
 
-        String home = send(get("/api/home/bloggers"), "blog.test", null, null)
+        String home = send(get("/api/home/bloggers"), null, null, null)
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         List<Integer> homeIds = JsonPath.read(home, "$.items[*].blog.id");
         assertThat(homeIds).hasSizeLessThanOrEqualTo(5);
-        String all = send(get("/api/ranking/bloggers"), "blog.test", null, null)
+        String all = send(get("/api/ranking/bloggers"), null, null, null)
                 .andReturn().getResponse().getContentAsString();
         List<Integer> ids = JsonPath.read(all, "$.items[*].blog.id");
         assertThat(ids).contains(blogA.getId().intValue()).doesNotContain(blogB.getId().intValue());
@@ -98,24 +98,24 @@ class RankingIntegrationTest extends IntegrationTestSupport {
         assertThat(snapshotAt).endsWith(":00:00+09:00");
 
         // 추천: 구독 중인 A는 빠진다
-        String recommend = send(get("/api/recommend/blogs"), "blog.test", testMembers.loginCookies(reader), null)
+        String recommend = send(get("/api/recommend/blogs"), null, testMembers.loginCookies(reader), null)
                 .andReturn().getResponse().getContentAsString();
         List<Integer> recommended = JsonPath.read(recommend, "$[*].blog.id");
         assertThat(recommended).doesNotContain(blogA.getId().intValue()).hasSizeLessThanOrEqualTo(5);
         // 내 블로그도 빠진다
-        String mine = send(get("/api/recommend/blogs"), "blog.test", testMembers.loginCookies(a), null)
+        String mine = send(get("/api/recommend/blogs"), null, testMembers.loginCookies(a), null)
                 .andReturn().getResponse().getContentAsString();
         assertThat((List<Integer>) JsonPath.read(mine, "$[*].blog.id")).doesNotContain(blogA.getId().intValue());
 
         // 같은 기준 시각이면 이어서, 다르면 409와 새 기준 시각
-        send(get("/api/ranking/bloggers").param("snapshotAt", snapshotAt).param("offset", "20"), "blog.test", null, null)
+        send(get("/api/ranking/bloggers").param("snapshotAt", snapshotAt).param("offset", "20"), null, null, null)
                 .andExpect(status().isOk());
         send(get("/api/ranking/bloggers").param("snapshotAt", "2020-01-01T00:00:00+09:00").param("offset", "20"),
-                "blog.test", null, null)
+                null, null, null)
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("RANKING_UPDATED"))
                 .andExpect(jsonPath("$.detail.snapshotAt").value(snapshotAt));
-        send(get("/api/ranking/bloggers").param("offset", "100"), "blog.test", null, null).andExpect(status().isBadRequest());
+        send(get("/api/ranking/bloggers").param("offset", "100"), null, null, null).andExpect(status().isBadRequest());
     }
 
     @Test
@@ -128,28 +128,32 @@ class RankingIntegrationTest extends IntegrationTestSupport {
             jdbcTemplate.update("INSERT INTO view_log (post_id, viewer_key, viewed_at) VALUES (?, ?, ?)",
                     post, "p:" + i, LocalDateTime.now(ZoneId.of("Asia/Seoul")).minusMinutes(1));
         }
-        String home = send(get("/api/home/popular"), "blog.test", null, null).andReturn().getResponse().getContentAsString();
-        String ranking = send(get("/api/ranking/posts"), "blog.test", null, null)
+        String home = send(get("/api/home/popular"), null, null, null).andReturn().getResponse().getContentAsString();
+        String ranking = send(get("/api/ranking/posts"), null, null, null)
                 .andExpect(jsonPath("$.items[0].rank").value(1))
                 .andReturn().getResponse().getContentAsString();
         assertThat((String) JsonPath.read(ranking, "$.snapshotAt")).isEqualTo(JsonPath.read(home, "$.snapshotAt"));
         // 다른 테스트의 글이 더 위일 수 있어 순위 안에 있는지만 본다
         assertThat((List<Integer>) JsonPath.read(ranking, "$.items[*].post.id")).contains((int) post);
-        send(get("/api/ranking/posts").param("snapshotAt", "2020-01-01T00:00:00+09:00"), "blog.test", null, null)
+        send(get("/api/ranking/posts").param("snapshotAt", "2020-01-01T00:00:00+09:00"), null, null, null)
                 .andExpect(status().isConflict());
     }
 
     private long publish(Blog target, Cookie[] cookies, String title) throws Exception {
         String response = send(post("/api/posts").header("Idempotency-Key", UUID.randomUUID().toString()),
-                TestBlogs.host(target), cookies,
+                target.getAddress(), cookies,
                 "{\"title\":\"" + title + "\",\"contentHtml\":\"<p>본문</p>\",\"visibility\":\"PUBLIC\",\"status\":\"PUBLISHED\"}")
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         return ((Number) JsonPath.read(response, "$.id")).longValue();
     }
 
-    private ResultActions send(MockHttpServletRequestBuilder request, String host, Cookie[] cookies, String body)
+    private ResultActions send(MockHttpServletRequestBuilder request, String blogAddress, Cookie[] cookies, String body)
             throws Exception {
-        request.header(HttpHeaders.HOST, host).header("X-Requested-With", "XMLHttpRequest");
+        // 블로그 API면 블로그 화면처럼 X-Blog-Address로 블로그를 알린다(null이면 플랫폼)
+        if (blogAddress != null) {
+            request.header(TestBlogs.HEADER, blogAddress);
+        }
+        request.header("X-Requested-With", "XMLHttpRequest");
         if (body != null) {
             request.contentType(MediaType.APPLICATION_JSON).content(body);
         }

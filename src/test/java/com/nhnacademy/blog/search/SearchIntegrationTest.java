@@ -92,13 +92,13 @@ class SearchIntegrationTest extends IntegrationTestSupport {
     @Test
     void blankOrTooLongQueryIs400() throws Exception {
         search("   ", null).andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors[0].field").value("q"));
-        mockMvc.perform(get("/api/search").header(HttpHeaders.HOST, TestBlogs.host(blog)))
+        mockMvc.perform(get("/api/search").header(TestBlogs.HEADER, blog.getAddress()))
                 .andExpect(status().isBadRequest());
         search("가".repeat(101), null).andExpect(status().isBadRequest());
     }
 
     private ResultActions search(String q, Cookie[] cookies) throws Exception {
-        var request = get("/api/search").param("q", q).header(HttpHeaders.HOST, TestBlogs.host(blog));
+        var request = get("/api/search").param("q", q).header(TestBlogs.HEADER, blog.getAddress());
         return mockMvc.perform(cookies == null ? request : request.cookie(cookies));
     }
 
@@ -107,7 +107,7 @@ class SearchIntegrationTest extends IntegrationTestSupport {
                 {"title":"%s","contentHtml":"%s","visibility":"%s","status":"PUBLISHED","tagNames":%s}
                 """.formatted(title, html.replace("\"", "\\\""), visibility, tags);
         String response = mockMvc.perform(post("/api/posts")
-                        .header(HttpHeaders.HOST, TestBlogs.host(blog))
+                        .header(TestBlogs.HEADER, blog.getAddress())
                         .header("X-Requested-With", "XMLHttpRequest")
                         .header("Idempotency-Key", UUID.randomUUID().toString())
                         .contentType(MediaType.APPLICATION_JSON)

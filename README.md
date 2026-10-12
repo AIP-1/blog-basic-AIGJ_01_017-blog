@@ -1,6 +1,6 @@
 # blog-basic-AIGJ_01_017-blog
 
-티스토리형 멀티 블로그 서비스(지원). 누구나 가입해 자기 블로그(서브도메인)를 열고, 에디터로 글을 발행하고, 다른 블로그 글을 읽고 댓글·공감한다.
+티스토리형 멀티 블로그 서비스(지원). 누구나 가입해 자기 블로그(`blog.com/@주소`)를 열고, 에디터로 글을 발행하고, 다른 블로그 글을 읽고 댓글·공감한다.
 
 명세·계획·작업 목록·학습 자료는 별도 문서 저장소(blog-docs)에 있다. 옆 폴더 `../blog-docs`의 `specs/001-tistory-blog/`를 본다.
 
@@ -31,7 +31,7 @@ docker compose up -d                 # MySQL, Redis, PostgreSQL(pgvector), Ollam
 ./mvnw spring-boot:run               # http://blog.test:8080 (처음 뜰 때 Flyway가 테이블 생성)
 ```
 
-- 블로그 주소(`{주소}.blog.test:8080`)를 열려면 `*.blog.test`가 127.0.0.1을 가리켜야 한다. dnsmasq 설정 또는 `/etc/hosts`는 `quickstart.md`를 본다.
+- 플랫폼은 `http://blog.test:8080`, 블로그는 그 아래 `http://blog.test:8080/@{주소}`다(스텝 21). `/etc/hosts`에 `127.0.0.1 blog.test` 한 줄이면 된다(`quickstart.md`).
 - Ollama는 이미 만들어 둔 docker 볼륨 `ollama`를 쓴다(`docker-compose.yml`의 `external: true`). 없으면 `docker volume create ollama` 뒤 `docker exec blog-ollama ollama pull bge-m3`.
 - Ollama가 꺼져 있어도 서버는 뜬다. 그동안 쓴 글은 비슷한 글 추천만 비어 있고, 다음에 서버가 뜰 때 채운다.
 
@@ -75,7 +75,7 @@ java -jar target/blog-*.jar --spring.profiles.active=prod
 
 ```
 src/main/java/com/nhnacademy/blog/
-  global/        공통(설정, 오류 응답, 인증, 서브도메인 해석, 가시성 판단, 웹 도구)
+  global/        공통(설정, 오류 응답, 인증, 블로그 주소(`/@주소`·`X-Blog-Address`) 해석, 가시성 판단, 웹 도구)
   auth/ member/ blog/ post/ category/ tag/ comment/ reaction/ image/
   search/ home/ manage/ recommend/ subscription/ admin/
     각 기능 안: domain/(엔티티·Repository) → application/(Service) → presentation/(Controller, dto/)

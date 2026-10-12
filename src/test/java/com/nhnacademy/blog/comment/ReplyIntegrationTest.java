@@ -92,7 +92,7 @@ class ReplyIntegrationTest extends IntegrationTestSupport {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fieldErrors[0].field").value("parentId"));
         mockMvc.perform(post("/api/posts/" + otherPost.getId() + "/comments")
-                        .header(HttpHeaders.HOST, TestBlogs.host(blog))
+                        .header(TestBlogs.HEADER, blog.getAddress())
                         .header("X-Requested-With", "XMLHttpRequest")
                         .header("Idempotency-Key", UUID.randomUUID().toString())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -137,7 +137,7 @@ class ReplyIntegrationTest extends IntegrationTestSupport {
                 ? "{\"content\":\"" + content + "\"}"
                 : "{\"content\":\"" + content + "\",\"parentId\":" + parentId + "}";
         return mockMvc.perform(post("/api/posts/" + post.getId() + "/comments")
-                .header(HttpHeaders.HOST, TestBlogs.host(blog))
+                .header(TestBlogs.HEADER, blog.getAddress())
                 .header("X-Requested-With", "XMLHttpRequest")
                 .header("Idempotency-Key", UUID.randomUUID().toString())
                 .contentType(MediaType.APPLICATION_JSON)
@@ -147,12 +147,12 @@ class ReplyIntegrationTest extends IntegrationTestSupport {
 
     private ResultActions list() throws Exception {
         return mockMvc.perform(get("/api/posts/" + post.getId() + "/comments")
-                .header(HttpHeaders.HOST, TestBlogs.host(blog)));
+                .header(TestBlogs.HEADER, blog.getAddress()));
     }
 
     private ResultActions remove(Cookie[] cookies, long commentId) throws Exception {
         return mockMvc.perform(delete("/api/comments/" + commentId)
-                .header(HttpHeaders.HOST, TestBlogs.host(blog))
+                .header(TestBlogs.HEADER, blog.getAddress())
                 .header("X-Requested-With", "XMLHttpRequest")
                 .cookie(cookies));
     }

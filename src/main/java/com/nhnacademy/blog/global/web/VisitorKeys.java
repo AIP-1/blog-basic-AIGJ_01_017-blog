@@ -1,7 +1,6 @@
 package com.nhnacademy.blog.global.web;
 
 import com.nhnacademy.blog.global.auth.LoginMembers;
-import com.nhnacademy.blog.global.host.DomainProperties;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -17,7 +16,7 @@ import org.springframework.stereotype.Component;
 /**
  * 조회자·방문자를 구분하는 키 (view_log.viewer_key, 뒤에 blog_visit.visitor_key도 같은 방식).
  * 회원은 "m:{회원 id}"다. 비회원은 처음 볼 때 임의의 값(UUID)을 visitor_id 쿠키로 주고 "a:{그 값}"으로 쓴다.
- * 쿠키는 로그인 쿠키처럼 Domain=.{platform}이라 모든 블로그 주소에서 같은 비회원으로 보인다.
+ * 쿠키는 로그인 쿠키처럼 플랫폼 주소 하나에 두므로 모든 블로그 화면(/@주소)에서 같은 비회원으로 보인다.
  * 쿠키를 지우거나 받지 않는 브라우저는 볼 때마다 새 비회원이 된다.
  */
 @Component
@@ -27,12 +26,10 @@ public class VisitorKeys {
 
     private static final Duration COOKIE_TTL = Duration.ofDays(365);
 
-    private final DomainProperties domainProperties;
     /** 로그인 쿠키와 같은 Secure 설정(app.auth.cookie-secure). 인증 설정 객체 대신 값 하나만 받는다(인증 경계, 스텝 19b). */
     private final boolean cookieSecure;
 
-    public VisitorKeys(DomainProperties domainProperties, @Value("${app.auth.cookie-secure}") boolean cookieSecure) {
-        this.domainProperties = domainProperties;
+    public VisitorKeys(@Value("${app.auth.cookie-secure}") boolean cookieSecure) {
         this.cookieSecure = cookieSecure;
     }
 
@@ -70,7 +67,6 @@ public class VisitorKeys {
     private String issue(HttpServletResponse response) {
         String visitorId = UUID.randomUUID().toString();
         ResponseCookie cookie = ResponseCookie.from(COOKIE, visitorId)
-                .domain(domainProperties.cookieDomain())
                 .path("/")
                 .httpOnly(true)
                 .secure(cookieSecure)

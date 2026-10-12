@@ -1,7 +1,7 @@
 package com.nhnacademy.blog.notification.presentation;
 
 import com.nhnacademy.blog.global.auth.LoginMember;
-import com.nhnacademy.blog.global.host.BlogHostResolver;
+import com.nhnacademy.blog.global.host.BlogAddressResolver;
 import com.nhnacademy.blog.global.web.CursorResponse;
 import com.nhnacademy.blog.global.web.TimeIdCursor;
 import com.nhnacademy.blog.notification.application.NotificationPage;
@@ -28,11 +28,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class NotificationController {
 
     private final NotificationService notificationService;
-    private final BlogHostResolver blogHostResolver;
+    private final BlogAddressResolver blogAddressResolver;
 
-    public NotificationController(NotificationService notificationService, BlogHostResolver blogHostResolver) {
+    public NotificationController(NotificationService notificationService, BlogAddressResolver blogAddressResolver) {
         this.notificationService = notificationService;
-        this.blogHostResolver = blogHostResolver;
+        this.blogAddressResolver = blogAddressResolver;
     }
 
     /** 최신순 20개씩 더보기. 대상이 지워졌거나 볼 수 없게 된 알림은 빠진다. */
@@ -66,8 +66,8 @@ public class NotificationController {
 
     private String link(HttpServletRequest request, NotificationView view) {
         return view.blog() == null
-                ? blogHostResolver.platformUrl(request, view.path())
-                : blogHostResolver.blogUrl(request, view.blog(), view.path());
+                ? blogAddressResolver.platformUrl(request, view.path())
+                : blogAddressResolver.blogUrl(request, view.blog(), view.path());
     }
 
 }

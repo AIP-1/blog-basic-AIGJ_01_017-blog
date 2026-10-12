@@ -14,6 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.jayway.jsonpath.JsonPath;
 import com.nhnacademy.blog.global.web.TimeIdCursor;
+import com.nhnacademy.blog.support.TestBlogs;
 import com.nhnacademy.blog.support.TestEmails;
 import jakarta.servlet.http.Cookie;
 import java.awt.image.BufferedImage;
@@ -43,7 +44,6 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
  */
 class QuickstartScenarioIntegrationTest extends IntegrationTestSupport {
 
-    private static final String PLATFORM = "blog.test";
 
     @Autowired
     MockMvc mockMvc;
@@ -61,32 +61,33 @@ class QuickstartScenarioIntegrationTest extends IntegrationTestSupport {
         String alpha = "qa" + UUID.randomUUID().toString().substring(0, 8);
         User a = signup("A");
         a = login(a);
-        send(post("/api/blogs"), PLATFORM, a.cookies(),
+        send(post("/api/blogs"), null, a.cookies(),
                 "{\"address\":\"" + alpha + "\",\"name\":\"A의 블로그\"}").andExpect(status().isCreated());
-        String alphaHost = alpha + "." + PLATFORM;
-        send(patch("/api/blog"), alphaHost, a.cookies(), "{\"name\":\"A의 기록\",\"address\":\"changed\"}")
+        // 블로그 API는 블로그 화면처럼 X-Blog-Address로 블로그를 알린다(스텝 21)
+        String alphaAddress = alpha;
+        send(patch("/api/blog"), alphaAddress, a.cookies(), "{\"name\":\"A의 기록\",\"address\":\"changed\"}")
                 .andExpect(status().isOk());
-        send(get("/api/blog"), alphaHost, null, null).andExpect(jsonPath("$.address").value(alpha));
+        send(get("/api/blog"), alphaAddress, null, null).andExpect(jsonPath("$.address").value(alpha));
 
         // 2. 블로그 메인: 빈 상태와 사이드바, 블로그 주소에서도 같은 로그인 상태(쿠키 Domain=.blog.test)
-        send(get("/api/posts"), alphaHost, null, null).andExpect(jsonPath("$.totalElements").value(0));
-        send(get("/api/blog/sidebar"), alphaHost, null, null).andExpect(jsonPath("$.modules[0].type").value("PROFILE"));
-        send(get("/api/me"), alphaHost, a.cookies(), null).andExpect(jsonPath("$.primaryBlog.address").value(alpha));
-        assertThat(a.cookies()).allSatisfy(cookie -> assertThat(cookie.getDomain()).isEqualTo("." + PLATFORM));
+        send(get("/api/posts"), alphaAddress, null, null).andExpect(jsonPath("$.totalElements").value(0));
+        send(get("/api/blog/sidebar"), alphaAddress, null, null).andExpect(jsonPath("$.modules[0].type").value("PROFILE"));
+        send(get("/api/me"), alphaAddress, a.cookies(), null).andExpect(jsonPath("$.primaryBlog.address").value(alpha));
+        assertThat(a.cookies()).allSatisfy(cookie -> assertThat(cookie.getDomain()).isNull());
 
         // 3. 카테고리 'Java' → 굵게·목록·코드 블록·이미지·태그 2개 글 발행 → 공감·댓글·조회수 0
-        long javaId = idOf(send(post("/api/categories"), alphaHost, a.cookies(), "{\"name\":\"Java\"}")
+        long javaId = idOf(send(post("/api/categories"), alphaAddress, a.cookies(), "{\"name\":\"Java\"}")
                 .andExpect(status().isCreated()));
         String imageUrl = JsonPath.read(upload(a), "$.url");
         String contentHtml = "<p><strong>굵게</strong></p><ul><li>목록</li></ul><pre><code>int x = 1;</code></pre>"
                 + "<img src=\\\"" + imageUrl + "\\\" alt=\\\"사진\\\">";
-        long postId = idOf(send(post("/api/posts").header("Idempotency-Key", UUID.randomUUID().toString()), alphaHost,
+        long postId = idOf(send(post("/api/posts").header("Idempotency-Key", UUID.randomUUID().toString()), alphaAddress,
                 a.cookies(), """
                         {"title":"첫 글","contentHtml":"%s","categoryId":%d,"tagNames":["java","spring"],
                          "visibility":"PUBLIC","status":"PUBLISHED"}
                         """.formatted(contentHtml, javaId))
                 .andExpect(status().isCreated()));
-        send(get("/api/posts/" + postId), alphaHost, null, null)
+        send(get("/api/posts/" + postId), alphaAddress, null, null)
                 .andExpect(jsonPath("$.likeCount").value(0))
                 .andExpect(jsonPath("$.commentCount").value(0))
                 .andExpect(jsonPath("$.viewCount").value(0))
@@ -98,30 +99,30 @@ class QuickstartScenarioIntegrationTest extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.contentHtml", containsString(imageUrl)));
 
         // 4. 로그아웃 → 비회원으로 홈 최신 글에 그 글이 보임
-        send(post("/api/auth/logout"), PLATFORM, a.cookies(), null).andExpect(status().isNoContent());
+        send(post("/api/auth/logout"), null, a.cookies(), null).andExpect(status().isNoContent());
         assertThat(latestAt(postId)).contains(postId);
 
         // 5. B 가입·로그인 → 글 열람 → 댓글 → 공감, 새로고침해도 1, 다시 눌러도 1
         User b = login(signup("B"));
-        send(get("/api/posts/" + postId), alphaHost, b.cookies(), null).andExpect(status().isOk());
+        send(get("/api/posts/" + postId), alphaAddress, b.cookies(), null).andExpect(status().isOk());
         long commentId = idOf(send(post("/api/posts/" + postId + "/comments")
-                .header("Idempotency-Key", UUID.randomUUID().toString()), alphaHost, b.cookies(),
+                .header("Idempotency-Key", UUID.randomUUID().toString()), alphaAddress, b.cookies(),
                 "{\"content\":\"잘 읽었습니다\"}").andExpect(status().isCreated()));
-        send(put("/api/posts/" + postId + "/like"), alphaHost, b.cookies(), null).andExpect(jsonPath("$.likeCount").value(1));
-        send(put("/api/posts/" + postId + "/like"), alphaHost, b.cookies(), null).andExpect(jsonPath("$.likeCount").value(1));
-        send(get("/api/posts/" + postId), alphaHost, b.cookies(), null)
+        send(put("/api/posts/" + postId + "/like"), alphaAddress, b.cookies(), null).andExpect(jsonPath("$.likeCount").value(1));
+        send(put("/api/posts/" + postId + "/like"), alphaAddress, b.cookies(), null).andExpect(jsonPath("$.likeCount").value(1));
+        send(get("/api/posts/" + postId), alphaAddress, b.cookies(), null)
                 .andExpect(jsonPath("$.likeCount").value(1))
                 .andExpect(jsonPath("$.viewer.liked").value(true))
                 .andExpect(jsonPath("$.commentCount").value(1));
 
         // 6. A로 로그인 → B 댓글을 지울 수 있고, 수정 버튼은 없음
         a = login(a);
-        send(get("/api/posts/" + postId + "/comments"), alphaHost, a.cookies(), null)
+        send(get("/api/posts/" + postId + "/comments"), alphaAddress, a.cookies(), null)
                 .andExpect(jsonPath("$.content[0].id").value(commentId))
                 .andExpect(jsonPath("$.content[0].viewer.canDelete").value(true))
                 .andExpect(jsonPath("$.content[0].viewer.canEdit").value(false));
-        send(delete("/api/comments/" + commentId), alphaHost, a.cookies(), null).andExpect(status().isNoContent());
-        send(get("/api/posts/" + postId), alphaHost, null, null).andExpect(jsonPath("$.commentCount").value(0));
+        send(delete("/api/comments/" + commentId), alphaAddress, a.cookies(), null).andExpect(status().isNoContent());
+        send(get("/api/posts/" + postId), alphaAddress, null, null).andExpect(jsonPath("$.commentCount").value(0));
     }
 
     /** quickstart "권한·가시성" 표 8줄 (US4, SC-002·003·004·006). */
@@ -129,62 +130,62 @@ class QuickstartScenarioIntegrationTest extends IntegrationTestSupport {
     void permissionAndVisibilityTable() throws Exception {
         User a = login(signup("A"));
         String alpha = "qa" + UUID.randomUUID().toString().substring(0, 8);
-        send(post("/api/blogs"), PLATFORM, a.cookies(), "{\"address\":\"" + alpha + "\",\"name\":\"A\"}")
+        send(post("/api/blogs"), null, a.cookies(), "{\"address\":\"" + alpha + "\",\"name\":\"A\"}")
                 .andExpect(status().isCreated());
-        String alphaHost = alpha + "." + PLATFORM;
+        String alphaAddress = alpha;
         User b = login(signup("B"));
         String beta = "qb" + UUID.randomUUID().toString().substring(0, 8);
-        send(post("/api/blogs"), PLATFORM, b.cookies(), "{\"address\":\"" + beta + "\",\"name\":\"B\"}")
+        send(post("/api/blogs"), null, b.cookies(), "{\"address\":\"" + beta + "\",\"name\":\"B\"}")
                 .andExpect(status().isCreated());
-        String betaHost = beta + "." + PLATFORM;
-        long postId = publish(a, alphaHost, "A의 글", "<p>본문</p>", UUID.randomUUID().toString());
+        String betaAddress = beta;
+        long postId = publish(a, alphaAddress, "A의 글", "<p>본문</p>", UUID.randomUUID().toString());
 
         // 비회원이 관리 화면 → 화면은 앱을 주고(앱이 로그인으로 보냄), 관리 API는 401
-        send(get("/manage/write"), alphaHost, null, null).andExpect(status().isOk());
-        send(get("/api/manage/posts/" + postId), alphaHost, null, null).andExpect(status().isUnauthorized());
+        send(get("/@" + alpha + "/manage/write"), null, null, null).andExpect(status().isOk());
+        send(get("/api/manage/posts/" + postId), alphaAddress, null, null).andExpect(status().isUnauthorized());
 
         // B가 A 글 수정 → 403
-        send(put("/api/posts/" + postId), alphaHost, b.cookies(), """
+        send(put("/api/posts/" + postId), alphaAddress, b.cookies(), """
                 {"title":"남의 글","contentHtml":"<p>x</p>","visibility":"PUBLIC","status":"PUBLISHED"}
                 """).andExpect(status().isForbidden());
 
         // B 블로그 주소에 A 글 번호 → 볼 수 있으면 A 블로그로 301
-        send(get("/" + postId), betaHost, null, null)
+        send(get("/@" + beta + "/" + postId), null, null, null)
                 .andExpect(status().isMovedPermanently())
-                .andExpect(header().string(HttpHeaders.LOCATION, "http://" + alphaHost + "/" + postId));
+                .andExpect(header().string(HttpHeaders.LOCATION, "http://blog.test/@" + alpha + "/" + postId));
 
         // A가 비공개로 → B·비회원은 404, 홈·목록·글 수에서 빠짐, 다른 블로그 주소로도 404 (바꾸기 전에는 1)
-        send(get("/api/posts"), alphaHost, null, null).andExpect(jsonPath("$.totalElements").value(1));
-        send(get("/api/categories"), alphaHost, null, null).andExpect(jsonPath("$.totalCount").value(1));
+        send(get("/api/posts"), alphaAddress, null, null).andExpect(jsonPath("$.totalElements").value(1));
+        send(get("/api/categories"), alphaAddress, null, null).andExpect(jsonPath("$.totalCount").value(1));
         assertThat(latestAt(postId)).contains(postId);
-        send(patch("/api/posts/" + postId + "/visibility"), alphaHost, a.cookies(), "{\"visibility\":\"PRIVATE\"}")
+        send(patch("/api/posts/" + postId + "/visibility"), alphaAddress, a.cookies(), "{\"visibility\":\"PRIVATE\"}")
                 .andExpect(status().isNoContent());
-        send(get("/api/posts/" + postId), alphaHost, b.cookies(), null).andExpect(status().isNotFound());
-        send(get("/api/posts/" + postId), alphaHost, null, null).andExpect(status().isNotFound());
-        send(get("/api/posts"), alphaHost, null, null).andExpect(jsonPath("$.totalElements").value(0));
-        send(get("/api/categories"), alphaHost, null, null).andExpect(jsonPath("$.totalCount").value(0));
+        send(get("/api/posts/" + postId), alphaAddress, b.cookies(), null).andExpect(status().isNotFound());
+        send(get("/api/posts/" + postId), alphaAddress, null, null).andExpect(status().isNotFound());
+        send(get("/api/posts"), alphaAddress, null, null).andExpect(jsonPath("$.totalElements").value(0));
+        send(get("/api/categories"), alphaAddress, null, null).andExpect(jsonPath("$.totalCount").value(0));
         assertThat(latestAt(postId)).doesNotContain(postId);
-        send(get("/" + postId), betaHost, null, null).andExpect(status().isNotFound());
+        send(get("/@" + beta + "/" + postId), null, null, null).andExpect(status().isNotFound());
 
         // B가 관리자 API → 403
-        send(get("/api/admin/dashboard"), PLATFORM, b.cookies(), null).andExpect(status().isForbidden());
+        send(get("/api/admin/dashboard"), null, b.cookies(), null).andExpect(status().isForbidden());
 
         // 본문의 onerror·script는 저장할 때 지워진다 (SC-006)
-        long xss = publish(a, alphaHost, "XSS", "<p>글</p><img src=x onerror=alert(1)><script>alert(2)</script>",
+        long xss = publish(a, alphaAddress, "XSS", "<p>글</p><img src=x onerror=alert(1)><script>alert(2)</script>",
                 UUID.randomUUID().toString());
         String saved = jdbcTemplate.queryForObject("SELECT content_html FROM post WHERE id = ?", String.class, xss);
         assertThat(saved).doesNotContain("onerror", "<script", "alert(");
 
         // 같은 Idempotency-Key로 두 번 발행 → 글 1개 (SC-004)
         String key = UUID.randomUUID().toString();
-        long first = publish(a, alphaHost, "한 번만", "<p>x</p>", key);
-        long second = publish(a, alphaHost, "한 번만", "<p>x</p>", key);
+        long first = publish(a, alphaAddress, "한 번만", "<p>x</p>", key);
+        long second = publish(a, alphaAddress, "한 번만", "<p>x</p>", key);
         assertThat(second).isEqualTo(first);
         assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM post WHERE title = '한 번만' AND blog_id = "
                 + "(SELECT id FROM blog WHERE address = ?)", Integer.class, alpha)).isEqualTo(1);
 
         // ?page=999 → 200, 빈 목록
-        send(get("/api/posts").param("page", "999"), alphaHost, null, null)
+        send(get("/api/posts").param("page", "999"), alphaAddress, null, null)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content.length()").value(0));
     }
@@ -197,7 +198,7 @@ class QuickstartScenarioIntegrationTest extends IntegrationTestSupport {
         LocalDateTime publishedAt = jdbcTemplate.queryForObject(
                 "SELECT published_at FROM post WHERE id = ?", LocalDateTime.class, postId);
         String cursor = new TimeIdCursor(publishedAt, postId + 1).encode();
-        String body = send(get("/api/home/latest").param("cursor", cursor), PLATFORM, null, null)
+        String body = send(get("/api/home/latest").param("cursor", cursor), null, null, null)
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         return ids(body, "$.content[*].id");
     }
@@ -209,12 +210,12 @@ class QuickstartScenarioIntegrationTest extends IntegrationTestSupport {
     private User signup(String who) throws Exception {
         String email = TestEmails.unique();
         String password = "password1";
-        send(post("/api/auth/email-verifications"), PLATFORM, null, "{\"email\":\"" + email + "\"}")
+        send(post("/api/auth/email-verifications"), null, null, "{\"email\":\"" + email + "\"}")
                 .andExpect(status().isAccepted());
         String code = testEmails.latestCode(email);
-        send(post("/api/auth/email-verifications/verify"), PLATFORM, null,
+        send(post("/api/auth/email-verifications/verify"), null, null,
                 "{\"email\":\"" + email + "\",\"code\":\"" + code + "\"}").andExpect(status().is2xxSuccessful());
-        MockHttpServletResponse response = send(post("/api/auth/signup"), PLATFORM, null, """
+        MockHttpServletResponse response = send(post("/api/auth/signup"), null, null, """
                 {"email":"%s","code":"%s","password":"%s","nickname":"%s"}
                 """.formatted(email, code, password, who + UUID.randomUUID().toString().substring(0, 6)))
                 .andExpect(status().isCreated()).andReturn().getResponse();
@@ -222,7 +223,7 @@ class QuickstartScenarioIntegrationTest extends IntegrationTestSupport {
     }
 
     private User login(User user) throws Exception {
-        MockHttpServletResponse response = send(post("/api/auth/login"), PLATFORM, null,
+        MockHttpServletResponse response = send(post("/api/auth/login"), null, null,
                 "{\"email\":\"" + user.email() + "\",\"password\":\"" + user.password() + "\"}")
                 .andExpect(status().isOk()).andReturn().getResponse();
         return new User(user.email(), user.password(), liveCookies(response));
@@ -242,7 +243,6 @@ class QuickstartScenarioIntegrationTest extends IntegrationTestSupport {
         ImageIO.write(image, "png", out);
         return mockMvc.perform(multipart("/api/images")
                         .file(new MockMultipartFile("file", "photo.png", "image/png", out.toByteArray()))
-                        .header(HttpHeaders.HOST, PLATFORM)
                         .header("X-Requested-With", "XMLHttpRequest")
                         .cookie(user.cookies()))
                 .andExpect(status().isCreated())
@@ -260,9 +260,13 @@ class QuickstartScenarioIntegrationTest extends IntegrationTestSupport {
         return live.toArray(Cookie[]::new);
     }
 
-    private ResultActions send(MockHttpServletRequestBuilder request, String host, Cookie[] cookies, String body)
+    private ResultActions send(MockHttpServletRequestBuilder request, String blogAddress, Cookie[] cookies, String body)
             throws Exception {
-        request.header(HttpHeaders.HOST, host).header("X-Requested-With", "XMLHttpRequest");
+        // 블로그 API면 블로그 화면처럼 X-Blog-Address로 블로그를 알린다(null이면 플랫폼)
+        if (blogAddress != null) {
+            request.header(TestBlogs.HEADER, blogAddress);
+        }
+        request.header("X-Requested-With", "XMLHttpRequest");
         if (body != null) {
             request.contentType(MediaType.APPLICATION_JSON).content(body);
         }

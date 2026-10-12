@@ -63,7 +63,7 @@ class SpamIntegrationTest extends IntegrationTestSupport {
 
     @Test
     void blockedMemberCannotCommentWriteGuestbookOrSubscribe() throws Exception {
-        String host = TestBlogs.host(blog);
+        String host = blog.getAddress();
         send(put("/api/blogs/" + blog.getId() + "/subscription"), host, spammerCookies, null).andExpect(status().isOk());
 
         send(post("/api/manage/blocked-members"), host, spammerCookies, "{\"memberId\":" + owner.getId() + "}")
@@ -99,7 +99,7 @@ class SpamIntegrationTest extends IntegrationTestSupport {
 
     @Test
     void bannedWordsRejectNewCommentsIgnoringCase() throws Exception {
-        String host = TestBlogs.host(blog);
+        String host = blog.getAddress();
         String created = send(post("/api/manage/banned-words"), host, ownerCookies, "{\"word\":\"Casino\"}")
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         long id = ((Number) JsonPath.read(created, "$.id")).longValue();
@@ -123,7 +123,7 @@ class SpamIntegrationTest extends IntegrationTestSupport {
 
     @Test
     void editsAreCheckedLikeNewWrites() throws Exception {
-        String host = TestBlogs.host(blog);
+        String host = blog.getAddress();
         long comment = idOf(send(post("/api/posts/" + post + "/comments").header("Idempotency-Key", UUID.randomUUID().toString()),
                 host, spammerCookies, "{\"content\":\"깨끗한 댓글\"}").andExpect(status().isCreated()));
         long guestbook = idOf(send(post("/api/guestbook").header("Idempotency-Key", UUID.randomUUID().toString()), host,
@@ -157,21 +157,25 @@ class SpamIntegrationTest extends IntegrationTestSupport {
         for (int i = 0; i < 100; i++) {
             jdbcTemplate.update("INSERT INTO blog_banned_word (blog_id, word) VALUES (?, ?)", blog.getId(), "w" + i);
         }
-        send(post("/api/manage/banned-words"), TestBlogs.host(blog), ownerCookies, "{\"word\":\"one-more\"}")
+        send(post("/api/manage/banned-words"), blog.getAddress(), ownerCookies, "{\"word\":\"one-more\"}")
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("BANNED_WORD_LIMIT"));
     }
 
     private long publish(Blog target, Cookie[] cookies, String title) throws Exception {
         String response = send(post("/api/posts").header("Idempotency-Key", UUID.randomUUID().toString()),
-                TestBlogs.host(target), cookies,
+                target.getAddress(), cookies,
                 "{\"title\":\"" + title + "\",\"contentHtml\":\"<p>본문</p>\",\"visibility\":\"PUBLIC\",\"status\":\"PUBLISHED\"}")
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         return ((Number) JsonPath.read(response, "$.id")).longValue();
     }
 
-    private ResultActions send(MockHttpServletRequestBuilder request, String host, Cookie[] cookies, String body)
+    private ResultActions send(MockHttpServletRequestBuilder request, String blogAddress, Cookie[] cookies, String body)
             throws Exception {
-        request.header(HttpHeaders.HOST, host).header("X-Requested-With", "XMLHttpRequest");
+        // 블로그 API면 블로그 화면처럼 X-Blog-Address로 블로그를 알린다(null이면 플랫폼)
+        if (blogAddress != null) {
+            request.header(TestBlogs.HEADER, blogAddress);
+        }
+        request.header("X-Requested-With", "XMLHttpRequest");
         if (body != null) {
             request.contentType(MediaType.APPLICATION_JSON).content(body);
         }

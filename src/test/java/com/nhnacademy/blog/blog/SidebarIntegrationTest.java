@@ -176,7 +176,7 @@ class SidebarIntegrationTest extends IntegrationTestSupport {
     }
 
     private ResultActions sidebar(Cookie[] cookies) throws Exception {
-        var request = get("/api/blog/sidebar").header(HttpHeaders.HOST, TestBlogs.host(blog));
+        var request = get("/api/blog/sidebar").header(TestBlogs.HEADER, blog.getAddress());
         return mockMvc.perform(cookies == null ? request : request.cookie(cookies));
     }
 

@@ -53,22 +53,22 @@ class BookmarkIntegrationTest extends IntegrationTestSupport {
         long first = publish(blog, ownerCookies, "처음 저장할 글");
         long second = publish(blog, ownerCookies, "나중에 숨겨질 글");
 
-        send(put("/api/posts/" + first + "/bookmark"), TestBlogs.host(blog), null, null).andExpect(status().isUnauthorized());
-        send(put("/api/posts/" + first + "/bookmark"), TestBlogs.host(blog), readerCookies, null)
+        send(put("/api/posts/" + first + "/bookmark"), blog.getAddress(), null, null).andExpect(status().isUnauthorized());
+        send(put("/api/posts/" + first + "/bookmark"), blog.getAddress(), readerCookies, null)
                 .andExpect(jsonPath("$.bookmarked").value(true));
-        send(put("/api/posts/" + first + "/bookmark"), TestBlogs.host(blog), readerCookies, null).andExpect(status().isOk());
-        send(put("/api/posts/" + second + "/bookmark"), TestBlogs.host(blog), readerCookies, null).andExpect(status().isOk());
+        send(put("/api/posts/" + first + "/bookmark"), blog.getAddress(), readerCookies, null).andExpect(status().isOk());
+        send(put("/api/posts/" + second + "/bookmark"), blog.getAddress(), readerCookies, null).andExpect(status().isOk());
         assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM post_bookmark WHERE member_id = ?", Integer.class,
                 reader.getId())).isEqualTo(2);
-        send(get("/api/posts/" + first), TestBlogs.host(blog), readerCookies, null)
+        send(get("/api/posts/" + first), blog.getAddress(), readerCookies, null)
                 .andExpect(jsonPath("$.viewer.bookmarked").value(true));
 
         // 주인이 둘째 글을 비공개로 바꾸고 제목도 바꾼다 → 저장한 사람에게는 저장할 때의 제목으로 "볼 수 없는 글"
-        send(patch("/api/posts/" + second + "/visibility"), TestBlogs.host(blog), ownerCookies,
+        send(patch("/api/posts/" + second + "/visibility"), blog.getAddress(), ownerCookies,
                 "{\"visibility\":\"PRIVATE\"}").andExpect(status().isNoContent());
         jdbcTemplate.update("UPDATE post SET title = '바뀐 제목' WHERE id = ?", second);
 
-        send(get("/api/me/bookmarks"), "blog.test", readerCookies, null)
+        send(get("/api/me/bookmarks"), null, readerCookies, null)
                 .andExpect(jsonPath("$.content", hasSize(2)))
                 .andExpect(jsonPath("$.content[0].visible").value(false))
                 .andExpect(jsonPath("$.content[0].postId").value(second))
@@ -79,14 +79,14 @@ class BookmarkIntegrationTest extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.content[1].post.title").value("처음 저장할 글"))
                 .andExpect(jsonPath("$.nextCursor").isEmpty());
         // 주소로 열면 404, 목록에서는 바로 취소된다
-        send(get("/api/posts/" + second), TestBlogs.host(blog), readerCookies, null).andExpect(status().isNotFound());
-        send(delete("/api/me/bookmarks/" + second), "blog.test", readerCookies, null).andExpect(status().isNoContent());
-        send(get("/api/me/bookmarks"), "blog.test", readerCookies, null).andExpect(jsonPath("$.content", hasSize(1)));
+        send(get("/api/posts/" + second), blog.getAddress(), readerCookies, null).andExpect(status().isNotFound());
+        send(delete("/api/me/bookmarks/" + second), null, readerCookies, null).andExpect(status().isNoContent());
+        send(get("/api/me/bookmarks"), null, readerCookies, null).andExpect(jsonPath("$.content", hasSize(1)));
         // 다시 볼 수 있게 되면 지금 제목으로
-        send(delete("/api/posts/" + first + "/bookmark"), TestBlogs.host(blog), readerCookies, null)
+        send(delete("/api/posts/" + first + "/bookmark"), blog.getAddress(), readerCookies, null)
                 .andExpect(jsonPath("$.bookmarked").value(false));
-        send(get("/api/me/bookmarks"), "blog.test", ownerCookies, null).andExpect(jsonPath("$.content", hasSize(0)));
-        send(get("/api/me/bookmarks"), "blog.test", null, null).andExpect(status().isUnauthorized());
+        send(get("/api/me/bookmarks"), null, ownerCookies, null).andExpect(jsonPath("$.content", hasSize(0)));
+        send(get("/api/me/bookmarks"), null, null, null).andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -98,28 +98,32 @@ class BookmarkIntegrationTest extends IntegrationTestSupport {
         Cookie[] readerCookies = testMembers.loginCookies(reader);
         for (int i = 0; i < 21; i++) {
             long id = publish(blog, ownerCookies, "글 " + i);
-            send(put("/api/posts/" + id + "/bookmark"), TestBlogs.host(blog), readerCookies, null).andExpect(status().isOk());
+            send(put("/api/posts/" + id + "/bookmark"), blog.getAddress(), readerCookies, null).andExpect(status().isOk());
         }
-        String first = send(get("/api/me/bookmarks"), "blog.test", readerCookies, null)
+        String first = send(get("/api/me/bookmarks"), null, readerCookies, null)
                 .andExpect(jsonPath("$.content", hasSize(20)))
                 .andReturn().getResponse().getContentAsString();
         String cursor = JsonPath.read(first, "$.nextCursor");
-        send(get("/api/me/bookmarks").param("cursor", cursor), "blog.test", readerCookies, null)
+        send(get("/api/me/bookmarks").param("cursor", cursor), null, readerCookies, null)
                 .andExpect(jsonPath("$.content", hasSize(1)))
                 .andExpect(jsonPath("$.content[0].post.title").value("글 0"));
     }
 
     private long publish(Blog target, Cookie[] cookies, String title) throws Exception {
         String response = send(post("/api/posts").header("Idempotency-Key", UUID.randomUUID().toString()),
-                TestBlogs.host(target), cookies,
+                target.getAddress(), cookies,
                 "{\"title\":\"" + title + "\",\"contentHtml\":\"<p>본문</p>\",\"visibility\":\"PUBLIC\",\"status\":\"PUBLISHED\"}")
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         return ((Number) JsonPath.read(response, "$.id")).longValue();
     }
 
-    private ResultActions send(MockHttpServletRequestBuilder request, String host, Cookie[] cookies, String body)
+    private ResultActions send(MockHttpServletRequestBuilder request, String blogAddress, Cookie[] cookies, String body)
             throws Exception {
-        request.header(HttpHeaders.HOST, host).header("X-Requested-With", "XMLHttpRequest");
+        // 블로그 API면 블로그 화면처럼 X-Blog-Address로 블로그를 알린다(null이면 플랫폼)
+        if (blogAddress != null) {
+            request.header(TestBlogs.HEADER, blogAddress);
+        }
+        request.header("X-Requested-With", "XMLHttpRequest");
         if (body != null) {
             request.contentType(MediaType.APPLICATION_JSON).content(body);
         }

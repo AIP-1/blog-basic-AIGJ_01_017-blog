@@ -101,13 +101,13 @@ class BlogDecorateMoveDeleteIntegrationTest extends IntegrationTestSupport {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"address\":\"" + address + "\",\"name\":\"새 블로그\"}"))
                 .andExpect(status().isCreated());
-        mockMvc.perform(get("/api/blog/sidebar/modules").header(HttpHeaders.HOST, address + ".blog.test")
+        mockMvc.perform(get("/api/blog/sidebar/modules").header(TestBlogs.HEADER, address)
                         .cookie(testMembers.loginCookies(member)))
                 .andExpect(jsonPath("$", hasSize(8)))
                 .andExpect(jsonPath("$[*].moduleType", contains("PROFILE", "CATEGORY", "TAG", "RECENT_POST",
                         "RECENT_COMMENT", "VISITOR", "POPULAR_POST", "SUBSCRIBE")))
                 .andExpect(jsonPath("$[*].isVisible", contains(true, true, true, true, true, false, false, false)));
-        mockMvc.perform(get("/api/blog/sidebar").header(HttpHeaders.HOST, address + ".blog.test"))
+        mockMvc.perform(get("/api/blog/sidebar").header(TestBlogs.HEADER, address))
                 .andExpect(jsonPath("$.modules[*].type", contains("PROFILE", "CATEGORY", "TAG", "RECENT_POST",
                         "RECENT_COMMENT")));
     }
@@ -177,9 +177,9 @@ class BlogDecorateMoveDeleteIntegrationTest extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.movedCount").value(1));
 
         // 옛 주소는 새 블로그의 같은 번호로 301, 카테고리는 미분류, 태그는 대상 블로그의 같은 이름(대소문자 무시)에
-        mockMvc.perform(get("/" + moved).header(HttpHeaders.HOST, TestBlogs.host(blog)))
+        mockMvc.perform(get("/@" + blog.getAddress() + "/" + moved))
                 .andExpect(status().isMovedPermanently())
-                .andExpect(header().string(HttpHeaders.LOCATION, "http://" + TestBlogs.host(target) + "/" + moved));
+                .andExpect(header().string(HttpHeaders.LOCATION, TestBlogs.url(target, "/" + moved)));
         send(get("/api/posts/" + moved), target, null, null)
                 .andExpect(jsonPath("$.category").doesNotExist())
                 .andExpect(jsonPath("$.tags", contains("spring", "여행")))
@@ -200,9 +200,9 @@ class BlogDecorateMoveDeleteIntegrationTest extends IntegrationTestSupport {
         send(put("/api/blog/moved-to"), b, ownerCookies, "{\"targetBlogId\":" + c.getId() + "}")
                 .andExpect(status().isNoContent());
         assertThat(movedTo(blog)).isEqualTo(c.getId());
-        mockMvc.perform(get("/").header(HttpHeaders.HOST, TestBlogs.host(blog)))
+        mockMvc.perform(get("/@" + blog.getAddress()))
                 .andExpect(status().isMovedPermanently())
-                .andExpect(header().string(HttpHeaders.LOCATION, "http://" + TestBlogs.host(c) + "/"));
+                .andExpect(header().string(HttpHeaders.LOCATION, TestBlogs.url(c, "/")));
         // C를 A로: A의 최종이 C라 순환
         send(put("/api/blog/moved-to"), c, ownerCookies, "{\"targetBlogId\":" + blog.getId() + "}")
                 .andExpect(status().isBadRequest())
@@ -214,12 +214,12 @@ class BlogDecorateMoveDeleteIntegrationTest extends IntegrationTestSupport {
         // 이사한 B를 지워도 B 주소는 새 블로그 C로 301(삭제 여부 무관). C를 지우면 이어지지 않는다
         send(delete("/api/blog"), b, ownerCookies, "{\"confirmAddress\":\"" + b.getAddress() + "\"}")
                 .andExpect(status().isNoContent());
-        mockMvc.perform(get("/").header(HttpHeaders.HOST, TestBlogs.host(b)))
+        mockMvc.perform(get("/@" + b.getAddress()))
                 .andExpect(status().isMovedPermanently())
-                .andExpect(header().string(HttpHeaders.LOCATION, "http://" + TestBlogs.host(c) + "/"));
+                .andExpect(header().string(HttpHeaders.LOCATION, TestBlogs.url(c, "/")));
         send(delete("/api/blog"), c, ownerCookies, "{\"confirmAddress\":\"" + c.getAddress() + "\"}")
                 .andExpect(status().isNoContent());
-        mockMvc.perform(get("/").header(HttpHeaders.HOST, TestBlogs.host(b))).andExpect(status().isNotFound());
+        mockMvc.perform(get("/@" + b.getAddress())).andExpect(status().isNotFound());
     }
 
     // ---------- T107 삭제 ----------
@@ -253,11 +253,11 @@ class BlogDecorateMoveDeleteIntegrationTest extends IntegrationTestSupport {
         assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM comment WHERE post_id = ? AND deleted_at IS NULL",
                 Integer.class, post)).isZero();
         // 옮긴 글은 새 블로그에 남고, 지운 블로그의 옛 주소도 여전히 301. 옮기지 않은 글은 404
-        mockMvc.perform(get("/" + moved).header(HttpHeaders.HOST, TestBlogs.host(side)))
+        mockMvc.perform(get("/@" + side.getAddress() + "/" + moved))
                 .andExpect(status().isMovedPermanently());
-        mockMvc.perform(get("/" + post).header(HttpHeaders.HOST, TestBlogs.host(side)))
+        mockMvc.perform(get("/@" + side.getAddress() + "/" + post))
                 .andExpect(status().isNotFound());
-        mockMvc.perform(get("/").header(HttpHeaders.HOST, TestBlogs.host(side))).andExpect(status().isNotFound());
+        mockMvc.perform(get("/@" + side.getAddress())).andExpect(status().isNotFound());
         // 주소는 다시 쓸 수 없다
         mockMvc.perform(get("/api/blogs/address-availability").param("address", side.getAddress())
                         .header(HttpHeaders.HOST, "blog.test").cookie(ownerCookies))
@@ -285,7 +285,7 @@ class BlogDecorateMoveDeleteIntegrationTest extends IntegrationTestSupport {
 
     private ResultActions send(MockHttpServletRequestBuilder request, Blog target, Cookie[] cookies, String body)
             throws Exception {
-        request.header(HttpHeaders.HOST, TestBlogs.host(target)).header("X-Requested-With", "XMLHttpRequest");
+        request.header(TestBlogs.HEADER, target.getAddress()).header("X-Requested-With", "XMLHttpRequest");
         if (body != null) {
             request.contentType(MediaType.APPLICATION_JSON).content(body);
         }

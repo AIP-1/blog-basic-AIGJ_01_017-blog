@@ -74,7 +74,7 @@ class AuthenticationIntegrationTest extends IntegrationTestSupport {
 
         List<String> setCookies = response.getHeaders(HttpHeaders.SET_COOKIE);
         assertThat(setCookies).hasSize(2).allSatisfy(cookie -> assertThat(cookie)
-                .contains("Domain=.blog.test", "HttpOnly", "SameSite=Lax", "Path=/"));
+                .contains("HttpOnly", "SameSite=Lax", "Path=/").doesNotContain("Domain="));
         assertThat(setCookies).filteredOn(cookie -> cookie.startsWith("refresh_token=")).singleElement()
                 .satisfies(cookie -> assertThat(cookie).contains("Max-Age=1209600"));
         assertThat(setCookies).filteredOn(cookie -> cookie.startsWith("access_token=")).singleElement()

@@ -56,14 +56,14 @@ class StatsIntegrationTest extends IntegrationTestSupport {
         Cookie[] ownerCookies = testMembers.loginCookies(owner);
         Cookie[] readerCookies = testMembers.loginCookies(reader);
         long post = publish(blog, ownerCookies, "통계 글");
-        String host = TestBlogs.host(blog);
+        String host = blog.getAddress();
 
         // 화면 요청이 방문이다. 같은 회원은 하루 한 번, 주인 본인은 세지 않는다. Referer로 유입 종류
-        mockMvc.perform(get("/").header(HttpHeaders.HOST, host).header(HttpHeaders.REFERER, "https://www.google.com/search?q=x")
+        mockMvc.perform(get("/@" + host).header(HttpHeaders.REFERER, "https://www.google.com/search?q=x")
                 .cookie(readerCookies)).andExpect(status().isOk());
-        mockMvc.perform(get("/" + post).header(HttpHeaders.HOST, host).cookie(readerCookies)).andExpect(status().isOk());
-        mockMvc.perform(get("/").header(HttpHeaders.HOST, host).cookie(ownerCookies)).andExpect(status().isOk());
-        mockMvc.perform(get("/manage").header(HttpHeaders.HOST, host).cookie(ownerCookies)).andExpect(status().isOk());
+        mockMvc.perform(get("/@" + host + "/" + post).cookie(readerCookies)).andExpect(status().isOk());
+        mockMvc.perform(get("/@" + host).cookie(ownerCookies)).andExpect(status().isOk());
+        mockMvc.perform(get("/@" + host + "/manage").cookie(ownerCookies)).andExpect(status().isOk());
         assertThat(jdbcTemplate.queryForList("SELECT referrer_type FROM blog_visit WHERE blog_id = ?", String.class,
                 blog.getId())).containsExactly("SEARCH");
 
@@ -117,15 +117,19 @@ class StatsIntegrationTest extends IntegrationTestSupport {
 
     private long publish(Blog target, Cookie[] cookies, String title) throws Exception {
         String response = send(post("/api/posts").header("Idempotency-Key", UUID.randomUUID().toString()),
-                TestBlogs.host(target), cookies,
+                target.getAddress(), cookies,
                 "{\"title\":\"" + title + "\",\"contentHtml\":\"<p>본문</p>\",\"visibility\":\"PUBLIC\",\"status\":\"PUBLISHED\"}")
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         return ((Number) JsonPath.read(response, "$.id")).longValue();
     }
 
-    private ResultActions send(MockHttpServletRequestBuilder request, String host, Cookie[] cookies, String body)
+    private ResultActions send(MockHttpServletRequestBuilder request, String blogAddress, Cookie[] cookies, String body)
             throws Exception {
-        request.header(HttpHeaders.HOST, host).header("X-Requested-With", "XMLHttpRequest");
+        // 블로그 API면 블로그 화면처럼 X-Blog-Address로 블로그를 알린다(null이면 플랫폼)
+        if (blogAddress != null) {
+            request.header(TestBlogs.HEADER, blogAddress);
+        }
+        request.header("X-Requested-With", "XMLHttpRequest");
         if (body != null) {
             request.contentType(MediaType.APPLICATION_JSON).content(body);
         }

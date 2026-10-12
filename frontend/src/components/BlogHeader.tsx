@@ -11,7 +11,7 @@ import LogoutButton from './LogoutButton'
 import SuspensionNotice from './SuspensionNotice'
 
 /**
- * 블로그 주소({address}.blog.com)의 머리글. 주인에게는 이 블로그의 글쓰기·관리 버튼이 보인다.
+ * 블로그 주소(blog.com/@{address})의 머리글. 주인에게는 이 블로그의 글쓰기·관리 버튼이 보인다.
  * 남의 블로그에서 누르는 글쓰기는 내 대표 블로그의 글쓰기로, 블로그가 없으면 개설 안내로 간다 (AUTH-04).
  * 내 대표 블로그가 아닌 곳에서는 '내 블로그'(대표 블로그, BLOG-08), 서비스 관리자에게는 서비스 관리(ADMIN-01).
  * 로그인한 채로 정지된 회원이면 머리글 아래에 정지 사유를 띄운다(ADMIN-02).

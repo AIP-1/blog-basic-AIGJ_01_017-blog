@@ -14,6 +14,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
@@ -21,7 +22,8 @@ import org.springframework.stereotype.Component;
 
 /**
  * 로그인 쿠키를 주고, 읽고, 지운다 (R-03).
- * 쿠키는 Domain=.{platform}; HttpOnly; SameSite=Lax라 모든 블로그 주소가 같은 로그인 상태를 본다.
+ * 쿠키는 HttpOnly; SameSite=Lax이고 Domain을 두지 않는다. 블로그는 플랫폼 주소 아래 /@주소 경로라(스텝 21)
+ * 플랫폼과 모든 블로그 화면이 같은 주소의 쿠키를 그대로 본다.
  * Access 쿠키는 브라우저를 닫으면 사라진다. Refresh 쿠키는 로그인 유지를 고르면 만료 시각(14일)까지 남는다.
  * 고르지 않으면 브라우저를 닫을 때 사라지고, 그 전에도 무활동 시간(30분)이 지나면 서버에서 끝난다(AUTH-03).
  */
@@ -45,8 +47,7 @@ public class AuthCookieManager {
     private final DomainProperties domainProperties;
 
     public AuthCookieManager(JwtTokenProvider tokenProvider, TokenStore tokenStore, AuthProperties authProperties,
-                             DomainProperties domainProperties,
-                             DeviceTokens deviceTokens) {
+                             DomainProperties domainProperties, DeviceTokens deviceTokens) {
         this.deviceTokens = deviceTokens;
         this.tokenProvider = tokenProvider;
         this.tokenStore = tokenStore;
@@ -93,7 +94,7 @@ public class AuthCookieManager {
     }
 
     /**
-     * 소셜 로그인 state 쿠키 (T099). 블로그 주소와 나눌 필요가 없어 지금 주소(플랫폼)에만 두고(Domain 없음),
+     * 소셜 로그인 state 쿠키 (T099). 로그인 쿠키와 같이 지금 주소에만 두고(Domain 없음),
      * /api/auth/oauth 아래에만 보낸다. 제공사에서 돌아오는 이동은 다른 사이트에서 오는 GET이라 SameSite=Lax여야 따라온다.
      */
     public void issueOAuthState(HttpServletResponse response, String state, Duration maxAge) {
@@ -121,22 +122,50 @@ public class AuthCookieManager {
         addCookie(response, REFRESH_COOKIE, "", Duration.ZERO);
     }
 
+    /**
+     * 그 이름의 쿠키 값. 같은 이름이 둘 이상이면 마지막 것을 읽는다: 스텝 21 전의 Domain 쿠키가 남은 브라우저는 옛 쿠키와 새 쿠키를
+     * 함께 보내고, 경로가 같으면 먼저 만든(옛) 쿠키를 앞에 둔다(RFC 6265 5.4).
+     */
     public Optional<String> readCookie(HttpServletRequest request, String name) {
+        List<String> values = values(request, name);
+        return values.isEmpty() ? Optional.empty() : Optional.of(values.getLast());
+    }
+
+    /**
+     * 스텝 21 전에는 로그인·기기 쿠키를 Domain=.{platform}으로 줬다. 그 쿠키가 남은 브라우저는 같은 이름의 쿠키를 둘 보내고,
+     * 로그아웃은 새(Domain 없는) 쿠키만 지워서 옛 Refresh 쿠키로 다시 로그인될 수 있다. 같은 이름이 둘 이상 오면 옛 쿠키를 지운다.
+     */
+    public void expireLegacyDomainCookies(HttpServletRequest request, HttpServletResponse response) {
+        for (String name : List.of(ACCESS_COOKIE, REFRESH_COOKIE, DEVICE_COOKIE)) {
+            if (values(request, name).size() > 1) {
+                response.addHeader(HttpHeaders.SET_COOKIE, ResponseCookie.from(name, "")
+                        .domain("." + domainProperties.platform())
+                        .path("/")
+                        .httpOnly(true)
+                        .secure(authProperties.cookieSecure())
+                        .sameSite("Lax")
+                        .maxAge(Duration.ZERO)
+                        .build()
+                        .toString());
+            }
+        }
+    }
+
+    private static List<String> values(HttpServletRequest request, String name) {
         Cookie[] cookies = request.getCookies();
         if (cookies == null) {
-            return Optional.empty();
+            return List.of();
         }
         return Arrays.stream(cookies)
                 .filter(cookie -> name.equals(cookie.getName()))
                 .map(Cookie::getValue)
                 .filter(value -> !value.isBlank())
-                .findFirst();
+                .toList();
     }
 
     /** maxAge가 null이면 브라우저를 닫을 때 사라지는 쿠키다. */
     private void addCookie(HttpServletResponse response, String name, String value, Duration maxAge) {
         ResponseCookie.ResponseCookieBuilder cookie = ResponseCookie.from(name, value)
-                .domain(domainProperties.cookieDomain())
                 .path("/")
                 .httpOnly(true)
                 .secure(authProperties.cookieSecure())
