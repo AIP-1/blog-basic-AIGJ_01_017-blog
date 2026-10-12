@@ -45,6 +45,28 @@ class LogoutIntegrationTest extends IntegrationTestSupport {
     }
 
     @Test
+    void legacyDomainCookieIsIgnoredAndExpired() throws Exception {
+        // 스텝 21 전 Domain=.blog.test 쿠키가 남은 브라우저: 같은 이름이 둘이고 옛 쿠키가 앞에 온다
+        Member member = testMembers.create();
+        Cookie[] fresh = testMembers.loginCookies(member, true);
+        Cookie[] withLegacy = new Cookie[fresh.length * 2];
+        for (int i = 0; i < fresh.length; i++) {
+            withLegacy[i] = new Cookie(fresh[i].getName(), "stale-legacy-value");
+            withLegacy[fresh.length + i] = fresh[i];
+        }
+
+        MvcResult result = mockMvc.perform(get("/api/me").cookie(withLegacy))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        // 뒤의 새 쿠키로 로그인 상태이고, 옛 Domain 쿠키는 지우라고 응답한다
+        assertThat(result.getResponse().getHeaders(HttpHeaders.SET_COOKIE))
+                .filteredOn(cookie -> cookie.contains("Domain=.blog.test"))
+                .hasSize(2)
+                .allSatisfy(cookie -> assertThat(cookie).contains("Max-Age=0"));
+    }
+
+    @Test
     void oldCookiesNoLongerWorkAfterLogout() throws Exception {
         Member member = testMembers.create();
         Cookie[] cookies = testMembers.loginCookies(member, true);

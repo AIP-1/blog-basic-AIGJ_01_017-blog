@@ -63,6 +63,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
+        cookieManager.expireLegacyDomainCookies(request, response);
         Optional<String> accessCookie = cookieManager.readCookie(request, AuthCookieManager.ACCESS_COOKIE);
         Optional<String> refreshCookie = cookieManager.readCookie(request, AuthCookieManager.REFRESH_COOKIE);
         if (accessCookie.isEmpty() && refreshCookie.isEmpty()) {
