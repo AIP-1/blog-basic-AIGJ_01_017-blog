@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router'
 import { api } from '../../api/client'
 import { errorMessage } from '../../api/errors'
-import type { CursorResponse, PopularPosts, PostSummary, Topic } from '../../api/types'
+import type { CursorResponse, PopularPosts, PostSummary, RankedBlogs, Topic } from '../../api/types'
 import { formatTime } from '../../app/format'
 import { blogUrl } from '../../app/host'
 import { useMe } from '../../app/useMe'
+import BlogCardItem from '../../components/BlogCardItem'
 import NoticeBand from '../../components/NoticeBand'
 import PlatformHeader from '../../components/PlatformHeader'
 import PlatformPostItem from '../../components/PlatformPostItem'
@@ -56,6 +58,7 @@ export default function HomePage() {
       <main className="page">
         <NoticeBand />
         <PopularSection />
+        <BloggerSection />
         <TopicSection />
         <section className="section">
           <h2>최신 글</h2>
@@ -91,7 +94,10 @@ function PopularSection() {
   }
   return (
     <section className="section">
-      <h2>인기 글 <small>최근 1시간 · {formatTime(popular.snapshotAt)} 기준</small></h2>
+      <div className="row between">
+        <h2>인기 글 <small>최근 1시간 · {formatTime(popular.snapshotAt)} 기준</small></h2>
+        <Link className="small" to="/ranking">랭킹 전체보기</Link>
+      </div>
       {popular.items.length === 0
         ? <p className="muted">최근 1시간 동안 읽힌 글이 없습니다.</p>
         : (
@@ -105,6 +111,30 @@ function PopularSection() {
             ))}
           </div>
         )}
+    </section>
+  )
+}
+
+/** 인기 블로거 5 (HOME-04). 최근 7일 블로그 점수, 1시간마다 바뀐다. 실패하면 영역을 숨긴다 */
+function BloggerSection() {
+  const [bloggers, setBloggers] = useState<RankedBlogs | null>(null)
+
+  useEffect(() => {
+    api<RankedBlogs>('/api/home/bloggers', { allowAnonymous: true }).then(setBloggers).catch(() => undefined)
+  }, [])
+
+  if (!bloggers) {
+    return null
+  }
+  return (
+    <section className="section">
+      <div className="row between">
+        <h2>인기 블로거 <small>최근 7일 · {formatTime(bloggers.snapshotAt)} 기준</small></h2>
+        <Link className="small" to="/ranking?tab=bloggers">랭킹 전체보기</Link>
+      </div>
+      {bloggers.items.length === 0
+        ? <p className="muted">아직 순위가 없습니다.</p>
+        : <div className="rank-list">{bloggers.items.map((card) => <BlogCardItem key={card.blog.id} card={card} />)}</div>}
     </section>
   )
 }

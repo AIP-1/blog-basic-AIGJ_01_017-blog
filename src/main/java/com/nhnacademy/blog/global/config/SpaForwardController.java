@@ -7,9 +7,11 @@ import com.nhnacademy.blog.global.host.RequestHost;
 import com.nhnacademy.blog.global.visibility.BlogVisibilityPolicy;
 import com.nhnacademy.blog.global.visibility.PostAccess;
 import com.nhnacademy.blog.global.visibility.PostVisibilityPolicy;
+import com.nhnacademy.blog.manage.application.VisitRecorder;
 import com.nhnacademy.blog.post.application.PostPreview;
 import com.nhnacademy.blog.post.application.PostPreviewService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
@@ -53,9 +55,12 @@ public class SpaForwardController {
     private final BlogVisibilityPolicy blogVisibilityPolicy;
     private final PostVisibilityPolicy postVisibilityPolicy;
     private final PostPreviewService postPreviewService;
+    private final VisitRecorder visitRecorder;
 
     public SpaForwardController(BlogHostResolver blogHostResolver, BlogVisibilityPolicy blogVisibilityPolicy,
-                                PostVisibilityPolicy postVisibilityPolicy, PostPreviewService postPreviewService) {
+                                PostVisibilityPolicy postVisibilityPolicy, PostPreviewService postPreviewService,
+                                VisitRecorder visitRecorder) {
+        this.visitRecorder = visitRecorder;
         this.blogHostResolver = blogHostResolver;
         this.blogVisibilityPolicy = blogVisibilityPolicy;
         this.postVisibilityPolicy = postVisibilityPolicy;
@@ -71,16 +76,16 @@ public class SpaForwardController {
             "/" + FIRST + "/{s2:[^.]+}/{s3:[^.]+}/{s4:[^.]+}/{s5:[^.]+}",
             // 태그 이름에는 점이 들어갈 수 있다(node.js). 확장자로 보지 않는다 (TAG-02)
             "/tag/{name:.+}"})
-    public ResponseEntity<Resource> page(HttpServletRequest request) {
+    public ResponseEntity<Resource> page(HttpServletRequest request, HttpServletResponse response) {
         return switch (blogHostResolver.resolve(request)) {
             case RequestHost.Platform platform -> app(HttpStatus.OK);
             // 플랫폼의 블로그 주소 꼴인데 규칙에 맞지 않거나 예약어면 없는 블로그다
             case RequestHost.Unknown unknown -> isUnderPlatform(request) ? app(HttpStatus.NOT_FOUND) : app(HttpStatus.OK);
-            case RequestHost.BlogAddress blogAddress -> blogPage(request);
+            case RequestHost.BlogAddress blogAddress -> blogPage(request, response);
         };
     }
 
-    private ResponseEntity<Resource> blogPage(HttpServletRequest request) {
+    private ResponseEntity<Resource> blogPage(HttpServletRequest request, HttpServletResponse response) {
         Optional<Blog> found = blogHostResolver.findBlog(request);
         if (found.isEmpty()) {
             return app(HttpStatus.NOT_FOUND);
@@ -99,8 +104,8 @@ public class SpaForwardController {
                 case PostAccess.NotFound notFound -> app(HttpStatus.NOT_FOUND);
                 // 구독 안내는 화면이 API의 403 SUBSCRIBERS_ONLY로 그린다
                 case PostAccess.Owner owner -> postPage(request, blog, postId);
-                case PostAccess.Visible visible -> postPage(request, blog, postId);
-                case PostAccess.SubscribersOnly subscribersOnly -> app(HttpStatus.OK);
+                case PostAccess.Visible visible -> visited(blog, request, response, postPage(request, blog, postId));
+                case PostAccess.SubscribersOnly subscribersOnly -> visited(blog, request, response, app(HttpStatus.OK));
             };
         }
 
@@ -120,7 +125,17 @@ public class SpaForwardController {
             // 이사 간 블로그가 삭제되면 리다이렉트도 끊기고 없는 블로그다 (R-08)
             return target.isDeleted() ? app(HttpStatus.NOT_FOUND) : redirect(request, target);
         }
-        return app(HttpStatus.OK);
+        return isManagePath(path) ? app(HttpStatus.OK) : visited(blog, request, response, app(HttpStatus.OK));
+    }
+
+    /**
+     * 블로그 화면을 정상으로 보여 줄 때 방문을 남긴다 (T082, MNG-03). 주인 본인은 VisitRecorder가 세지 않는다.
+     * 404·301과 관리 화면은 방문이 아니라서 남기지 않는다.
+     */
+    private ResponseEntity<Resource> visited(Blog blog, HttpServletRequest request, HttpServletResponse response,
+                                             ResponseEntity<Resource> page) {
+        visitRecorder.record(blog, request, response);
+        return page;
     }
 
     /** 글 화면. 비회원도 볼 수 있는 글이면 공유 미리보기 태그를 넣은 index.html, 아니면 그대로. */

@@ -1,5 +1,6 @@
 import { type ChangeEvent, type FormEvent, useEffect, useState } from 'react'
 import { Link } from 'react-router'
+import MeTabs from '../../components/MeTabs'
 import { ApiError, api, redirectToLogin, uploadFile } from '../../api/client'
 import { type FieldMessages, errorMessage, fieldMessages } from '../../api/errors'
 import type { Me, MyBlog } from '../../api/types'
@@ -34,6 +35,7 @@ export default function MyPage() {
       <main className="page">
         {me && (
           <div className="stack" style={{ gap: 24, maxWidth: 520 }}>
+            <MeTabs />
             <h2>내 정보</h2>
             <ProfileSection me={me} onSaved={setMe} />
             <MyBlogsSection onPrimaryChanged={setMe} />

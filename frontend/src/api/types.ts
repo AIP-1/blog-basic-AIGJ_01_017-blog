@@ -356,3 +356,68 @@ export interface Notice extends NoticeSummary {
   content: string
   updatedAt: string
 }
+
+/** 저장한 글 한 줄 (GET /api/me/bookmarks). 볼 수 없게 된 글은 저장할 때의 제목·블로그 이름만 */
+export type SavedPost =
+  | { postId: number; visible: true; post: PostSummary; savedAt: string }
+  | { postId: number; visible: false; titleSnapshot: string; blogNameSnapshot: string; savedAt: string }
+
+/** 관리 홈 (GET /api/manage/stats) */
+export interface ManageSummary {
+  today: number
+  yesterday: number
+  total: number
+  recentComments: (Comment & { post: { id: number; title: string } | null })[]
+  recentPosts: { id: number; title: string; viewCount: number; publishedAt: string | null }[]
+}
+
+export interface StatsPoint {
+  date: string
+  visitorCount: number
+  viewCount: number
+}
+
+export type ReferrerType = 'SEARCH' | 'SNS' | 'DIRECT' | 'INTERNAL' | 'OTHER'
+
+export interface Referrers {
+  byType: { type: ReferrerType; count: number }[]
+  bySite: { type: ReferrerType; host: string; count: number }[]
+}
+
+export interface PopularPostStat {
+  rank: number
+  post: { id: number; title: string }
+  viewCount: number
+}
+
+export interface BlockedMember {
+  member: MemberSummary
+  memo: string | null
+  blockedAt: string
+}
+
+export interface BannedWord {
+  id: number
+  word: string
+}
+
+/** 인기 블로거·추천 블로그 한 칸 */
+export interface BlogCard {
+  rank: number
+  blog: { id: number; address: string; name: string; description: string | null; profileImageUrl: string | null }
+  owner: MemberSummary
+  subscriberCount: number
+  recentPostTitle: string | null
+}
+
+export interface RankedBlogs {
+  snapshotAt: string
+  items: BlogCard[]
+  nextOffset: number | null
+}
+
+export interface RankedPosts {
+  snapshotAt: string
+  items: { rank: number; post: PostSummary }[]
+  nextOffset: number | null
+}

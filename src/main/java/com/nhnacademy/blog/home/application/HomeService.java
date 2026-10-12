@@ -65,6 +65,13 @@ public class HomeService {
         return new PopularPosts(snapshot.snapshotAt(), visibleInRankOrder(snapshot, POPULAR_SIZE));
     }
 
+    /** 인기 글을 limit위까지(랭킹 전체보기 HOME-05는 100). 홈 인기 글과 같은 스냅숏이다. */
+    @Transactional(readOnly = true)
+    public PopularPosts popularRanking(int limit) {
+        PopularSnapshot snapshot = popularRanking.snapshot();
+        return new PopularPosts(snapshot.snapshotAt(), visibleInRankOrder(snapshot, limit));
+    }
+
     /**
      * 주제별 글 6개 (HOME-03). 인기 글과 같은 점수 순(5분 캐시)이고, 6개가 안 되면 그 주제의 최신 글로 채운다.
      * 채우는 최신 글은 캐시하지 않는다(주제 인덱스 idx_post_topic_feed로 몇 개만 읽는다). 주제 없는 글은 어느 주제에도 없다.

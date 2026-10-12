@@ -9,6 +9,7 @@ import { useBlog } from '../../app/useBlog'
 import { useMe } from '../../app/useMe'
 import AdminBlindButton from '../../components/AdminBlindButton'
 import AuthorName from '../../components/AuthorName'
+import BookmarkButton from '../../components/BookmarkButton'
 import BlogHeader from '../../components/BlogHeader'
 import Comments from '../../components/Comments'
 import LikeButton from '../../components/LikeButton'
@@ -200,6 +201,7 @@ function Article({ post, me, onDelete, onVisibilityChange, actionError, onCommen
       <div className="row">
         <LikeButton key={`like-${post.id}`} postId={post.id} me={me} initialLiked={post.viewer.liked}
                     initialCount={post.likeCount} />
+        <BookmarkButton key={`bookmark-${post.id}`} postId={post.id} me={me} initialBookmarked={post.viewer.bookmarked} />
         <ShareButtons postId={post.id} title={post.title} />
         {!post.viewer.isOwner && <ReportButton targetType="POST" targetId={post.id} me={me} />}
         {admin && !post.viewer.isOwner && !adminBlinded && (

@@ -7,17 +7,18 @@ import com.nhnacademy.blog.global.auth.LoginMember;
 import com.nhnacademy.blog.global.error.BusinessException;
 import com.nhnacademy.blog.global.error.ErrorCode;
 import com.nhnacademy.blog.global.web.TimeIdCursor;
+import com.nhnacademy.blog.manage.application.SpamGuard;
 import com.nhnacademy.blog.member.domain.Member;
 import com.nhnacademy.blog.member.domain.MemberRepository;
 import com.nhnacademy.blog.notification.application.NotificationService;
 import com.nhnacademy.blog.post.application.PostReadService;
 import com.nhnacademy.blog.post.domain.Post;
 import com.nhnacademy.blog.post.domain.PostRepository;
+import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
-import jakarta.persistence.criteria.Root;
-import jakarta.persistence.criteria.Subquery;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -31,6 +32,8 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 public class CommentService {
+
+    private final SpamGuard spamGuard;
 
     public static final int PAGE_SIZE = 20;
 
@@ -47,7 +50,9 @@ public class CommentService {
     public CommentService(CommentRepository commentRepository, PostRepository postRepository,
                           MemberRepository memberRepository,
                           PostReadService postReadService, CommentViews commentViews,
-                          NotificationService notificationService, Clock clock) {
+                          NotificationService notificationService, Clock clock,
+                          SpamGuard spamGuard) {
+        this.spamGuard = spamGuard;
         this.commentRepository = commentRepository;
         this.postRepository = postRepository;
         this.memberRepository = memberRepository;
@@ -94,7 +99,8 @@ public class CommentService {
     }
 
     /**
-     * 댓글을 쓸 수 있는 글인가. 상태 코드 순서대로: 볼 수 없는 글 404(구독자 공개 403) → 비회원 401 → 댓글을 막은 글 403.
+     * 댓글을 쓸 수 있는 글인가. 상태 코드 순서대로: 볼 수 없는 글 404(구독자 공개 403) → 비회원 401 → 댓글을 막은 글 403
+     * → 이 블로그에서 차단된 회원 403(MNG-04).
      * 입력 검증(400)은 이 다음에 컨트롤러가 한다.
      */
     @Transactional(readOnly = true)
@@ -106,6 +112,7 @@ public class CommentService {
         if (!post.isCommentAllowed()) {
             throw new BusinessException(ErrorCode.COMMENTS_DISABLED);
         }
+        spamGuard.requireNotBlocked(post.getBlog(), member.id());
         return post;
     }
 
@@ -114,6 +121,7 @@ public class CommentService {
     public CommentView write(Blog blog, Long postId, LoginMember member, String content, Long parentId,
                              boolean secret) {
         Post post = writablePost(blog, postId, member);
+        spamGuard.requireNoBannedWord(post.getBlog(), content);
         // 댓글 INSERT(외래 키 공유 잠금) 뒤 댓글 수 UPDATE(배타 잠금)가 동시에 엇갈리면 데드락이라 글 행부터 잠근다
         postRepository.lockById(post.getId());
         Member author = memberRepository.getReferenceById(member.id());
@@ -169,10 +177,14 @@ public class CommentService {
         editable(blog, commentId, member);
     }
 
-    /** 내용 고치기 (CMT-03). 글의 수정 시각이나 댓글 수는 바뀌지 않는다. 고친 시각은 댓글의 updatedAt으로 보인다. */
+    /**
+     * 내용 고치기 (CMT-03). 글의 수정 시각이나 댓글 수는 바뀌지 않는다. 고친 시각은 댓글의 updatedAt으로 보인다.
+     * 고친 내용도 새로 쓸 때처럼 금칙어를 검사한다(MNG-04, 2026-10-11 지원 결정).
+     */
     @Transactional
     public CommentView edit(Blog blog, Long commentId, LoginMember member, String content) {
         Comment comment = editable(blog, commentId, member);
+        spamGuard.requireNoBannedWord(comment.getPost().getBlog(), content);
         comment.edit(content.trim());
         // updatedAt(@LastModifiedDate)이 응답에 들어가도록 UPDATE를 먼저 보낸다
         commentRepository.flush();
@@ -184,6 +196,8 @@ public class CommentService {
         if (!comment.isWrittenBy(member.id()) || comment.isBlinded()) {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
+        // 차단된 회원은 전에 쓴 댓글도 고칠 수 없다(MNG-04, 2026-10-11 지원 결정). 지우기는 그대로 된다
+        spamGuard.requireNotBlocked(comment.getPost().getBlog(), member.id());
         return comment;
     }
 

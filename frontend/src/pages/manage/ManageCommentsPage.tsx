@@ -15,7 +15,7 @@ type Tab = 'comment' | 'guestbook'
  * 받은 댓글·방명록 관리 (MNG-02, 목업 manage-comments). 남이 쓴 것만 최신순 20개씩, 탭과 페이지는 주소(?type=&page=)에 둔다.
  * 지우기와 답글은 글 상세·방명록과 같은 API를 쓴다. 답글은 한 단계라 답글 줄에서 누르면 그 부모에 단다.
  * 주인이 단 답글은 "받은" 것이 아니라 이 목록에는 나오지 않고, 글 상세·방명록에서 보인다.
- * 작성자 차단(목업 4번, MNG-04)은 백로그다.
+ * 작성자 옆 "차단"으로 그 회원을 이 블로그에서 차단한다(MNG-04, 목업 4번). 차단 목록·해제는 스팸·차단 화면이다.
  */
 export default function ManageCommentsPage() {
   const [params, setParams] = useSearchParams()
@@ -64,6 +64,18 @@ export default function ManageCommentsPage() {
     }
   }
 
+  async function block(target: Received) {
+    if (!target.author || !window.confirm(`${target.author.nickname}님을 차단할까요? 이 블로그에 댓글·방명록을 쓰거나 구독할 수 없게 되고, 구독 중이면 구독이 지워집니다.`)) {
+      return
+    }
+    try {
+      await api('/api/manage/blocked-members', { method: 'POST', body: { memberId: target.author.id } })
+      setMessage(`${target.author.nickname}님을 차단했습니다.`)
+    } catch (caught) {
+      setError(caught instanceof ApiError && caught.code === 'ALREADY_BLOCKED' ? '이미 차단한 회원입니다.' : errorMessage(caught))
+    }
+  }
+
   function replied() {
     setReplyingTo(null)
     setMessage('답글을 달았습니다.')
@@ -91,6 +103,9 @@ export default function ManageCommentsPage() {
                            extra={item.post
                              ? <Link to={`/${item.post.id}#comment-${item.id}`}>{item.post.title}</Link>
                              : <Link to="/guestbook">방명록</Link>}
+                           actions={item.author && (
+                             <button className="btn ghost small" type="button" onClick={() => block(item)}>차단</button>
+                           )}
                            onReply={() => setReplyingTo(replyingTo === item.id ? null : item.id)} />
               {replyingTo === item.id && (
                 <div className="comment reply">

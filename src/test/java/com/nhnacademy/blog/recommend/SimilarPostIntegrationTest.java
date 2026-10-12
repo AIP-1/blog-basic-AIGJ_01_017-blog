@@ -80,9 +80,12 @@ class SimilarPostIntegrationTest extends IntegrationTestSupport {
         List<Long> ids = ids(body);
         // 비공개 글은 가장 비슷해도 다른 사람에게 나오지 않고, 자기 글도 빠진다
         assertThat(ids).doesNotContain(base, privateClose)
-                .contains(sameBlog, otherBlogPost, far);
-        assertThat(ids.indexOf(sameBlog)).isLessThan(ids.indexOf(far));
-        assertThat(ids.indexOf(otherBlogPost)).isLessThan(ids.indexOf(far));
+                .contains(sameBlog, otherBlogPost);
+        // 먼 글은 같은 DB의 다른 테스트 글에 밀려 5개 밖일 수 있다. 들어 있으면 가까운 글보다 뒤다
+        if (ids.contains(far)) {
+            assertThat(ids.indexOf(sameBlog)).isLessThan(ids.indexOf(far));
+            assertThat(ids.indexOf(otherBlogPost)).isLessThan(ids.indexOf(far));
+        }
         int otherIndex = ids.indexOf(otherBlogPost);
         assertThat((String) JsonPath.read(body, "$[" + otherIndex + "].blog.address")).isEqualTo(otherBlog.getAddress());
 

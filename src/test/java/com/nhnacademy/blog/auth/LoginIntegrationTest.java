@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.nhnacademy.blog.IntegrationTestSupport;
+import com.nhnacademy.blog.auth.presentation.AuthCookieManager;
 import com.nhnacademy.blog.admin.domain.ModerationAction;
 import com.nhnacademy.blog.admin.domain.ModerationLog;
 import com.nhnacademy.blog.admin.domain.ModerationLogRepository;
@@ -53,7 +54,8 @@ class LoginIntegrationTest extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.nickname").value(member.getNickname()))
                 .andReturn();
 
-        List<String> setCookies = result.getResponse().getHeaders(HttpHeaders.SET_COOKIE);
+        // 로그인 쿠키 둘(Access·Refresh). 기기 쿠키(T055b)는 로그인 상태가 아니라서 따로 본다
+        List<String> setCookies = loginCookies(result);
         assertThat(setCookies).hasSize(2).allSatisfy(cookie -> assertThat(cookie).contains("Domain=.blog.test"));
         // 로그인 유지를 고르지 않으면 브라우저를 닫으면 사라지는 쿠키다
         assertThat(setCookies).noneMatch(cookie -> cookie.contains("Max-Age"));
@@ -142,7 +144,14 @@ class LoginIntegrationTest extends IntegrationTestSupport {
                 .andExpect(status().isOk())
                 .andReturn();
 
-        assertThat(result.getResponse().getHeaders(HttpHeaders.SET_COOKIE)).noneMatch(c -> c.contains("Max-Age"));
+        assertThat(loginCookies(result)).noneMatch(c -> c.contains("Max-Age"));
+    }
+
+    /** 기기 쿠키(device=…, 1년)를 뺀 로그인 쿠키. */
+    private static List<String> loginCookies(MvcResult result) {
+        return result.getResponse().getHeaders(HttpHeaders.SET_COOKIE).stream()
+                .filter(cookie -> !cookie.startsWith(AuthCookieManager.DEVICE_COOKIE + "="))
+                .toList();
     }
 
     @Test

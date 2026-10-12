@@ -6,7 +6,7 @@ import org.springframework.stereotype.Repository;
 
 /**
  * 탈퇴한 회원의 흔적 정리 (AUTH-06). 그 회원이 누른 공감과 구독을 지우고 수치(공감 수)를 맞추며, 그 회원이 쓴 댓글·방명록을
- * 소프트 삭제하고 댓글 수를 맞추고, 소셜 연동을 끊는다. 답글이 달린 댓글은 화면에서 "삭제된 댓글입니다"로 자리만 남는다(CMT-05).
+ * 소프트 삭제하고 댓글 수를 맞추고, 저장한 글을 지우고, 소셜 연동을 끊는다. 답글이 달린 댓글은 화면에서 "삭제된 댓글입니다"로 자리만 남는다(CMT-05).
  * 작성자가 고친 것이 아니라서 글·댓글의 수정 시각은 그대로 둔다. 같은 트랜잭션 안에서 부른다.
  */
 @Repository
@@ -38,6 +38,8 @@ public class MemberTraceCleaner {
         jdbcTemplate.update("""
                 UPDATE guestbook SET deleted_at = ?, updated_at = updated_at
                 WHERE member_id = ? AND deleted_at IS NULL""", now, memberId);
+        // 저장한 글은 본인만 보는 목록이라 함께 지운다 (T077, SOC-03)
+        jdbcTemplate.update("DELETE FROM post_bookmark WHERE member_id = ?", memberId);
         // 소셜 연동을 끊어 같은 소셜 계정을 다른 회원에 다시 연결할 수 있게
         jdbcTemplate.update("DELETE FROM social_account WHERE member_id = ?", memberId);
     }

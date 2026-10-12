@@ -51,7 +51,7 @@ public class GuestbookController {
     @ResponseStatus(HttpStatus.CREATED)
     public CommentResponse write(@CurrentBlog Blog blog, @AuthenticationPrincipal LoginMember member,
                                  @RequestBody GuestbookRequest request) {
-        guestbookService.requireMember(member);
+        guestbookService.requireWritable(blog, member);
         requestValidator.validate(request);
         return CommentResponse.from(
                 guestbookService.write(blog, member, request.content(), request.parentId(), request.isSecret()));

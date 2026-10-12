@@ -64,3 +64,7 @@ app:
     view-weight: 1
     like-weight: 3
     comment-weight: 5
+  ranking:
+    # 블로그 점수 = 정시 전 blog-window 동안 조회·공감·댓글(가중치는 popular와 같음) + 새 구독자×subscribe-weight (R-13, HOME-04)
+    blog-window: 7d
+    subscribe-weight: 10

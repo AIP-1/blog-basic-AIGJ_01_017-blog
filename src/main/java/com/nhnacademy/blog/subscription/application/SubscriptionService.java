@@ -6,6 +6,7 @@ import com.nhnacademy.blog.global.auth.LoginMember;
 import com.nhnacademy.blog.global.error.BusinessException;
 import com.nhnacademy.blog.global.error.ErrorCode;
 import com.nhnacademy.blog.global.visibility.BlogVisibilityPolicy;
+import com.nhnacademy.blog.manage.application.SpamGuard;
 import com.nhnacademy.blog.member.domain.MemberRepository;
 import com.nhnacademy.blog.notification.application.NotificationService;
 import com.nhnacademy.blog.subscription.domain.SubscriptionRepository;
@@ -20,6 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class SubscriptionService {
 
+    private final SpamGuard spamGuard;
+
     private final SubscriptionRepository subscriptionRepository;
     private final BlogRepository blogRepository;
     private final MemberRepository memberRepository;
@@ -28,7 +31,9 @@ public class SubscriptionService {
 
     public SubscriptionService(SubscriptionRepository subscriptionRepository, BlogRepository blogRepository,
                                MemberRepository memberRepository, BlogVisibilityPolicy blogVisibilityPolicy,
-                               NotificationService notificationService) {
+                               NotificationService notificationService,
+                               SpamGuard spamGuard) {
+        this.spamGuard = spamGuard;
         this.subscriptionRepository = subscriptionRepository;
         this.blogRepository = blogRepository;
         this.memberRepository = memberRepository;
@@ -42,6 +47,7 @@ public class SubscriptionService {
         if (blog.isOwnedBy(member.id())) {
             throw BusinessException.invalidField("blogId", "자기 블로그는 구독할 수 없습니다.");
         }
+        spamGuard.requireNotBlocked(blog, member.id());
         if (subscriptionRepository.insertIfAbsent(member.id(), blog.getId()) == 1) {
             // 새로 구독했을 때만 주인에게 알린다(연타한 두 번째 요청은 알리지 않음, SUB-04)
             notificationService.subscribed(blog, memberRepository.getReferenceById(member.id()));

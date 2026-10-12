@@ -16,6 +16,8 @@ import CategoriesPage from './CategoriesPage'
 import ManageCommentsPage from './ManageCommentsPage'
 import ManageHomePage from './ManageHomePage'
 import ManagePostsPage from './ManagePostsPage'
+import ManageSpamPage from './ManageSpamPage'
+import ManageStatsPage from './ManageStatsPage'
 import PostWritePage from './PostWritePage'
 
 /**
@@ -74,8 +76,11 @@ export default function ManagePage() {
           <NavLink to="/manage/posts" end>글 관리</NavLink>
           <NavLink to="/manage/comments">댓글·방명록</NavLink>
           <NavLink to="/manage/categories">카테고리·태그</NavLink>
+          <div className="sec">통계</div>
+          <NavLink to="/manage/stats">방문 통계</NavLink>
           <div className="sec">설정</div>
           <NavLink to="/manage/settings">블로그 설정</NavLink>
+          <NavLink to="/manage/spam">스팸·차단</NavLink>
         </nav>
         <Routes>
           <Route index element={<ManageHomePage blog={blog} />} />
@@ -85,6 +90,8 @@ export default function ManagePage() {
           <Route path="posts/:postId/edit" element={<PostWritePage key="edit" />} />
           <Route path="categories" element={<CategoriesPage />} />
           <Route path="settings" element={<BlogSettingsPage blog={blog} onSaved={setBlog} />} />
+          <Route path="stats" element={<ManageStatsPage />} />
+          <Route path="spam" element={<ManageSpamPage />} />
           <Route path="*" element={<main className="page"><p className="muted">준비 중인 화면입니다.</p></main>} />
         </Routes>
       </div>
