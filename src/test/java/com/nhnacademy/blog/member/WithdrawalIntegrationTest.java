@@ -151,8 +151,10 @@ class WithdrawalIntegrationTest extends IntegrationTestSupport {
 
     private ResultActions send(MockHttpServletRequestBuilder request, Blog blog, Cookie[] cookies, String body)
             throws Exception {
-        request.header(HttpHeaders.HOST, blog == null ? "blog.test" : TestBlogs.host(blog))
-                .header("X-Requested-With", "XMLHttpRequest");
+        if (blog != null) {
+            request.header(TestBlogs.HEADER, blog.getAddress());
+        }
+        request.header("X-Requested-With", "XMLHttpRequest");
         if (body != null) {
             request.contentType(MediaType.APPLICATION_JSON).content(body);
         }

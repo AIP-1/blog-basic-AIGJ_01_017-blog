@@ -112,7 +112,7 @@ class SimilarPostIntegrationTest extends IntegrationTestSupport {
 
     private long publish(Blog target, Cookie[] cookies, String title, String visibility) throws Exception {
         String response = mockMvc.perform(post("/api/posts")
-                        .header(HttpHeaders.HOST, TestBlogs.host(target))
+                        .header(TestBlogs.HEADER, target.getAddress())
                         .header("X-Requested-With", "XMLHttpRequest")
                         .header("Idempotency-Key", UUID.randomUUID().toString())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -125,7 +125,7 @@ class SimilarPostIntegrationTest extends IntegrationTestSupport {
     }
 
     private ResultActions similar(long postId, String size) throws Exception {
-        var request = get("/api/posts/" + postId + "/similar").header(HttpHeaders.HOST, TestBlogs.host(blog));
+        var request = get("/api/posts/" + postId + "/similar").header(TestBlogs.HEADER, blog.getAddress());
         if (size != null) {
             request.param("size", size);
         }

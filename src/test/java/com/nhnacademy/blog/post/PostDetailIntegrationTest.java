@@ -91,7 +91,7 @@ class PostDetailIntegrationTest extends IntegrationTestSupport {
         Post post = testPosts.published(blog, Visibility.PUBLIC);
 
         mockMvc.perform(put("/api/posts/" + post.getId())
-                        .header(HttpHeaders.HOST, TestBlogs.host(blog))
+                        .header(TestBlogs.HEADER, blog.getAddress())
                         .header("X-Requested-With", "XMLHttpRequest")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"title\":\"고침\",\"contentHtml\":\"<p>새 본문</p>\",\"visibility\":\"PUBLIC\","
@@ -149,7 +149,7 @@ class PostDetailIntegrationTest extends IntegrationTestSupport {
         Post elsewhere = testPosts.published(testBlogs.create(testMembers.create()), Visibility.PUBLIC);
 
         detail(elsewhere, null).andExpect(status().isNotFound());
-        mockMvc.perform(get("/api/posts/999999999").header(HttpHeaders.HOST, TestBlogs.host(blog)))
+        mockMvc.perform(get("/api/posts/999999999").header(TestBlogs.HEADER, blog.getAddress()))
                 .andExpect(status().isNotFound());
     }
 
@@ -184,7 +184,7 @@ class PostDetailIntegrationTest extends IntegrationTestSupport {
     }
 
     private ResultActions detail(Post post, Cookie[] cookies) throws Exception {
-        var request = get("/api/posts/" + post.getId()).header(HttpHeaders.HOST, TestBlogs.host(blog));
+        var request = get("/api/posts/" + post.getId()).header(TestBlogs.HEADER, blog.getAddress());
         return mockMvc.perform(cookies == null ? request : request.cookie(cookies));
     }
 

@@ -1,5 +1,6 @@
 package com.nhnacademy.blog.support;
 
+import com.nhnacademy.blog.global.host.BlogAddressResolver;
 import com.nhnacademy.blog.blog.domain.Blog;
 import com.nhnacademy.blog.blog.domain.BlogRepository;
 import com.nhnacademy.blog.member.domain.Member;
@@ -48,8 +49,12 @@ public class TestBlogs {
         jdbcTemplate.update("UPDATE member SET status = 'SUSPENDED' WHERE id = ?", blog.getMember().getId());
     }
 
-    public static String host(Blog blog) {
-        return blog.getAddress() + ".blog.test";
+    /** 블로그 화면이 블로그 API를 부를 때 붙이는 헤더 (스텝 21). 값은 blog.getAddress(). */
+    public static final String HEADER = BlogAddressResolver.HEADER;
+
+    /** 블로그 화면의 전체 주소: http://blog.test/@주소/글. path가 "/"면 블로그 첫 화면. */
+    public static String url(Blog blog, String path) {
+        return "http://blog.test" + BlogAddressResolver.blogPath(blog.getAddress(), path);
     }
 
 }

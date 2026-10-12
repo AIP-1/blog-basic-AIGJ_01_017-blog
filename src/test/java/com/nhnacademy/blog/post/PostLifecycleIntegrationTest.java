@@ -81,7 +81,7 @@ class PostLifecycleIntegrationTest extends IntegrationTestSupport {
 
         list("?categoryId=0").andExpect(jsonPath("$.totalElements").value(2));
         list("").andExpect(jsonPath("$.content[0].category").doesNotExist());
-        mockMvc.perform(get("/api/blog/sidebar").header(HttpHeaders.HOST, TestBlogs.host(blog)))
+        mockMvc.perform(get("/api/blog/sidebar").header(TestBlogs.HEADER, blog.getAddress()))
                 .andExpect(jsonPath("$.modules[1].data.uncategorizedCount").value(2))
                 .andExpect(jsonPath("$.modules[1].data.categories").isEmpty());
         list("?categoryId=" + categoryId).andExpect(status().isNotFound());
@@ -96,13 +96,13 @@ class PostLifecycleIntegrationTest extends IntegrationTestSupport {
                 .andExpect(status().isNoContent());
 
         list(null).andExpect(jsonPath("$.content[*].id", contains((int) kept)));
-        mockMvc.perform(get("/api/blog").header(HttpHeaders.HOST, TestBlogs.host(blog)))
+        mockMvc.perform(get("/api/blog").header(TestBlogs.HEADER, blog.getAddress()))
                 .andExpect(jsonPath("$.postCount").value(1));
-        mockMvc.perform(get("/api/blog/sidebar").header(HttpHeaders.HOST, TestBlogs.host(blog)))
+        mockMvc.perform(get("/api/blog/sidebar").header(TestBlogs.HEADER, blog.getAddress()))
                 .andExpect(jsonPath("$.modules[1].data.totalCount").value(1))
                 .andExpect(jsonPath("$.modules[3].data[*].id", contains((int) kept)));
         // 주인에게는 그대로 보인다
-        mockMvc.perform(get("/api/posts").header(HttpHeaders.HOST, TestBlogs.host(blog)).cookie(ownerCookies))
+        mockMvc.perform(get("/api/posts").header(TestBlogs.HEADER, blog.getAddress()).cookie(ownerCookies))
                 .andExpect(jsonPath("$.totalElements").value(2));
     }
 
@@ -130,7 +130,7 @@ class PostLifecycleIntegrationTest extends IntegrationTestSupport {
 
     private ResultActions list(String query) throws Exception {
         return mockMvc.perform(get("/api/posts" + (query == null ? "" : query))
-                .header(HttpHeaders.HOST, TestBlogs.host(blog)));
+                .header(TestBlogs.HEADER, blog.getAddress()));
     }
 
     private ResultActions send(MockHttpServletRequestBuilder request, String body) throws Exception {
@@ -142,7 +142,7 @@ class PostLifecycleIntegrationTest extends IntegrationTestSupport {
     }
 
     private MockHttpServletRequestBuilder withDefaults(MockHttpServletRequestBuilder request) {
-        return request.header(HttpHeaders.HOST, TestBlogs.host(blog))
+        return request.header(TestBlogs.HEADER, blog.getAddress())
                 .header("X-Requested-With", "XMLHttpRequest")
                 .contentType(MediaType.APPLICATION_JSON)
                 .cookie(ownerCookies);

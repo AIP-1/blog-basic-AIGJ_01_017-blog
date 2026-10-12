@@ -16,6 +16,7 @@ import com.nhnacademy.blog.post.domain.Post;
 import com.nhnacademy.blog.post.domain.PostBody;
 import com.nhnacademy.blog.post.domain.PostRepository;
 import com.nhnacademy.blog.post.domain.Visibility;
+import com.nhnacademy.blog.global.host.BlogAddressResolver;
 import com.nhnacademy.blog.support.TestBlogs;
 import com.nhnacademy.blog.support.TestMembers;
 import java.time.LocalDateTime;
@@ -47,21 +48,22 @@ class SpaForwardIntegrationTest extends IntegrationTestSupport {
 
     @Test
     void platformPagesServeTheApp() throws Exception {
-        mockMvc.perform(page("blog.test", "/"))
+        mockMvc.perform(platformPage("/"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML));
-        mockMvc.perform(page("blog.test", "/signup"))
+        mockMvc.perform(platformPage("/signup"))
                 .andExpect(status().isOk());
-        mockMvc.perform(page("localhost", "/login"))
+        mockMvc.perform(platformPage("/login"))
                 .andExpect(status().isOk());
     }
 
     @Test
     void unknownBlogAddressIs404Page() throws Exception {
-        mockMvc.perform(page("nobody-here.blog.test", "/"))
+        // 없는 주소, 예약어 주소(/@admin), 규칙에 맞지 않는 주소는 없는 블로그다
+        mockMvc.perform(blogPage("nobody-here", "/"))
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML));
-        mockMvc.perform(page("admin.blog.test", "/"))
+        mockMvc.perform(blogPage("admin", "/"))
                 .andExpect(status().isNotFound());
     }
 
@@ -69,12 +71,12 @@ class SpaForwardIntegrationTest extends IntegrationTestSupport {
     void blogPagesServeTheApp() throws Exception {
         Blog blog = testBlogs.create(testMembers.create());
 
-        mockMvc.perform(page(TestBlogs.host(blog), "/"))
+        mockMvc.perform(blogPage(blog.getAddress(), "/"))
                 .andExpect(status().isOk());
-        mockMvc.perform(page(TestBlogs.host(blog), "/category/12"))
+        mockMvc.perform(blogPage(blog.getAddress(), "/category/12"))
                 .andExpect(status().isOk());
         // 태그 이름에는 점이 들어갈 수 있다 (node.js). 확장자로 보고 정적 파일로 넘기면 안 된다
-        mockMvc.perform(page(TestBlogs.host(blog), "/tag/node.js"))
+        mockMvc.perform(blogPage(blog.getAddress(), "/tag/node.js"))
                 .andExpect(status().isOk());
     }
 
@@ -83,7 +85,7 @@ class SpaForwardIntegrationTest extends IntegrationTestSupport {
         Blog blog = testBlogs.create(testMembers.create());
         testBlogs.delete(blog);
 
-        mockMvc.perform(page(TestBlogs.host(blog), "/"))
+        mockMvc.perform(blogPage(blog.getAddress(), "/"))
                 .andExpect(status().isNotFound());
     }
 
@@ -94,12 +96,12 @@ class SpaForwardIntegrationTest extends IntegrationTestSupport {
         Blog newBlog = testBlogs.create(owner);
         testBlogs.move(oldBlog, newBlog);
 
-        mockMvc.perform(page(TestBlogs.host(oldBlog), "/category/3").queryParam("page", "2"))
+        mockMvc.perform(blogPage(oldBlog.getAddress(), "/category/3").queryParam("page", "2"))
                 .andExpect(status().isMovedPermanently())
-                .andExpect(header().string("Location", "http://" + TestBlogs.host(newBlog) + "/category/3?page=2"));
-        mockMvc.perform(page(TestBlogs.host(oldBlog), "/manage/settings"))
+                .andExpect(header().string("Location", TestBlogs.url(newBlog, "/category/3?page=2")));
+        mockMvc.perform(blogPage(oldBlog.getAddress(), "/manage/settings"))
                 .andExpect(status().isMovedPermanently());
-        mockMvc.perform(page(TestBlogs.host(oldBlog), "/manage/settings").cookie(testMembers.loginCookies(owner)))
+        mockMvc.perform(blogPage(oldBlog.getAddress(), "/manage/settings").cookie(testMembers.loginCookies(owner)))
                 .andExpect(status().isOk());
     }
 
@@ -111,7 +113,7 @@ class SpaForwardIntegrationTest extends IntegrationTestSupport {
         testBlogs.move(oldBlog, newBlog);
         testBlogs.delete(newBlog);
 
-        mockMvc.perform(page(TestBlogs.host(oldBlog), "/"))
+        mockMvc.perform(blogPage(oldBlog.getAddress(), "/"))
                 .andExpect(status().isNotFound());
     }
 
@@ -122,14 +124,14 @@ class SpaForwardIntegrationTest extends IntegrationTestSupport {
         Post publicPost = post(alpha, Visibility.PUBLIC);
         Post privatePost = post(alpha, Visibility.PRIVATE);
 
-        mockMvc.perform(page(TestBlogs.host(alpha), "/" + publicPost.getId()))
+        mockMvc.perform(blogPage(alpha.getAddress(), "/" + publicPost.getId()))
                 .andExpect(status().isOk());
-        mockMvc.perform(page(TestBlogs.host(beta), "/" + publicPost.getId()))
+        mockMvc.perform(blogPage(beta.getAddress(), "/" + publicPost.getId()))
                 .andExpect(status().isMovedPermanently())
-                .andExpect(header().string("Location", "http://" + TestBlogs.host(alpha) + "/" + publicPost.getId()));
-        mockMvc.perform(page(TestBlogs.host(beta), "/" + privatePost.getId()))
+                .andExpect(header().string("Location", TestBlogs.url(alpha, "/" + publicPost.getId())));
+        mockMvc.perform(blogPage(beta.getAddress(), "/" + privatePost.getId()))
                 .andExpect(status().isNotFound());
-        mockMvc.perform(page(TestBlogs.host(beta), "/999999999"))
+        mockMvc.perform(blogPage(beta.getAddress(), "/999999999"))
                 .andExpect(status().isNotFound());
     }
 
@@ -139,12 +141,12 @@ class SpaForwardIntegrationTest extends IntegrationTestSupport {
         Blog blog = testBlogs.create(owner);
         Post privatePost = post(blog, Visibility.PRIVATE);
 
-        mockMvc.perform(page(TestBlogs.host(blog), "/" + privatePost.getId()))
+        mockMvc.perform(blogPage(blog.getAddress(), "/" + privatePost.getId()))
                 .andExpect(status().isNotFound());
-        mockMvc.perform(page(TestBlogs.host(blog), "/" + privatePost.getId())
+        mockMvc.perform(blogPage(blog.getAddress(), "/" + privatePost.getId())
                         .cookie(testMembers.loginCookies(testMembers.create())))
                 .andExpect(status().isNotFound());
-        mockMvc.perform(page(TestBlogs.host(blog), "/" + privatePost.getId()).cookie(testMembers.loginCookies(owner)))
+        mockMvc.perform(blogPage(blog.getAddress(), "/" + privatePost.getId()).cookie(testMembers.loginCookies(owner)))
                 .andExpect(status().isOk());
     }
 
@@ -155,7 +157,7 @@ class SpaForwardIntegrationTest extends IntegrationTestSupport {
         Post leftBehind = post(oldBlog, Visibility.PUBLIC);
         testBlogs.move(oldBlog, testBlogs.create(owner));
 
-        mockMvc.perform(page(TestBlogs.host(oldBlog), "/" + leftBehind.getId()))
+        mockMvc.perform(blogPage(oldBlog.getAddress(), "/" + leftBehind.getId()))
                 .andExpect(status().isOk());
     }
 
@@ -164,16 +166,16 @@ class SpaForwardIntegrationTest extends IntegrationTestSupport {
         Blog blog = testBlogs.create(testMembers.create());
         Post post = post(blog, Visibility.SUBSCRIBERS);
 
-        mockMvc.perform(page(TestBlogs.host(blog), "/" + post.getId()))
+        mockMvc.perform(blogPage(blog.getAddress(), "/" + post.getId()))
                 .andExpect(status().isOk());
     }
 
     @Test
     void assetsAndApiAreNotPages() throws Exception {
-        mockMvc.perform(page("blog.test", "/assets/missing.js"))
+        mockMvc.perform(platformPage("/assets/missing.js"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("NOT_FOUND"));
-        mockMvc.perform(page("blog.test", "/api/missing"))
+        mockMvc.perform(platformPage("/api/missing"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("NOT_FOUND"));
     }
@@ -189,9 +191,7 @@ class SpaForwardIntegrationTest extends IntegrationTestSupport {
         Post post = postRepository.save(Post.published(blog, null, "<b>제목\"><script>alert(1)</script>",
                 new PostBody("<p>요약 & 소개</p><img src=\"/uploads/og-" + blog.getAddress() + ".png\">",
                         "요약 & 소개", "요약 & 소개"), Visibility.PUBLIC, null, LocalDateTime.now()));
-        String host = TestBlogs.host(blog);
-
-        String html = mockMvc.perform(page(host, "/" + post.getId()))
+        String html = mockMvc.perform(blogPage(blog.getAddress(), "/" + post.getId()))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
@@ -199,8 +199,8 @@ class SpaForwardIntegrationTest extends IntegrationTestSupport {
                 .contains("<meta property=\"og:type\" content=\"article\">")
                 .contains("<meta property=\"og:title\" content=\"&lt;b&gt;제목&quot;&gt;&lt;script&gt;alert(1)&lt;/script&gt;\">")
                 .contains("<meta property=\"og:description\" content=\"요약 &amp; 소개\">")
-                .contains("<meta property=\"og:url\" content=\"http://" + host + "/" + post.getId() + "\">")
-                .contains("<meta property=\"og:image\" content=\"http://" + host + "/uploads/t_og-" + blog.getAddress() + ".png\">")
+                .contains("<meta property=\"og:url\" content=\"" + TestBlogs.url(blog, "/" + post.getId()) + "\">")
+                .contains("<meta property=\"og:image\" content=\"" + TestBlogs.url(blog, "/uploads/t_og-" + blog.getAddress() + ".png") + "\">")
                 .contains("<meta property=\"og:site_name\" content=\"" + blog.getName() + "\">")
                 .contains("<title>&lt;b&gt;제목")
                 // 사용자가 쓴 글자가 태그로 끼어들지 않는다
@@ -214,20 +214,26 @@ class SpaForwardIntegrationTest extends IntegrationTestSupport {
         Post privatePost = post(blog, Visibility.PRIVATE);
         Post subscribersOnly = post(blog, Visibility.SUBSCRIBERS);
 
-        String ownerView = mockMvc.perform(page(TestBlogs.host(blog), "/" + privatePost.getId())
+        String ownerView = mockMvc.perform(blogPage(blog.getAddress(), "/" + privatePost.getId())
                         .cookie(testMembers.loginCookies(owner)))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
         assertThat(ownerView).doesNotContain("og:title");
-        assertThat(mockMvc.perform(page(TestBlogs.host(blog), "/" + subscribersOnly.getId()))
+        assertThat(mockMvc.perform(blogPage(blog.getAddress(), "/" + subscribersOnly.getId()))
                 .andReturn().getResponse().getContentAsString()).doesNotContain("og:title");
         // 블로그 메인 같은 다른 화면에는 넣지 않는다
-        assertThat(mockMvc.perform(page(TestBlogs.host(blog), "/"))
+        assertThat(mockMvc.perform(blogPage(blog.getAddress(), "/"))
                 .andReturn().getResponse().getContentAsString()).doesNotContain("og:title");
     }
 
-    private MockHttpServletRequestBuilder page(String host, String path) {
-        return get(path).header("Host", host).accept(MediaType.TEXT_HTML);
+    /** 플랫폼 화면 주소. */
+    private MockHttpServletRequestBuilder platformPage(String path) {
+        return get(path).accept(MediaType.TEXT_HTML);
+    }
+
+    /** 블로그 화면 주소 /@{address}{path} (스텝 21). path가 "/"면 /@{address}. */
+    private MockHttpServletRequestBuilder blogPage(String address, String path) {
+        return get(BlogAddressResolver.blogPath(address, path)).accept(MediaType.TEXT_HTML);
     }
 
     private Post post(Blog blog, Visibility visibility) {

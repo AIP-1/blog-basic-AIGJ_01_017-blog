@@ -157,7 +157,7 @@ class ManagePostIntegrationTest extends IntegrationTestSupport {
         assertThat(visibility(second)).isEqualTo("PRIVATE");
         assertThat(visibility(foreign)).isEqualTo("PUBLIC");
         // 다른 사람에게는 블로그 목록에서 바로 빠진다
-        mockMvc.perform(get("/api/posts").header(HttpHeaders.HOST, TestBlogs.host(blog)))
+        mockMvc.perform(get("/api/posts").header(TestBlogs.HEADER, blog.getAddress()))
                 .andExpect(jsonPath("$.totalElements").value(0));
 
         // 구독자 공개도 일괄로 바꿀 수 있다(스텝 16, POST-12)
@@ -215,7 +215,7 @@ class ManagePostIntegrationTest extends IntegrationTestSupport {
 
     private ResultActions send(MockHttpServletRequestBuilder request, Cookie[] cookies, String body)
             throws Exception {
-        request.header(HttpHeaders.HOST, TestBlogs.host(blog)).header("X-Requested-With", "XMLHttpRequest");
+        request.header(TestBlogs.HEADER, blog.getAddress()).header("X-Requested-With", "XMLHttpRequest");
         if (body != null) {
             request.contentType(MediaType.APPLICATION_JSON).content(body);
         }

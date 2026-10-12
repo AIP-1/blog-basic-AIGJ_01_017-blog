@@ -99,7 +99,7 @@ class PostWriteIntegrationTest extends IntegrationTestSupport {
 
         Number id = JsonPath.read(response, "$.id");
         assertThat((String) JsonPath.read(response, "$.url"))
-                .isEqualTo("http://" + TestBlogs.host(blog) + "/" + id);
+                .isEqualTo(TestBlogs.url(blog, "/" + id));
         Post saved = postRepository.findById(id.longValue()).orElseThrow();
         assertThat(saved.getTitle()).isEqualTo("첫 글");
         assertThat(saved.getContentHtml()).isEqualTo("<h2>제목</h2><p>본문 <b>굵게</b></p>");
@@ -192,7 +192,7 @@ class PostWriteIntegrationTest extends IntegrationTestSupport {
         perform(put("/api/posts/" + post.getId()), ownerCookies, body("고친 제목", "PRIVATE"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(post.getId()))
-                .andExpect(jsonPath("$.url").value("http://" + TestBlogs.host(blog) + "/" + post.getId()));
+                .andExpect(jsonPath("$.url").value(TestBlogs.url(blog, "/" + post.getId())));
 
         Post edited = postRepository.findById(post.getId()).orElseThrow();
         assertThat(edited.getTitle()).isEqualTo("고친 제목");
@@ -275,7 +275,7 @@ class PostWriteIntegrationTest extends IntegrationTestSupport {
                 .andExpect(status().isNoContent());
 
         listOf(null).andExpect(jsonPath("$.totalElements").value(0));
-        mockMvc.perform(get("/api/blog").header(HttpHeaders.HOST, TestBlogs.host(blog)))
+        mockMvc.perform(get("/api/blog").header(TestBlogs.HEADER, blog.getAddress()))
                 .andExpect(jsonPath("$.postCount").value(0));
         listOf(ownerCookies).andExpect(jsonPath("$.totalElements").value(1));
         perform(patch("/api/posts/" + post.getId() + "/visibility"), ownerCookies,
@@ -311,7 +311,7 @@ class PostWriteIntegrationTest extends IntegrationTestSupport {
         assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM notification WHERE receiver_id = ?",
                 Integer.class, owner.getId())).isZero();
         listOf(ownerCookies).andExpect(jsonPath("$.totalElements").value(0));
-        mockMvc.perform(get("/api/blog/sidebar").header(HttpHeaders.HOST, TestBlogs.host(blog)))
+        mockMvc.perform(get("/api/blog/sidebar").header(TestBlogs.HEADER, blog.getAddress()))
                 .andExpect(jsonPath("$.modules[4].data").isEmpty());
         // 지운 글은 다시 지울 수 없다(없는 글)
         perform(delete("/api/posts/" + post.getId()), ownerCookies, null).andExpect(status().isNotFound());
@@ -332,13 +332,13 @@ class PostWriteIntegrationTest extends IntegrationTestSupport {
     }
 
     private ResultActions listOf(Cookie[] cookies) throws Exception {
-        var request = get("/api/posts").header(HttpHeaders.HOST, TestBlogs.host(blog));
+        var request = get("/api/posts").header(TestBlogs.HEADER, blog.getAddress());
         return mockMvc.perform(cookies == null ? request : request.cookie(cookies));
     }
 
     private ResultActions perform(MockHttpServletRequestBuilder request, Cookie[] cookies, String body)
             throws Exception {
-        request.header(HttpHeaders.HOST, TestBlogs.host(blog)).header("X-Requested-With", "XMLHttpRequest");
+        request.header(TestBlogs.HEADER, blog.getAddress()).header("X-Requested-With", "XMLHttpRequest");
         if (body != null) {
             request.contentType(MediaType.APPLICATION_JSON).content(body);
         }

@@ -80,7 +80,7 @@ class ViewCountIntegrationTest extends IntegrationTestSupport {
         MockHttpServletResponse first = view(post, null).andExpect(status().isNoContent()).andReturn().getResponse();
         Cookie visitor = first.getCookie(VisitorKeys.COOKIE);
         assertThat(visitor).isNotNull();
-        assertThat(first.getHeader(HttpHeaders.SET_COOKIE)).contains("HttpOnly", "Domain=.blog.test");
+        assertThat(first.getHeader(HttpHeaders.SET_COOKIE)).contains("HttpOnly").doesNotContain("Domain=");
 
         // 같은 쿠키로 다시 보면 세지 않고, 쿠키를 다시 주지도 않는다
         MockHttpServletResponse again = view(post, new Cookie[]{visitor}).andReturn().getResponse();
@@ -143,7 +143,7 @@ class ViewCountIntegrationTest extends IntegrationTestSupport {
     }
 
     private MockHttpServletRequestBuilder withHeaders(MockHttpServletRequestBuilder request) {
-        return request.header(HttpHeaders.HOST, TestBlogs.host(blog)).header("X-Requested-With", "XMLHttpRequest");
+        return request.header(TestBlogs.HEADER, blog.getAddress()).header("X-Requested-With", "XMLHttpRequest");
     }
 
     private long viewCount(Post target) {

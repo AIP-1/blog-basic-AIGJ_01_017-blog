@@ -32,16 +32,16 @@ class LogoutIntegrationTest extends IntegrationTestSupport {
         Cookie[] cookies = testMembers.loginCookies(testMembers.create(), true);
 
         MvcResult result = mockMvc.perform(post("/api/auth/logout")
-                        .header(HttpHeaders.HOST, "alpha.blog.test")
+                        .header("X-Blog-Address", "alpha")
                         .header("X-Requested-With", "XMLHttpRequest")
                         .cookie(cookies))
                 .andExpect(status().isNoContent())
                 .andReturn();
 
-        // .blog.test 도메인 쿠키를 지우므로 플랫폼과 모든 블로그 주소가 함께 로그아웃된다
+        // 쿠키는 플랫폼 주소 하나에만 있으므로(블로그는 /@주소) 지우면 모든 블로그 화면이 함께 로그아웃된다
         assertThat(result.getResponse().getHeaders(HttpHeaders.SET_COOKIE))
                 .hasSize(2)
-                .allSatisfy(cookie -> assertThat(cookie).contains("Max-Age=0", "Domain=.blog.test"));
+                .allSatisfy(cookie -> assertThat(cookie).contains("Max-Age=0").doesNotContain("Domain="));
     }
 
     @Test
@@ -53,7 +53,7 @@ class LogoutIntegrationTest extends IntegrationTestSupport {
                 .andExpect(status().isNoContent());
 
         // 쿠키를 지우지 않고 남겨 둔 브라우저가 다시 보내도 Access·Refresh 둘 다 무효다
-        mockMvc.perform(get("/api/me").header(HttpHeaders.HOST, "beta.blog.test").cookie(cookies))
+        mockMvc.perform(get("/api/me").header("X-Blog-Address", "beta").cookie(cookies))
                 .andExpect(status().isUnauthorized());
         Cookie[] refreshOnly = Arrays.stream(cookies)
                 .filter(cookie -> cookie.getName().equals("refresh_token"))

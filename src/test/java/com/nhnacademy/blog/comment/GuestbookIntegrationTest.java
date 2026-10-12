@@ -190,12 +190,12 @@ class GuestbookIntegrationTest extends IntegrationTestSupport {
 
     private ResultActions list(Member member, int page) throws Exception {
         var request = get("/api/guestbook").param("page", String.valueOf(page))
-                .header(HttpHeaders.HOST, TestBlogs.host(blog));
+                .header(TestBlogs.HEADER, blog.getAddress());
         return mockMvc.perform(member == null ? request : request.cookie(testMembers.loginCookies(member)));
     }
 
     private ResultActions send(MockHttpServletRequestBuilder request, Member member, String body) throws Exception {
-        request.header(HttpHeaders.HOST, TestBlogs.host(blog)).header("X-Requested-With", "XMLHttpRequest");
+        request.header(TestBlogs.HEADER, blog.getAddress()).header("X-Requested-With", "XMLHttpRequest");
         if (body != null) {
             request.contentType(MediaType.APPLICATION_JSON).content(body);
         }

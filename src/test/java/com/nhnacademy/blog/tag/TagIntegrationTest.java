@@ -65,7 +65,7 @@ class TagIntegrationTest extends IntegrationTestSupport {
     void tagsAreCleanedDedupedAndCreatedOnce() throws Exception {
         long id = publish("[\"spring\", \" #Security \", \"Spring\", \"\", \"spring\"]");
 
-        mockMvc.perform(get("/api/posts/" + id).header(HttpHeaders.HOST, TestBlogs.host(blog)))
+        mockMvc.perform(get("/api/posts/" + id).header(TestBlogs.HEADER, blog.getAddress()))
                 .andExpect(jsonPath("$.tags", contains("Security", "spring")));
         assertThat(tagCount()).isEqualTo(2);
 
@@ -114,10 +114,10 @@ class TagIntegrationTest extends IntegrationTestSupport {
         send(patch("/api/posts/" + privatePost + "/visibility"), "{\"visibility\":\"PRIVATE\"}")
                 .andExpect(status().isNoContent());
 
-        mockMvc.perform(get("/api/posts").param("tag", "SPRING").header(HttpHeaders.HOST, TestBlogs.host(blog)))
+        mockMvc.perform(get("/api/posts").param("tag", "SPRING").header(TestBlogs.HEADER, blog.getAddress()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[*].id", contains((int) both, (int) springPost)));
-        mockMvc.perform(get("/api/posts").param("tag", "없는태그").header(HttpHeaders.HOST, TestBlogs.host(blog)))
+        mockMvc.perform(get("/api/posts").param("tag", "없는태그").header(TestBlogs.HEADER, blog.getAddress()))
                 .andExpect(status().isNotFound());
     }
 
@@ -127,7 +127,7 @@ class TagIntegrationTest extends IntegrationTestSupport {
         publish("[\"Café\"]");
         long id = publish("[\"cafe\", \"résumé\", \"resume\"]");
 
-        mockMvc.perform(get("/api/posts/" + id).header(HttpHeaders.HOST, TestBlogs.host(blog)))
+        mockMvc.perform(get("/api/posts/" + id).header(TestBlogs.HEADER, blog.getAddress()))
                 .andExpect(jsonPath("$.tags", contains("Café", "résumé")));
         assertThat(tagCount()).isEqualTo(2);
     }
@@ -160,10 +160,10 @@ class TagIntegrationTest extends IntegrationTestSupport {
         // 다른 사람: 비공개 글(secret)이나 관리자가 숨긴 글(blind-only)에만 단 태그는 없다. 글 수가 같으면 이름순
         String anonymous = "[{\"name\":\"spring\",\"postCount\":2},{\"name\":\"alpha\",\"postCount\":1},"
                 + "{\"name\":\"jpa\",\"postCount\":1}]";
-        mockMvc.perform(get("/api/tags").header(HttpHeaders.HOST, TestBlogs.host(blog)))
+        mockMvc.perform(get("/api/tags").header(TestBlogs.HEADER, blog.getAddress()))
                 .andExpect(status().isOk())
                 .andExpect(content().json(anonymous));
-        mockMvc.perform(get("/api/blog/sidebar").header(HttpHeaders.HOST, TestBlogs.host(blog)))
+        mockMvc.perform(get("/api/blog/sidebar").header(TestBlogs.HEADER, blog.getAddress()))
                 .andExpect(jsonPath("$.modules[2].type").value("TAG"))
                 .andExpect(jsonPath("$.modules[2].data[*].name", contains("spring", "alpha", "jpa")));
 
@@ -196,7 +196,7 @@ class TagIntegrationTest extends IntegrationTestSupport {
     }
 
     private ResultActions send(MockHttpServletRequestBuilder request, String body) throws Exception {
-        request.header(HttpHeaders.HOST, TestBlogs.host(blog)).header("X-Requested-With", "XMLHttpRequest")
+        request.header(TestBlogs.HEADER, blog.getAddress()).header("X-Requested-With", "XMLHttpRequest")
                 .cookie(cookies);
         if (body != null) {
             request.contentType(MediaType.APPLICATION_JSON).content(body);

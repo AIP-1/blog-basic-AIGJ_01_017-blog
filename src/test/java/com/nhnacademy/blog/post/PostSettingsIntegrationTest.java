@@ -81,15 +81,15 @@ class PostSettingsIntegrationTest extends IntegrationTestSupport {
         send(patch("/api/categories/" + dev), ownerCookies, "{\"isPrivate\":true}").andExpect(status().isNoContent());
 
         // 남에게는 그 카테고리와 하위의 글이 없는 글이다: 목록·글 수·글 상세·카테고리 트리·전체 검색
-        mockMvc.perform(get("/api/posts").header(HttpHeaders.HOST, TestBlogs.host(blog)))
+        mockMvc.perform(get("/api/posts").header(TestBlogs.HEADER, blog.getAddress()))
                 .andExpect(jsonPath("$.content[*].id", contains((int) open)));
-        mockMvc.perform(get("/api/blog").header(HttpHeaders.HOST, TestBlogs.host(blog)))
+        mockMvc.perform(get("/api/blog").header(TestBlogs.HEADER, blog.getAddress()))
                 .andExpect(jsonPath("$.postCount").value(1));
         for (long hidden : new long[] {inDev, inSpring}) {
-            mockMvc.perform(get("/api/posts/" + hidden).header(HttpHeaders.HOST, TestBlogs.host(blog)))
+            mockMvc.perform(get("/api/posts/" + hidden).header(TestBlogs.HEADER, blog.getAddress()))
                     .andExpect(status().isNotFound());
         }
-        mockMvc.perform(get("/api/categories").header(HttpHeaders.HOST, TestBlogs.host(blog)))
+        mockMvc.perform(get("/api/categories").header(TestBlogs.HEADER, blog.getAddress()))
                 .andExpect(jsonPath("$.categories").isEmpty());
         mockMvc.perform(get("/api/search").param("q", "스프링 글").header(HttpHeaders.HOST, "blog.test"))
                 .andExpect(jsonPath("$.content[?(@.id == " + inSpring + ")]").isEmpty());
@@ -100,7 +100,7 @@ class PostSettingsIntegrationTest extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.categories[0].isPrivate").value(true));
 
         send(patch("/api/categories/" + dev), ownerCookies, "{\"isPrivate\":false}");
-        mockMvc.perform(get("/api/posts/" + inSpring).header(HttpHeaders.HOST, TestBlogs.host(blog)))
+        mockMvc.perform(get("/api/posts/" + inSpring).header(TestBlogs.HEADER, blog.getAddress()))
                 .andExpect(status().isOk());
     }
 
@@ -277,7 +277,7 @@ class PostSettingsIntegrationTest extends IntegrationTestSupport {
                 .andReturn().getResponse().getContentAsString();
         long post = ((Number) JsonPath.read(response, "$.id")).longValue();
 
-        mockMvc.perform(get("/api/posts/" + post).header(HttpHeaders.HOST, TestBlogs.host(blog)))
+        mockMvc.perform(get("/api/posts/" + post).header(TestBlogs.HEADER, blog.getAddress()))
                 .andExpect(status().isNotFound());
         send(get("/api/manage/posts/" + post), ownerCookies, null)
                 .andExpect(jsonPath("$.status").value("SCHEDULED"))
@@ -291,7 +291,7 @@ class PostSettingsIntegrationTest extends IntegrationTestSupport {
         LocalDateTime past = LocalDateTime.now().minusMinutes(3).withNano(0);
         jdbcTemplate.update("UPDATE post SET scheduled_at = ? WHERE id = ?", past, post);
         assertThat(scheduledPublisher.publishDue()).isEqualTo(1);
-        mockMvc.perform(get("/api/posts/" + post).header(HttpHeaders.HOST, TestBlogs.host(blog)))
+        mockMvc.perform(get("/api/posts/" + post).header(TestBlogs.HEADER, blog.getAddress()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.visibility").value("PUBLIC"))
                 .andExpect(jsonPath("$.publishedAt").value(org.hamcrest.Matchers.startsWith(
@@ -336,16 +336,16 @@ class PostSettingsIntegrationTest extends IntegrationTestSupport {
         long third = publish("셋째 글", dev, "PUBLIC");
         long uncategorized = publish("미분류 글", null, "PUBLIC");
 
-        mockMvc.perform(get("/api/posts/" + first + "/same-category").header(HttpHeaders.HOST, TestBlogs.host(blog)))
+        mockMvc.perform(get("/api/posts/" + first + "/same-category").header(TestBlogs.HEADER, blog.getAddress()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[*].id", contains((int) third, (int) second)));
         mockMvc.perform(get("/api/posts/" + uncategorized + "/same-category")
-                        .header(HttpHeaders.HOST, TestBlogs.host(blog)))
+                        .header(TestBlogs.HEADER, blog.getAddress()))
                 .andExpect(jsonPath("$").isEmpty());
         mockMvc.perform(get("/api/posts/" + first + "/same-category").param("size", "11")
-                        .header(HttpHeaders.HOST, TestBlogs.host(blog)))
+                        .header(TestBlogs.HEADER, blog.getAddress()))
                 .andExpect(status().isBadRequest());
-        mockMvc.perform(get("/api/posts/999999/same-category").header(HttpHeaders.HOST, TestBlogs.host(blog)))
+        mockMvc.perform(get("/api/posts/999999/same-category").header(TestBlogs.HEADER, blog.getAddress()))
                 .andExpect(status().isNotFound());
     }
 
@@ -390,7 +390,7 @@ class PostSettingsIntegrationTest extends IntegrationTestSupport {
     }
 
     private ResultActions send(MockHttpServletRequestBuilder request, Cookie[] cookies, String body) throws Exception {
-        request.header(HttpHeaders.HOST, TestBlogs.host(blog)).header("X-Requested-With", "XMLHttpRequest");
+        request.header(TestBlogs.HEADER, blog.getAddress()).header("X-Requested-With", "XMLHttpRequest");
         if (body != null) {
             request.contentType(MediaType.APPLICATION_JSON).content(body);
         }

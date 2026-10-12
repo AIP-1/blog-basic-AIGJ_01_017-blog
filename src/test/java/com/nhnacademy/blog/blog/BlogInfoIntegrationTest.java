@@ -114,7 +114,7 @@ class BlogInfoIntegrationTest extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.profileImageUrl").value("/uploads/t_" + owner.getId() + ".png"));
         // 다른 사람이 봐도 같은 사진이고, 사이드바 블로그 홈 바로가기에도 보인다
         getBlog(null).andExpect(jsonPath("$.profileImageUrl").value("/uploads/t_" + owner.getId() + ".png"));
-        mockMvc.perform(get("/api/blog/sidebar").header(HttpHeaders.HOST, TestBlogs.host(blog)))
+        mockMvc.perform(get("/api/blog/sidebar").header(TestBlogs.HEADER, blog.getAddress()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.modules[0].type").value("PROFILE"))
                 .andExpect(jsonPath("$.modules[0].data.profileImageUrl")
@@ -141,7 +141,7 @@ class BlogInfoIntegrationTest extends IntegrationTestSupport {
 
     @Test
     void unknownOrDeletedBlogIs404() throws Exception {
-        mockMvc.perform(get("/api/blog").header(HttpHeaders.HOST, "no-such-blog.blog.test"))
+        mockMvc.perform(get("/api/blog").header(TestBlogs.HEADER, "no-such-blog"))
                 .andExpect(status().isNotFound());
         testBlogs.delete(blog);
         getBlog(testMembers.loginCookies(owner)).andExpect(status().isNotFound());
@@ -154,13 +154,13 @@ class BlogInfoIntegrationTest extends IntegrationTestSupport {
     }
 
     private ResultActions getBlog(Cookie[] cookies) throws Exception {
-        var request = get("/api/blog").header(HttpHeaders.HOST, TestBlogs.host(blog));
+        var request = get("/api/blog").header(TestBlogs.HEADER, blog.getAddress());
         return mockMvc.perform(cookies == null ? request : request.cookie(cookies));
     }
 
     private ResultActions update(Cookie[] cookies, String body) throws Exception {
         var request = patch("/api/blog")
-                .header(HttpHeaders.HOST, TestBlogs.host(blog))
+                .header(TestBlogs.HEADER, blog.getAddress())
                 .header("X-Requested-With", "XMLHttpRequest")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body);

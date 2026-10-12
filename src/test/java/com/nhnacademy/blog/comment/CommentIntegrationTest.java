@@ -91,7 +91,7 @@ class CommentIntegrationTest extends IntegrationTestSupport {
         // 댓글이 달린 것은 글을 고친 것이 아니다
         assertThat(jdbcTemplate.queryForObject("SELECT updated_at = created_at FROM post WHERE id = ?",
                 Boolean.class, post.getId())).isTrue();
-        mockMvc.perform(get("/api/posts/" + post.getId()).header(HttpHeaders.HOST, TestBlogs.host(blog)))
+        mockMvc.perform(get("/api/posts/" + post.getId()).header(TestBlogs.HEADER, blog.getAddress()))
                 .andExpect(jsonPath("$.commentCount").value(1))
                 .andExpect(jsonPath("$.updatedAt").doesNotExist());
     }
@@ -126,9 +126,9 @@ class CommentIntegrationTest extends IntegrationTestSupport {
         list(post, null, null)
                 .andExpect(jsonPath("$.content[0].author.profileImageUrl").value(readerPhoto))
                 .andExpect(jsonPath("$.content[1].author.profileImageUrl").doesNotExist());
-        mockMvc.perform(get("/api/posts/" + post.getId()).header(HttpHeaders.HOST, TestBlogs.host(blog)))
+        mockMvc.perform(get("/api/posts/" + post.getId()).header(TestBlogs.HEADER, blog.getAddress()))
                 .andExpect(jsonPath("$.author.profileImageUrl").value(ownerPhoto));
-        mockMvc.perform(get("/api/blog").header(HttpHeaders.HOST, TestBlogs.host(blog)))
+        mockMvc.perform(get("/api/blog").header(TestBlogs.HEADER, blog.getAddress()))
                 .andExpect(jsonPath("$.owner.profileImageUrl").value(ownerPhoto));
     }
 
@@ -275,7 +275,7 @@ class CommentIntegrationTest extends IntegrationTestSupport {
 
     private ResultActions write(Member member, Post target, String body, String key) throws Exception {
         var request = post("/api/posts/" + target.getId() + "/comments")
-                .header(HttpHeaders.HOST, TestBlogs.host(blog))
+                .header(TestBlogs.HEADER, blog.getAddress())
                 .header("X-Requested-With", "XMLHttpRequest")
                 .header("Idempotency-Key", key)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -284,7 +284,7 @@ class CommentIntegrationTest extends IntegrationTestSupport {
     }
 
     private ResultActions list(Post target, Member member, String cursor) throws Exception {
-        var request = get("/api/posts/" + target.getId() + "/comments").header(HttpHeaders.HOST, TestBlogs.host(blog));
+        var request = get("/api/posts/" + target.getId() + "/comments").header(TestBlogs.HEADER, blog.getAddress());
         if (cursor != null) {
             request.param("cursor", cursor);
         }
@@ -293,7 +293,7 @@ class CommentIntegrationTest extends IntegrationTestSupport {
 
     private ResultActions remove(Comment comment, Member member) throws Exception {
         var request = delete("/api/comments/" + comment.getId())
-                .header(HttpHeaders.HOST, TestBlogs.host(blog))
+                .header(TestBlogs.HEADER, blog.getAddress())
                 .header("X-Requested-With", "XMLHttpRequest");
         return mockMvc.perform(member == null ? request : request.cookie(cookies(member)));
     }

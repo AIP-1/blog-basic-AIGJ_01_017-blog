@@ -114,7 +114,7 @@ class CommentEditIntegrationTest extends IntegrationTestSupport {
 
     private ResultActions edit(Comment target, Member member, String body) throws Exception {
         var request = patch("/api/comments/" + target.getId())
-                .header(HttpHeaders.HOST, TestBlogs.host(blog))
+                .header(TestBlogs.HEADER, blog.getAddress())
                 .header("X-Requested-With", "XMLHttpRequest")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body);
@@ -122,7 +122,7 @@ class CommentEditIntegrationTest extends IntegrationTestSupport {
     }
 
     private ResultActions list(Member member) throws Exception {
-        var request = get("/api/posts/" + post.getId() + "/comments").header(HttpHeaders.HOST, TestBlogs.host(blog));
+        var request = get("/api/posts/" + post.getId() + "/comments").header(TestBlogs.HEADER, blog.getAddress());
         return mockMvc.perform(member == null ? request : request.cookie(testMembers.loginCookies(member)));
     }
 

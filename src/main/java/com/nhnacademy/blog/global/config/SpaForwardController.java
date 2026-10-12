@@ -77,7 +77,7 @@ public class SpaForwardController {
             "/" + FIRST + "/{s2:[^.]+}/{s3:[^.]+}/{s4:[^.]+}",
             "/" + FIRST + "/{s2:[^.]+}/{s3:[^.]+}/{s4:[^.]+}/{s5:[^.]+}",
             // 태그 이름에는 점이 들어갈 수 있다(node.js). 확장자로 보지 않는다 (TAG-02)
-            "/{s1:@[^/.]+}/tag/{name:.+}"})
+            "/{s1:@[^.]+}/tag/{name:.+}"})
     public ResponseEntity<Resource> page(HttpServletRequest request, HttpServletResponse response) {
         String path = PATH_HELPER.getPathWithinApplication(request);
         if (!path.startsWith(BlogAddressResolver.PATH_PREFIX)) {

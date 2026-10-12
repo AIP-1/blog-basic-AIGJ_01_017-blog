@@ -64,7 +64,7 @@ class AccessControlIntegrationTest extends IntegrationTestSupport {
         Post post = testPosts.published(alpha, Visibility.PUBLIC);
 
         mockMvc.perform(put("/api/posts/" + post.getId())
-                        .header(HttpHeaders.HOST, TestBlogs.host(alpha))
+                        .header(TestBlogs.HEADER, alpha.getAddress())
                         .header("X-Requested-With", "XMLHttpRequest")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"title\":\"x\",\"contentHtml\":\"\",\"visibility\":\"PUBLIC\",\"status\":\"PUBLISHED\"}")
@@ -72,12 +72,12 @@ class AccessControlIntegrationTest extends IntegrationTestSupport {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("FORBIDDEN"));
         mockMvc.perform(delete("/api/posts/" + post.getId())
-                        .header(HttpHeaders.HOST, TestBlogs.host(alpha))
+                        .header(TestBlogs.HEADER, alpha.getAddress())
                         .header("X-Requested-With", "XMLHttpRequest")
                         .cookie(bCookies))
                 .andExpect(status().isForbidden());
         mockMvc.perform(get("/api/manage/posts/" + post.getId())
-                        .header(HttpHeaders.HOST, TestBlogs.host(alpha)).cookie(bCookies))
+                        .header(TestBlogs.HEADER, alpha.getAddress()).cookie(bCookies))
                 .andExpect(status().isForbidden());
     }
 
@@ -86,16 +86,16 @@ class AccessControlIntegrationTest extends IntegrationTestSupport {
         Post privatePost = testPosts.published(alpha, Visibility.PRIVATE);
 
         for (Cookie[] cookies : new Cookie[][] {null, bCookies}) {
-            var api = get("/api/posts/" + privatePost.getId()).header(HttpHeaders.HOST, TestBlogs.host(alpha));
+            var api = get("/api/posts/" + privatePost.getId()).header(TestBlogs.HEADER, alpha.getAddress());
             mockMvc.perform(cookies == null ? api : api.cookie(cookies))
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.code").value("NOT_FOUND"));
-            var screen = get("/" + privatePost.getId()).header(HttpHeaders.HOST, TestBlogs.host(alpha));
+            var screen = get("/@" + alpha.getAddress() + "/" + privatePost.getId());
             mockMvc.perform(cookies == null ? screen : screen.cookie(cookies))
                     .andExpect(status().isNotFound());
         }
         // 목록·글 수에서도 빠진다
-        mockMvc.perform(get("/api/blog").header(HttpHeaders.HOST, TestBlogs.host(alpha)).cookie(bCookies))
+        mockMvc.perform(get("/api/blog").header(TestBlogs.HEADER, alpha.getAddress()).cookie(bCookies))
                 .andExpect(jsonPath("$.postCount").value(0));
     }
 
@@ -105,14 +105,14 @@ class AccessControlIntegrationTest extends IntegrationTestSupport {
         Post privatePost = testPosts.published(alpha, Visibility.PRIVATE);
 
         // 화면 주소: 볼 수 있으면 지금 소속 블로그로 301, 아니면 404
-        mockMvc.perform(get("/" + publicPost.getId()).header(HttpHeaders.HOST, TestBlogs.host(beta)))
+        mockMvc.perform(get("/@" + beta.getAddress() + "/" + publicPost.getId()))
                 .andExpect(status().isMovedPermanently())
                 .andExpect(header().string(HttpHeaders.LOCATION,
-                        "http://" + TestBlogs.host(alpha) + "/" + publicPost.getId()));
-        mockMvc.perform(get("/" + privatePost.getId()).header(HttpHeaders.HOST, TestBlogs.host(beta)))
+                        TestBlogs.url(alpha, "/" + publicPost.getId())));
+        mockMvc.perform(get("/@" + beta.getAddress() + "/" + privatePost.getId()))
                 .andExpect(status().isNotFound());
         // API는 301 없이 404
-        mockMvc.perform(get("/api/posts/" + publicPost.getId()).header(HttpHeaders.HOST, TestBlogs.host(beta)))
+        mockMvc.perform(get("/api/posts/" + publicPost.getId()).header(TestBlogs.HEADER, beta.getAddress()))
                 .andExpect(status().isNotFound());
     }
 

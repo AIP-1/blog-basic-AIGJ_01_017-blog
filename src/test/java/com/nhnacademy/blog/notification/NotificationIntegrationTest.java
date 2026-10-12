@@ -74,14 +74,14 @@ class NotificationIntegrationTest extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.content[0].type").value("SUBSCRIBE"))
                 .andExpect(jsonPath("$.content[0].message").value(reader.getNickname() + "님이 " + blog.getName()
                         + "을(를) 구독했습니다."))
-                .andExpect(jsonPath("$.content[0].link").value("http://" + TestBlogs.host(blog) + "/"))
+                .andExpect(jsonPath("$.content[0].link").value(TestBlogs.url(blog, "/")))
                 .andExpect(jsonPath("$.content[1].type").value("LIKE"))
-                .andExpect(jsonPath("$.content[1].link").value("http://" + TestBlogs.host(blog) + "/" + post.getId()))
+                .andExpect(jsonPath("$.content[1].link").value(TestBlogs.url(blog, "/" + post.getId())))
                 .andExpect(jsonPath("$.content[2].type").value("COMMENT"))
                 .andExpect(jsonPath("$.content[2].message").value(reader.getNickname() + "님이 \"" + post.getTitle()
                         + "\"에 댓글을 남겼습니다."))
                 .andExpect(jsonPath("$.content[2].link").value(
-                        "http://" + TestBlogs.host(blog) + "/" + post.getId() + "#comment-" + commentId))
+                        TestBlogs.url(blog, "/" + post.getId() + "#comment-" + commentId)))
                 .andExpect(jsonPath("$.content[2].read").value(false));
         list(reader).andExpect(jsonPath("$.content").isEmpty());
         me(owner).andExpect(jsonPath("$.unreadNotificationCount").value(3));
@@ -113,7 +113,7 @@ class NotificationIntegrationTest extends IntegrationTestSupport {
 
         Post other = testPosts.published(blog, Visibility.PUBLIC);
         mockMvc.perform(put("/api/posts/" + other.getId() + "/like")
-                        .header(HttpHeaders.HOST, TestBlogs.host(blog)).header("X-Requested-With", "XMLHttpRequest")
+                        .header(TestBlogs.HEADER, blog.getAddress()).header("X-Requested-With", "XMLHttpRequest")
                         .cookie(testMembers.loginCookies(reader)))
                 .andExpect(status().isOk());
         String listed = list(owner).andExpect(jsonPath("$.content", hasSize(1)))
@@ -158,7 +158,7 @@ class NotificationIntegrationTest extends IntegrationTestSupport {
     }
 
     private ResultActions send(MockHttpServletRequestBuilder request, Member member, String body) throws Exception {
-        request.header(HttpHeaders.HOST, TestBlogs.host(blog)).header("X-Requested-With", "XMLHttpRequest")
+        request.header(TestBlogs.HEADER, blog.getAddress()).header("X-Requested-With", "XMLHttpRequest")
                 .cookie(testMembers.loginCookies(member));
         if (body != null) {
             request.contentType(MediaType.APPLICATION_JSON).content(body);

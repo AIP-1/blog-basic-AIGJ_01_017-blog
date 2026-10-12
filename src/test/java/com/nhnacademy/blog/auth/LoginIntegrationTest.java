@@ -14,6 +14,7 @@ import com.nhnacademy.blog.admin.domain.ModerationLogRepository;
 import com.nhnacademy.blog.admin.domain.ModerationTargetType;
 import com.nhnacademy.blog.admin.domain.SanctionReason;
 import com.nhnacademy.blog.member.domain.Member;
+import com.nhnacademy.blog.support.TestBlogs;
 import com.nhnacademy.blog.support.TestMembers;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -56,12 +57,13 @@ class LoginIntegrationTest extends IntegrationTestSupport {
 
         // 로그인 쿠키 둘(Access·Refresh). 기기 쿠키(T055b)는 로그인 상태가 아니라서 따로 본다
         List<String> setCookies = loginCookies(result);
-        assertThat(setCookies).hasSize(2).allSatisfy(cookie -> assertThat(cookie).contains("Domain=.blog.test"));
+        // 블로그도 플랫폼 주소 아래 /@주소라 Domain 없이 이 주소 하나에만 둔다(스텝 21)
+        assertThat(setCookies).hasSize(2).allSatisfy(cookie -> assertThat(cookie).doesNotContain("Domain="));
         // 로그인 유지를 고르지 않으면 브라우저를 닫으면 사라지는 쿠키다
         assertThat(setCookies).noneMatch(cookie -> cookie.contains("Max-Age"));
 
-        // 플랫폼에서 로그인한 쿠키로 블로그 주소에서도 로그인 상태다 (시나리오 4)
-        mockMvc.perform(get("/api/me").header(HttpHeaders.HOST, "alpha.blog.test")
+        // 플랫폼에서 로그인한 쿠키로 블로그 화면(/@alpha)이 부르는 API에서도 로그인 상태다 (시나리오 4)
+        mockMvc.perform(get("/api/me").header(TestBlogs.HEADER, "alpha")
                         .cookie(result.getResponse().getCookies()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(member.getId()));

@@ -74,7 +74,7 @@ class TopicIntegrationTest extends IntegrationTestSupport {
 
     private ResultActions send(MockHttpServletRequestBuilder request, Blog blog, Cookie[] cookies, String body)
             throws Exception {
-        request.header(HttpHeaders.HOST, TestBlogs.host(blog)).header("X-Requested-With", "XMLHttpRequest");
+        request.header(TestBlogs.HEADER, blog.getAddress()).header("X-Requested-With", "XMLHttpRequest");
         if (body != null) {
             request.contentType(MediaType.APPLICATION_JSON).content(body);
         }

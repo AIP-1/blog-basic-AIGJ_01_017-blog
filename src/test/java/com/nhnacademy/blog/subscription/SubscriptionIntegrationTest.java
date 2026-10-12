@@ -129,7 +129,7 @@ class SubscriptionIntegrationTest extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.title").doesNotExist());
         detail(secret, null).andExpect(status().isForbidden());
         // 구독하지 않은 사람의 목록·글 수에서는 빠지고, 구독자의 피드에는 나온다
-        mockMvc.perform(get("/api/posts").header(HttpHeaders.HOST, TestBlogs.host(blogA))
+        mockMvc.perform(get("/api/posts").header(TestBlogs.HEADER, blogA.getAddress())
                         .cookie(testMembers.loginCookies(c)))
                 .andExpect(jsonPath("$.totalElements").value(0));
         blogInfo(c).andExpect(jsonPath("$.postCount").value(0));
@@ -159,17 +159,17 @@ class SubscriptionIntegrationTest extends IntegrationTestSupport {
     }
 
     private ResultActions blogInfo(Member member) throws Exception {
-        return mockMvc.perform(get("/api/blog").header(HttpHeaders.HOST, TestBlogs.host(blogA))
+        return mockMvc.perform(get("/api/blog").header(TestBlogs.HEADER, blogA.getAddress())
                 .cookie(testMembers.loginCookies(member)));
     }
 
     private ResultActions detail(Post post, Cookie[] cookies) throws Exception {
-        var request = get("/api/posts/" + post.getId()).header(HttpHeaders.HOST, TestBlogs.host(blogA));
+        var request = get("/api/posts/" + post.getId()).header(TestBlogs.HEADER, blogA.getAddress());
         return mockMvc.perform(cookies == null ? request : request.cookie(cookies));
     }
 
     private ResultActions send(MockHttpServletRequestBuilder request, Member member) throws Exception {
-        request.header(HttpHeaders.HOST, TestBlogs.host(blogA)).header("X-Requested-With", "XMLHttpRequest");
+        request.header(TestBlogs.HEADER, blogA.getAddress()).header("X-Requested-With", "XMLHttpRequest");
         return mockMvc.perform(member == null ? request : request.cookie(testMembers.loginCookies(member)));
     }
 
