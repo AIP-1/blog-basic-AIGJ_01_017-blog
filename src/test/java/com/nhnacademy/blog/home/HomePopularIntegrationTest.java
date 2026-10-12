@@ -105,18 +105,21 @@ class HomePopularIntegrationTest extends IntegrationTestSupport {
     @Test
     void rankingIsCachedButPostsThatBecameHiddenDropOutAtOnce() throws Exception {
         LocalDateTime now = LocalDateTime.now();
+        // 같은 DB를 쓰는 다른 테스트의 글(조회 1000 정도)보다 훨씬 많이 줘서 늘 1·2위가 되게 한다.
+        // 중간 순위로 두면 다른 테스트 글 하나가 보이거나 사라질 때마다 "몇 번째"가 밀려 CI에서 가끔 실패했다
         Post first = testPosts.published(blog, Visibility.PUBLIC);
-        views(first, 500, now);
+        views(first, 5000, now);
         Post second = testPosts.published(blog, Visibility.PUBLIC);
-        views(second, 450, now);
+        views(second, 4500, now);
 
         String before = popular().andReturn().getResponse().getContentAsString();
         List<Long> beforeIds = ids(before);
         int firstIndex = beforeIds.indexOf(first.getId());
-        assertThat(firstIndex).isNotNegative().isLessThan(beforeIds.indexOf(second.getId()));
+        assertThat(firstIndex).isZero();
+        assertThat(beforeIds.indexOf(second.getId())).isEqualTo(1);
 
         // 5분 안에는 점수가 바뀌어도 같은 순위·같은 기준 시각이다
-        views(second, 100, now);
+        views(second, 1000, now);
         String cached = popular().andReturn().getResponse().getContentAsString();
         assertThat(ids(cached)).isEqualTo(beforeIds);
         assertThat((String) JsonPath.read(cached, "$.snapshotAt")).isEqualTo(JsonPath.read(before, "$.snapshotAt"));
