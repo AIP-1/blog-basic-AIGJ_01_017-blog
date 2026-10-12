@@ -58,7 +58,9 @@ class HomePopularIntegrationTest extends IntegrationTestSupport {
 
     @BeforeEach
     void setUp() {
-        Objects.requireNonNull(cacheManager.getCache(PopularRanking.CACHE)).clear();
+        // clear()는 Redis에서 지우기를 기다리지 않고 돌아온다(Spring Data Redis 4, Lettuce). 바로 다음 요청이 옛 순위를 읽을 수 있어
+        // 다 지운 뒤 돌아오는 invalidate()를 쓴다
+        Objects.requireNonNull(cacheManager.getCache(PopularRanking.CACHE)).invalidate();
         blog = testBlogs.create(testMembers.create());
     }
 
@@ -129,7 +131,7 @@ class HomePopularIntegrationTest extends IntegrationTestSupport {
 
         // 캐시가 비면(5분이 지나면) 새로 계산한다
         jdbcTemplate.update("UPDATE post SET visibility = 'PUBLIC' WHERE id = ?", first.getId());
-        Objects.requireNonNull(cacheManager.getCache(PopularRanking.CACHE)).clear();
+        Objects.requireNonNull(cacheManager.getCache(PopularRanking.CACHE)).invalidate();
         List<Long> recomputed = ids(popular().andReturn().getResponse().getContentAsString());
         assertThat(recomputed.indexOf(second.getId())).isLessThan(recomputed.indexOf(first.getId()));
     }
