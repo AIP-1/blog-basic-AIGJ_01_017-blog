@@ -40,6 +40,9 @@ export default function LoginPage() {
     } catch (caught) {
       if (caught instanceof ApiError && caught.code === 'MEMBER_SUSPENDED') {
         setSuspension(caught.detail as unknown as SuspensionDetail)
+      } else if (caught instanceof ApiError && caught.code === 'TOO_MANY_REQUESTS') {
+        // 이메일이 막히면 서버가 그 이메일로 재설정 링크를 보낸다(T088). 가입 여부는 드러내지 않는다
+        setError(`${errorMessage(caught)} 가입한 이메일이 막혔다면, 그 메일함으로 비밀번호를 새로 정해 바로 로그인할 수 있는 링크를 보냈습니다.`)
       } else {
         setError(errorMessage(caught))
       }
@@ -76,7 +79,7 @@ export default function LoginPage() {
           {error && <p className="err">{error}</p>}
           {suspension && <SuspensionNotice suspension={suspension} />}
           <button className="btn primary" type="submit" disabled={submitting}>로그인</button>
-          <div className="row between small"><span /><Link to="/signup">회원가입</Link></div>
+          <div className="row between small"><Link to="/password-reset">비밀번호를 잊었어요</Link><Link to="/signup">회원가입</Link></div>
         </form>
       </main>
     </div>
