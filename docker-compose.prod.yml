@@ -1,0 +1,31 @@
+# 실습 서버용 Redis, Ollama. MySQL·PostgreSQL은 학교에서 받은 것을 쓴다.
+# 실행(실습 서버에서): docker compose -f docker-compose.prod.yml up -d
+# 컨테이너 이름은 서버의 다른 학생과 겹치지 않게 aigj017- 를 붙인다.
+# 같은 폴더의 .env에 REDIS_PASSWORD=... 를 적어 둔다(.env는 git 제외).
+#
+# 포트는 개인 범위 8460~8469 안에서: Redis 8465(x5~x7 DB·캐시), Ollama 8468(x8~x9 기타).
+# 127.0.0.1에만 열어 서버 밖에서는 접속할 수 없다. 서버는 여러 학생이 같이 쓰므로 Redis에는 비밀번호도 건다.
+services:
+  redis:
+    image: redis:7.4
+    container_name: aigj017-redis
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:?.env에 REDIS_PASSWORD를 적어 주세요}"]
+    ports:
+      - "127.0.0.1:8465:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+
+  # 비슷한 글 추천 임베딩 서버. 처음 한 번 모델을 받는다: docker exec aigj017-ollama ollama pull bge-m3
+  ollama:
+    image: ollama/ollama:latest
+    container_name: aigj017-ollama
+    ports:
+      - "127.0.0.1:8468:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    restart: unless-stopped
+
+volumes:
+  redis-data:
+  ollama-data:

@@ -1,0 +1,50 @@
+# 운영(실습 서버)용 비밀 설정의 틀
+#
+# 쓰는 법 (실습 서버에서)
+#   cp config/application-prod.yml.example config/application-prod.yml
+#   그다음 config/application-prod.yml의 빈 값("")을 채운다. 이 파일은 git에 올라가지 않는다(.gitignore).
+#   실행: java -jar blog.jar --spring.profiles.active=prod   (jar를 실행하는 폴더 아래 ./config/를 읽는다)
+#
+# src/main/resources/application-prod.yml은 값을 환경 변수(${DB_URL} 등)로 받는다.
+# 이 파일에 같은 키를 적으면 이 파일의 값을 먼저 쓰므로 환경 변수를 따로 줄 필요가 없다.
+#
+# 비밀번호·키는 대화창·이슈·PR에 붙이지 않는다.
+
+spring:
+  # 학교에서 받은 MySQL 8
+  datasource:
+    url: jdbc:mysql://s4.java21.net:13306/cf_u31_d1?connectionTimeZone=Asia/Seoul&characterEncoding=UTF-8
+    username: cf_u31_d1
+    password: ""
+  # 실습 서버에 직접 띄운 Redis (docker-compose.prod.yml). 비밀번호는 .env의 REDIS_PASSWORD와 같게
+  data:
+    redis:
+      host: localhost
+      port: 8465
+      password: ""
+
+app:
+  recommend:
+    # 학교에서 받은 PostgreSQL. DB nhnacademy를 여러 학생이 같이 쓰고, 내 것은 스키마 cf_u31_d2다.
+    # currentSchema 뒤의 public은 지우지 않는다: pgvector의 vector 타입이 public 스키마에 있으면
+    # 그 스키마도 찾아봐야 post_embedding 표를 만들 수 있다. 표는 맨 앞 스키마(cf_u31_d2)에 생긴다.
+    datasource:
+      url: jdbc:postgresql://s3.java21.net:8000/nhnacademy?currentSchema=cf_u31_d2,public
+      username: cf_u31_d2
+      password: ""
+    # 실습 서버에 직접 띄운 Ollama (docker-compose.prod.yml)
+    ollama-url: http://localhost:8468
+
+  upload:
+    # 업로드 이미지 폴더. 코드 폴더 밖에 두어야 다시 배포해도 지워지지 않는다
+    dir: /home/aiot3/AIGJ_01_017/uploads
+
+  domain:
+    # 플랫폼 주소. 블로그 주소는 {address}.{platform} — nginx·도메인을 정할 때 같이 정한다
+    platform: s2.java21.net
+
+  auth:
+    # 토큰 서명 키. 32바이트 넘게 아무렇게나: openssl rand -base64 48
+    jwt-secret: ""
+    # https가 아니면(http://s2.java21.net:8460) false. true면 브라우저가 로그인 쿠키를 저장하지 않는다
+    cookie-secure: false

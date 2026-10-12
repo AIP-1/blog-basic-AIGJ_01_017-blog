@@ -1,4 +1,11 @@
-# 운영: 접속 정보는 환경 변수로 준다
+# 운영: 접속 정보는 환경 변수나 ./config/application-prod.yml(git 제외, 틀은 config/application-prod.yml.example)로 준다
+server:
+  # 실습 서버 개인 포트 8460~8469 중 x0~x4(웹·API). 8460은 nginx, 앱은 8461
+  port: ${SERVER_PORT:8461}
+  # nginx가 넘긴 X-Forwarded-For·X-Forwarded-Proto를 Tomcat이 읽는다.
+  # 그래야 로그인 시도 제한이 nginx 주소가 아니라 실제 접속 IP로 센다(research R-17)
+  forward-headers-strategy: native
+
 spring:
   datasource:
     url: ${DB_URL}
@@ -6,8 +13,9 @@ spring:
     password: ${DB_PASSWORD}
   data:
     redis:
-      host: ${REDIS_HOST}
-      port: ${REDIS_PORT:6379}
+      # 실습 서버에 직접 띄운 Redis(docker-compose.prod.yml, 8465)
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:8465}
       password: ${REDIS_PASSWORD:}
 
 app:
@@ -16,7 +24,8 @@ app:
       url: ${RECOMMEND_DB_URL}
       username: ${RECOMMEND_DB_USERNAME}
       password: ${RECOMMEND_DB_PASSWORD}
-    ollama-url: ${OLLAMA_URL:http://localhost:11434}
+    # 실습 서버에 직접 띄운 Ollama(docker-compose.prod.yml, 8468)
+    ollama-url: ${OLLAMA_URL:http://localhost:8468}
   upload:
     dir: ${APP_UPLOAD_DIR}
   domain:

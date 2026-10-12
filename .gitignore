@@ -40,3 +40,6 @@ uploads/
 
 ### 프론트 빌드 결과 (scripts/build-frontend.sh) ###
 src/main/resources/static/
+
+### 실습 서버 docker compose 비밀 값 (REDIS_PASSWORD) ###
+.env
