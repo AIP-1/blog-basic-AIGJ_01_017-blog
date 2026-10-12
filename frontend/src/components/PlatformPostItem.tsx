@@ -4,7 +4,7 @@ import { blogUrl } from '../app/host'
 
 /**
  * 플랫폼 주소(홈 최신 글, 전체 검색)의 글 한 줄. 글마다 블로그가 달라서 제목과 블로그 이름은
- * 그 블로그 주소({address}.blog.com)로 가는 a다(블로그 안 목록의 PostItem은 같은 호스트라 Link).
+ * 그 블로그 주소(blog.com/@{address})로 가는 a다(블로그 안 목록의 PostItem은 같은 블로그 안이라 Link).
  */
 export default function PlatformPostItem({ post }: { post: PostSummary }) {
   return (

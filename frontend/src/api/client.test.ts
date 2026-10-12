@@ -12,7 +12,7 @@ function jsonResponse(status: number, body?: unknown): Response {
 
 beforeEach(() => {
   vi.stubGlobal('window', {
-    location: { protocol: 'http:', port: '8080', href: 'http://alpha.blog.test:8080/manage', assign },
+    location: { origin: 'http://blog.test:8080', pathname: '/@alpha/manage', href: 'http://blog.test:8080/@alpha/manage', assign },
   })
 })
 
@@ -43,6 +43,8 @@ describe('api', () => {
     expect(init.headers['X-Requested-With']).toBe('XMLHttpRequest')
     expect(init.headers['Idempotency-Key']).toBe(key)
     expect(init.headers['Content-Type']).toBe('application/json')
+    // 블로그 화면(/@alpha/manage)에서 부르면 어느 블로그인지 헤더로 알린다(스텝 21)
+    expect(init.headers['X-Blog-Address']).toBe('alpha')
     expect(init.body).toBe('{"title":"t"}')
   })
 
@@ -84,7 +86,7 @@ describe('api', () => {
 
     await expect(api('/api/me')).rejects.toBeInstanceOf(ApiError)
     expect(assign).toHaveBeenCalledWith(
-      'http://blog.test:8080/login?redirect=' + encodeURIComponent('http://alpha.blog.test:8080/manage'))
+      'http://blog.test:8080/login?redirect=' + encodeURIComponent('http://blog.test:8080/@alpha/manage'))
   })
 
   it('allowAnonymous면 401이어도 이동하지 않는다', async () => {

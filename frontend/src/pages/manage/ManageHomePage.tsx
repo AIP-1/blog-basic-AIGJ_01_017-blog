@@ -3,7 +3,7 @@ import { Link } from 'react-router'
 import { api } from '../../api/client'
 import { errorMessage } from '../../api/errors'
 import type { Blog, ManageSummary } from '../../api/types'
-import { PLATFORM_DOMAIN } from '../../app/host'
+import { blogDisplayAddress } from '../../app/host'
 
 /**
  * 관리 홈 (MNG-03, 목업 manage-home). 오늘·어제·누적 방문자(주인 본인 방문은 세지 않음)와 최근 받은 댓글·최근 글 5개씩.
@@ -21,7 +21,7 @@ export default function ManageHomePage({ blog }: { blog: Blog }) {
     <main className="page">
       <section className="section">
         <h2>{blog.name}</h2>
-        <div className="small muted">{blog.address}.{PLATFORM_DOMAIN}</div>
+        <div className="small muted">{blogDisplayAddress(blog.address)}</div>
         <div className="row small">
           <span>글 <b className="num">{blog.postCount}</b></span>
           <span>구독자 <b className="num">{blog.subscriberCount}</b></span>

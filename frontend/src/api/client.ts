@@ -2,8 +2,9 @@
 // - 로그인 쿠키는 브라우저가 자동으로 보낸다(같은 출처, HttpOnly)
 // - 상태를 바꾸는 요청에는 CSRF 대책 헤더 X-Requested-With를 붙인다
 // - 401이면 플랫폼 로그인 화면으로 보내고, 로그인 뒤 지금 주소로 돌아온다
+// - 블로그 화면(/@주소)이면 X-Blog-Address 헤더로 어느 블로그인지 알린다(스텝 21). API 주소는 그대로다
 
-import { platformUrl } from '../app/host'
+import { currentBlogAddress, platformUrl } from '../app/host'
 
 export interface FieldError {
   field: string
@@ -59,13 +60,19 @@ export function suspensionDetail(): Record<string, unknown> | null {
   return suspension
 }
 
+/** 블로그 화면이면 { 'X-Blog-Address': 주소 }, 플랫폼 화면이면 빈 값 */
+function blogHeader(): Record<string, string> {
+  const address = currentBlogAddress()
+  return address ? { 'X-Blog-Address': address } : {}
+}
+
 export async function api<T>(path: string, options: RequestOptions = {}): Promise<T> {
   return request<T>(path, options, true)
 }
 
 async function request<T>(path: string, options: RequestOptions, retryIfSuspended: boolean): Promise<T> {
   const method = options.method ?? 'GET'
-  const headers: Record<string, string> = { Accept: 'application/json' }
+  const headers: Record<string, string> = { Accept: 'application/json', ...blogHeader() }
   if (method !== 'GET') {
     headers['X-Requested-With'] = 'XMLHttpRequest'
   }
@@ -115,7 +122,7 @@ async function readError(response: Response): Promise<ErrorBody> {
 
 /**
  * 연타 방지 키(UUID v4). crypto.randomUUID()는 보안 컨텍스트(HTTPS, localhost)에서만 있어서
- * 개발 주소 http://alpha.blog.test에서는 없다. 그때는 어디서나 되는 crypto.getRandomValues로 만든다.
+ * 개발 주소 http://blog.test:5173에서는 없다. 그때는 어디서나 되는 crypto.getRandomValues로 만든다.
  */
 export function newIdempotencyKey(): string {
   if (typeof crypto.randomUUID === 'function') {
@@ -146,7 +153,7 @@ export async function uploadFile<T>(path: string, file: File, field = 'file'): P
   form.append(field, file)
   const response = await fetch(path, {
     method: 'POST',
-    headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+    headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest', ...blogHeader() },
     credentials: 'same-origin',
     body: form,
   })

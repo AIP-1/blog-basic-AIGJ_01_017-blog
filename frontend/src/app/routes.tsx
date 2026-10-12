@@ -47,7 +47,10 @@ export function PlatformRoutes() {
   )
 }
 
-/** 블로그 주소({address}.blog.com)의 화면. 블로그는 Host로 정하므로 주소를 따로 넘기지 않는다 */
+/**
+ * 블로그 주소(blog.com/@{address})의 화면. App이 라우터 basename을 /@{address}로 두므로 여기 경로는 블로그 안의 경로다.
+ * 어느 블로그인지는 API 클라이언트가 X-Blog-Address로 서버에 알린다(스텝 21)
+ */
 export function BlogRoutes() {
   return (
     <Routes>

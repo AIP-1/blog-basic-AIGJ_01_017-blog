@@ -2,7 +2,7 @@ import { type ChangeEvent, type FormEvent, useState } from 'react'
 import { api, uploadFile } from '../../api/client'
 import { type FieldMessages, errorMessage, fieldMessages } from '../../api/errors'
 import type { Blog } from '../../api/types'
-import { PLATFORM_DOMAIN } from '../../app/host'
+import { blogDisplayAddress } from '../../app/host'
 import { DeleteSection, DesignSection, MoveSection, SidebarSection } from './BlogDesignSections'
 
 /**
@@ -77,7 +77,7 @@ export default function BlogSettingsPage({ blog, onSaved }: { blog: Blog; onSave
         </div>
         <label className="field">
           <span className="label">주소</span>
-          <input type="text" value={`${blog.address}.${PLATFORM_DOMAIN}`} disabled />
+          <input type="text" value={blogDisplayAddress(blog.address)} disabled />
           <span className="hint">주소는 바꿀 수 없습니다.</span>
         </label>
         <label className="field">

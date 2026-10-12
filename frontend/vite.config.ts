@@ -6,9 +6,9 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   plugins: [react()],
   server: {
-    // alpha.blog.test:5173 처럼 블로그 주소로도 연다 (/etc/hosts, quickstart)
+    // blog.test:5173으로 연다 (/etc/hosts, quickstart). 블로그는 blog.test:5173/@주소
     allowedHosts: ['.blog.test'],
-    // API와 업로드 이미지는 Spring Boot(8080)로 넘긴다. Host는 그대로 넘겨 서버가 블로그를 찾게 한다
+    // API와 업로드 이미지는 Spring Boot(8080)로 넘긴다. 블로그는 X-Blog-Address 헤더로 알린다
     proxy: {
       '/api': 'http://localhost:8080',
       '/uploads': 'http://localhost:8080',

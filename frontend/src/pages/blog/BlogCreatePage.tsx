@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router'
 import { ApiError, api, redirectToLogin } from '../../api/client'
 import { type FieldMessages, errorMessage, fieldMessages } from '../../api/errors'
 import type { Blog } from '../../api/types'
-import { PLATFORM_DOMAIN, blogUrl } from '../../app/host'
+import { blogUrl } from '../../app/host'
 import { shouldRedirectToLogin, useMe } from '../../app/useMe'
 import { FROM_WRITE } from '../../app/writeLink'
 import PlatformHeader from '../../components/PlatformHeader'
@@ -88,10 +88,10 @@ export default function BlogCreatePage() {
           <div className="field">
             <label className="label" htmlFor="address">블로그 주소</label>
             <div className="row nowrap">
+              <span className="muted">{window.location.host}/@</span>
               <input id="address" type="text" value={address} maxLength={32} autoCapitalize="none"
                      onChange={(event) => { setAddress(event.target.value); setAddressOk(false) }}
                      onBlur={checkAddress} />
-              <span className="muted">.{PLATFORM_DOMAIN}</span>
             </div>
             {addressOk && <p className="ok">쓸 수 있는 주소입니다.</p>}
             {errors.address && <p className="err">{errors.address}</p>}

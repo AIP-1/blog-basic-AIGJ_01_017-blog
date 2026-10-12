@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { ModerationTarget } from '../api/types'
 import { actionLabel, reasonLabel, releasePath, resolveChoices, targetHref, topReason } from './admin'
 
-const location = { protocol: 'http:', port: '8080', hostname: 'blog.test' } as Location
+const location = { origin: 'http://blog.test:8080' } as Location
 
 function target(overrides: Partial<ModerationTarget>): ModerationTarget {
   return {
@@ -13,11 +13,11 @@ function target(overrides: Partial<ModerationTarget>): ModerationTarget {
 
 describe('targetHref', () => {
   it('글·댓글·블로그는 그 블로그 주소로 간다', () => {
-    expect(targetHref(target({}), location)).toEqual({ href: 'http://jiwon.blog.test:8080/15', external: true })
+    expect(targetHref(target({}), location)).toEqual({ href: 'http://blog.test:8080/@jiwon/15', external: true })
     expect(targetHref(target({ type: 'COMMENT', id: 88 }), location))
-      .toEqual({ href: 'http://jiwon.blog.test:8080/15#comment-88', external: true })
+      .toEqual({ href: 'http://blog.test:8080/@jiwon/15#comment-88', external: true })
     expect(targetHref(target({ type: 'BLOG', id: 3, postId: null }), location))
-      .toEqual({ href: 'http://jiwon.blog.test:8080/', external: true })
+      .toEqual({ href: 'http://blog.test:8080/@jiwon', external: true })
   })
 
   it('회원은 관리자 회원 상세, 지워진 대상은 링크가 없다', () => {
