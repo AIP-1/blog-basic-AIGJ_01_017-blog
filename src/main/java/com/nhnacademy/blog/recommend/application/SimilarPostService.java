@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -25,6 +26,8 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>
  * 임베딩 표에는 비공개·숨긴 글도 있으므로(PostEmbeddingService) <b>가시성은 반드시 여기서</b> 거른다.
  * 후보를 넉넉히(30개) 뽑는 이유: 볼 수 없는 글을 빼고도 size개를 채우려고.
+ * <p>
+ * 추천을 꺼 두면(app.recommend.enabled=false, 1차 배포) 추천 DB 부품이 없으므로 늘 빈 목록이다.
  */
 @Service
 public class SimilarPostService {
@@ -35,11 +38,11 @@ public class SimilarPostService {
 
     private final PostReadService postReadService;
     private final PostRepository postRepository;
-    private final PostEmbeddingRepository postEmbeddingRepository;
+    private final Optional<PostEmbeddingRepository> postEmbeddingRepository;
     private final Clock clock;
 
     public SimilarPostService(PostReadService postReadService, PostRepository postRepository,
-                              PostEmbeddingRepository postEmbeddingRepository, Clock clock) {
+                              Optional<PostEmbeddingRepository> postEmbeddingRepository, Clock clock) {
         this.postReadService = postReadService;
         this.postRepository = postRepository;
         this.postEmbeddingRepository = postEmbeddingRepository;
@@ -48,7 +51,7 @@ public class SimilarPostService {
 
     /**
      * 이 글과 비슷한 글 size개, 가까운 순. 이 글을 볼 수 없으면 글 상세와 같이 404·403.
-     * 이 글의 임베딩이 아직 없거나 추천 DB에 닿지 않으면 빈 목록(contracts "추천이 준비 안 됐으면 빈 배열").
+     * 이 글의 임베딩이 아직 없거나 추천을 꺼 뒀거나 추천 DB에 닿지 않으면 빈 목록(contracts "추천이 준비 안 됐으면 빈 배열").
      * 다른 블로그의 글도 나온다. 볼 수 있는지는 보는 사람 기준(visibleTo)이다.
      */
     @Transactional(readOnly = true)
@@ -71,8 +74,11 @@ public class SimilarPostService {
     }
 
     private List<Long> nearest(Long postId) {
+        if (postEmbeddingRepository.isEmpty()) {
+            return List.of();
+        }
         try {
-            return postEmbeddingRepository.findNearest(postId, CANDIDATES);
+            return postEmbeddingRepository.get().findNearest(postId, CANDIDATES);
         } catch (DataAccessException e) {
             log.warn("비슷한 글 후보를 읽지 못했습니다(추천 DB): {}", e.toString());
             return List.of();

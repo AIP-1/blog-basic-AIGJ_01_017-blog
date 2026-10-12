@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.StringJoiner;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Repository;
  * PostgreSQL post_embedding (T069b, T069c). JPA는 주 DB(MySQL)만 쓰므로 여기는 JDBC로 SQL을 그대로 쓴다.
  * 벡터는 pgvector의 글자 표기 '[0.1,0.2,...]'로 보내고 SQL에서 vector로 바꾼다(CAST).
  */
+@ConditionalOnProperty(name = "app.recommend.enabled", havingValue = "true", matchIfMissing = true)
 @Repository
 public class PostEmbeddingRepository {
 

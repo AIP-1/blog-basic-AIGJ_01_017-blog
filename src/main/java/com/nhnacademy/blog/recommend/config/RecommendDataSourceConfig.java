@@ -4,6 +4,7 @@ import com.zaxxer.hikari.HikariDataSource;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,6 +17,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
  * {@code @Bean(defaultCandidate = false)}로 만들면 이 빈은 "타입만으로 고를 때의 후보"에서 빠져서,
  * 주 DB(MySQL)의 자동 설정·JPA·Flyway는 그대로 동작하고, 이 DB는 {@code @Qualifier("recommend")}로 이름을 짚어야만 주입된다.
  */
+@ConditionalOnProperty(name = "app.recommend.enabled", havingValue = "true", matchIfMissing = true)
 @Configuration
 public class RecommendDataSourceConfig {
 
