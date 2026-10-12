@@ -58,7 +58,7 @@ docker run -d --name "$APP" --network "$NETWORK" --restart unless-stopped \
   -e DB_USERNAME -e DB_PASSWORD \
   -e REDIS_HOST="$REDIS" -e REDIS_PORT=6379 -e REDIS_PASSWORD \
   -e JWT_SECRET \
-  -e KAKAO_CLIENT_ID -e KAKAO_CLIENT_SECRET -e GOOGLE_CLIENT_ID -e GOOGLE_CLIENT_SECRET \
+  -e KAKAO_CLIENT_ID -e KAKAO_CLIENT_SECRET \
   -e MAIL_USERNAME -e MAIL_PASSWORD -e APP_MAIL_SENDER="$MAIL_SENDER" \
   -e APP_UPLOAD_DIR=/app/uploads \
   "$IMAGE" >/dev/null

@@ -3,19 +3,18 @@
  * 서버가 제공사 로그인 화면으로 302하고, 끝나면 서버가 갈 곳으로 돌려보낸다(contracts 소셜 로그인 흐름).
  */
 
-export type SocialPath = 'kakao' | 'google'
+export type SocialPath = 'kakao'
 export type SocialMode = 'login' | 'link' | 'reauth'
 
 export interface SocialProviderInfo {
   path: SocialPath
   /** Me.socialAccounts[].provider 값 */
-  key: 'KAKAO' | 'GOOGLE'
+  key: 'KAKAO'
   name: string
 }
 
 export const SOCIAL_PROVIDERS: SocialProviderInfo[] = [
   { path: 'kakao', key: 'KAKAO', name: '카카오' },
-  { path: 'google', key: 'GOOGLE', name: '구글' },
 ]
 
 export function providerName(value: string | null): string {

@@ -1,4 +1,4 @@
-# 개발용 비밀 설정의 틀 (T088 메일, T099·T100 카카오·구글 로그인)
+# 개발용 비밀 설정의 틀 (T088 메일, T099·T100 카카오 로그인)
 #
 # 쓰는 법
 #   cp config/application-dev.yml.example config/application-dev.yml
@@ -13,19 +13,13 @@
 app:
   oauth:
     # 콜백(리다이렉트 URI)은 localhost여도 된다. 서버가 코드를 받은 뒤 로그인을 시작한 blog.test 주소로 다시 보내
-    # 거기서 로그인 쿠키를 준다. 구글은 https가 아니면 localhost만 받으므로 개발에서는 localhost로 둔다.
+    # 거기서 로그인 쿠키를 준다.
     # 카카오 developers → 내 애플리케이션 → 앱 키의 REST API 키, 클라이언트 시크릿(활성화 ON)
     kakao:
       client-id: ""
       client-secret: ""
       # 카카오 콘솔에 등록한 리다이렉트 URI와 글자 하나까지 같아야 한다
       redirect-uri: http://localhost:8080/api/auth/oauth/kakao/callback
-    # Google Cloud 콘솔 → API 및 서비스 → 사용자 인증 정보 → OAuth 2.0 클라이언트 ID(웹 애플리케이션)
-    google:
-      client-id: ""
-      client-secret: ""
-      # 구글 콘솔의 "승인된 리디렉션 URI"와 같아야 한다
-      redirect-uri: http://localhost:8080/api/auth/oauth/google/callback
 
   mail:
     # 메일을 보내는 방법
