@@ -43,3 +43,7 @@ src/main/resources/static/
 
 ### 실습 서버 docker compose 비밀 값 (REDIS_PASSWORD) ###
 .env
+
+### 비밀 설정 (DB 비밀번호·키). 틀은 config/application-*.yml.example ###
+config/application-dev.yml
+config/application-prod.yml
