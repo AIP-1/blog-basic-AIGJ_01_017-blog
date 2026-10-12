@@ -27,6 +27,9 @@ app:
       username: ${RECOMMEND_DB_USERNAME:}
       password: ${RECOMMEND_DB_PASSWORD:}
     ollama-url: ${OLLAMA_URL:}
+  mail:
+    # 운영 메일 계정(SMTP)이 준비되기 전까지는 로그로만 남긴다. smtp로 바꾸면 spring.mail.*도 환경 변수로 준다
+    sender: ${APP_MAIL_SENDER:log}
   upload:
     dir: ${APP_UPLOAD_DIR}
   domain:

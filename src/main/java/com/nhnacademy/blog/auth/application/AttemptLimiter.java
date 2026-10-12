@@ -85,6 +85,20 @@ public class AttemptLimiter {
         }
     }
 
+    /**
+     * 그 대상이 지금 막혀 있나(15분 안에 제한 횟수만큼 틀렸나). IP 제한은 보지 않는다.
+     * 로그인이 429일 때 이메일 때문인지 알아 "본인이면 이 링크로" 메일을 보낼지 정한다(T088).
+     */
+    public boolean isLocked(String key) {
+        String count = redis.opsForValue().get(PREFIX + key);
+        return count != null && Long.parseLong(count) >= properties.maxFailures();
+    }
+
+    /** 그 대상의 틀린 횟수를 지운다. 메일 링크로 비밀번호를 바꾼 본인은 바로 로그인할 수 있게(T088). IP 횟수는 그대로다. */
+    public void clear(String key) {
+        redis.delete(PREFIX + key);
+    }
+
     /** 하나 올리고, 처음이거나 INCR 뒤 수명을 못 붙이고 끊겼던 키(수명 없음)면 15분 수명을 붙인다. */
     private Counter reserve(String key, int max, boolean resetOnSuccess) {
         Long reserved = redis.opsForValue().increment(key);

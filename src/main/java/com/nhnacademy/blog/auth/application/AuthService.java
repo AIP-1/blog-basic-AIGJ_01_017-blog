@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthService {
 
     private final DeviceTokens deviceTokens;
+    private final PasswordResetService passwordResetService;
 
     private final MemberRepository memberRepository;
     private final EmailVerificationService emailVerificationService;
@@ -35,8 +36,9 @@ public class AuthService {
     public AuthService(MemberRepository memberRepository, EmailVerificationService emailVerificationService,
                        PasswordEncoder passwordEncoder, SuspensionDetails suspensionDetails, Clock clock,
                        AttemptLimiter attemptLimiter,
-                       DeviceTokens deviceTokens) {
+                       DeviceTokens deviceTokens, PasswordResetService passwordResetService) {
         this.deviceTokens = deviceTokens;
+        this.passwordResetService = passwordResetService;
         this.memberRepository = memberRepository;
         this.emailVerificationService = emailVerificationService;
         this.passwordEncoder = passwordEncoder;
@@ -88,8 +90,30 @@ public class AuthService {
      * 기기도 15분에 5번 틀리면 막히고, IP별 제한은 그대로다.
      */
     public Member login(String rawEmail, String password, String deviceToken) {
+        return login(rawEmail, password, deviceToken, null);
+    }
+
+    /**
+     * 로그인 (AUTH-01). resetLinkBase가 있으면, 이 이메일이 막혔을 때(남이 5번 틀린 경우 포함) 그 이메일로
+     * "본인이면 이 링크로 비밀번호를 바꾸면 바로 들어온다"는 메일을 보낸다(T088, R-17 ②). 15분에 한 번만 보내고,
+     * 응답은 메일과 상관없이 같다(가입하지 않은 이메일이면 메일이 가지 않을 뿐).
+     */
+    public Member login(String rawEmail, String password, String deviceToken, String resetLinkBase) {
         String email = Emails.normalize(rawEmail);
-        Member member = attemptLimiter.attempt(attemptKey(email, deviceToken), () -> {
+        String key = attemptKey(email, deviceToken);
+        try {
+            return checkPassword(email, password, key);
+        } catch (BusinessException e) {
+            if (resetLinkBase != null && key.equals(emailKey(email)) && attemptLimiter.isLocked(key)
+                    && (e.getErrorCode() == ErrorCode.LOGIN_FAILED || e.getErrorCode() == ErrorCode.TOO_MANY_REQUESTS)) {
+                passwordResetService.noticeLocked(email, resetLinkBase);
+            }
+            throw e;
+        }
+    }
+
+    private Member checkPassword(String email, String password, String key) {
+        Member member = attemptLimiter.attempt(key, () -> {
             Optional<Member> found = memberRepository.findByEmail(email);
             String hash = found.map(Member::getPasswordHash).orElse(null);
             boolean matches = passwordEncoder.matches(password, hash == null ? dummyPasswordHash : hash);
@@ -111,7 +135,11 @@ public class AuthService {
                         .map(member -> member.getId().equals(device.memberId()))
                         .orElse(false))
                 .map(device -> "login-device:" + device.nonce())
-                .orElse("login:" + email);
+                .orElse(emailKey(email));
+    }
+
+    private static String emailKey(String email) {
+        return "login:" + email;
     }
 
     @Transactional(readOnly = true)

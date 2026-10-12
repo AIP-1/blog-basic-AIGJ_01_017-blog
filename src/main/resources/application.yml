@@ -35,6 +35,11 @@ server:
     include-binding-errors: never
 
 app:
+  mail:
+    # 메일 보내는 방법 (T088). log: 보내지 않고 서버 로그에만, smtp: spring.mail.*로 실제 발송.
+    # 개발에서 Mailpit으로 받아 보려면 config/application-dev.yml(git 제외, 틀은 .example)에서 smtp로 바꾼다
+    sender: log
+    from: "now-log <no-reply@now-log.java21.net>"
   upload:
     dir: ${APP_UPLOAD_DIR:./uploads}
   domain:
