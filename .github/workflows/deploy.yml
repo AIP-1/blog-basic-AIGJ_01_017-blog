@@ -58,11 +58,9 @@ jobs:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          # 없어도 되는 값(비어 있으면 그 기능만 꺼짐): 카카오·구글 로그인 키, 메일 계정
+          # 없어도 되는 값(비어 있으면 그 기능만 꺼짐): 카카오 로그인 키, 메일 계정
           KAKAO_CLIENT_ID: ${{ secrets.KAKAO_CLIENT_ID }}
           KAKAO_CLIENT_SECRET: ${{ secrets.KAKAO_CLIENT_SECRET }}
-          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
-          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
           MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
         with:
@@ -70,6 +68,6 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           username: ${{ secrets.SSH_ID }}
           password: ${{ secrets.SSH_PASSWORD }}
-          envs: DB_ADDRESS,DB_PORT,DB_NAME,DB_USERNAME,DB_PASSWORD,REDIS_PASSWORD,JWT_SECRET,KAKAO_CLIENT_ID,KAKAO_CLIENT_SECRET,GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET,MAIL_USERNAME,MAIL_PASSWORD
+          envs: DB_ADDRESS,DB_PORT,DB_NAME,DB_USERNAME,DB_PASSWORD,REDIS_PASSWORD,JWT_SECRET,KAKAO_CLIENT_ID,KAKAO_CLIENT_SECRET,MAIL_USERNAME,MAIL_PASSWORD
           command_timeout: 10m
           script: bash ~/now-log/deploy/deploy.sh
