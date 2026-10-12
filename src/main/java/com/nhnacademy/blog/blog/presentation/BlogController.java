@@ -59,7 +59,7 @@ public class BlogController {
         return BlogResponse.from(blogQueryService.detail(blog, member.id()));
     }
 
-    /** 요청 Host의 블로그. 없거나 볼 수 없으면 404(@CurrentBlog). */
+    /** 요청(X-Blog-Address)의 블로그. 없거나 볼 수 없으면 404(@CurrentBlog). */
     @GetMapping("/api/blog")
     public BlogResponse blog(@CurrentBlog Blog blog) {
         return BlogResponse.from(blogQueryService.detail(blog, LoginMembers.currentId()));

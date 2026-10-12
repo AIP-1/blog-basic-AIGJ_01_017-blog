@@ -2,8 +2,7 @@ package com.nhnacademy.blog.global.config;
 
 import com.nhnacademy.blog.blog.domain.Blog;
 import com.nhnacademy.blog.global.auth.LoginMembers;
-import com.nhnacademy.blog.global.host.BlogHostResolver;
-import com.nhnacademy.blog.global.host.RequestHost;
+import com.nhnacademy.blog.global.host.BlogAddressResolver;
 import com.nhnacademy.blog.global.visibility.BlogVisibilityPolicy;
 import com.nhnacademy.blog.global.visibility.PostAccess;
 import com.nhnacademy.blog.global.visibility.PostVisibilityPolicy;
@@ -16,7 +15,6 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -30,6 +28,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.util.HtmlUtils;
+import org.springframework.web.util.UrlPathHelper;
 
 /**
  * 화면 주소 처리 (T010, 원본 6장 ①, contracts/rest-api.md 화면 주소 단계).
@@ -37,12 +36,15 @@ import org.springframework.web.util.HtmlUtils;
  * 없거나 볼 수 없으면 404 상태로, 이사했거나 다른 블로그 소속 글이면 서버가 직접 301로 보낸다(검색엔진도 따라간다).
  * 확장자가 있는 파일과 /api, /uploads, /assets는 여기로 오지 않는다.
  * 비회원도 볼 수 있는 글의 주소면 index.html의 head에 공유 미리보기(Open Graph) 태그를 넣는다 (T072).
+ * 블로그 화면은 /@{address}/… 경로다(스텝 21, T117). 그 밖의 주소는 플랫폼 화면이다.
  * 미리보기를 가져가는 서버는 자바스크립트를 실행하지 않아서, React가 그린 내용이 아니라 이 HTML만 본다.
  */
 @Controller
 public class SpaForwardController {
 
     private static final String FIRST = "{s1:(?!api$|uploads$|assets$)[^.]+}";
+    /** 디코딩한 경로(%40 → @). Spring MVC가 주소를 맞출 때 쓰는 것과 같은 방식이다. */
+    private static final UrlPathHelper PATH_HELPER = new UrlPathHelper();
     private static final Pattern POST_PATH = Pattern.compile("^/(\\d{1,18})$");
     private static final Resource INDEX = new ClassPathResource("static/index.html");
     /** 헤더에 글자 인코딩을 밝힌다. 미리보기를 가져가는 서버는 HTML 안의 meta charset보다 헤더를 먼저 믿기도 한다. */
@@ -51,17 +53,17 @@ public class SpaForwardController {
             + "<body><p>프론트 빌드가 없습니다. <code>./scripts/build-frontend.sh</code>를 실행하거나 "
             + "<code>cd frontend &amp;&amp; npm run dev</code>로 개발 서버를 쓰세요.</p></body></html>";
 
-    private final BlogHostResolver blogHostResolver;
+    private final BlogAddressResolver blogAddressResolver;
     private final BlogVisibilityPolicy blogVisibilityPolicy;
     private final PostVisibilityPolicy postVisibilityPolicy;
     private final PostPreviewService postPreviewService;
     private final VisitRecorder visitRecorder;
 
-    public SpaForwardController(BlogHostResolver blogHostResolver, BlogVisibilityPolicy blogVisibilityPolicy,
+    public SpaForwardController(BlogAddressResolver blogAddressResolver, BlogVisibilityPolicy blogVisibilityPolicy,
                                 PostVisibilityPolicy postVisibilityPolicy, PostPreviewService postPreviewService,
                                 VisitRecorder visitRecorder) {
         this.visitRecorder = visitRecorder;
-        this.blogHostResolver = blogHostResolver;
+        this.blogAddressResolver = blogAddressResolver;
         this.blogVisibilityPolicy = blogVisibilityPolicy;
         this.postVisibilityPolicy = postVisibilityPolicy;
         this.postPreviewService = postPreviewService;
@@ -75,24 +77,29 @@ public class SpaForwardController {
             "/" + FIRST + "/{s2:[^.]+}/{s3:[^.]+}/{s4:[^.]+}",
             "/" + FIRST + "/{s2:[^.]+}/{s3:[^.]+}/{s4:[^.]+}/{s5:[^.]+}",
             // 태그 이름에는 점이 들어갈 수 있다(node.js). 확장자로 보지 않는다 (TAG-02)
-            "/tag/{name:.+}"})
+            "/{s1:@[^/.]+}/tag/{name:.+}"})
     public ResponseEntity<Resource> page(HttpServletRequest request, HttpServletResponse response) {
-        return switch (blogHostResolver.resolve(request)) {
-            case RequestHost.Platform platform -> app(HttpStatus.OK);
-            // 플랫폼의 블로그 주소 꼴인데 규칙에 맞지 않거나 예약어면 없는 블로그다
-            case RequestHost.Unknown unknown -> isUnderPlatform(request) ? app(HttpStatus.NOT_FOUND) : app(HttpStatus.OK);
-            case RequestHost.BlogAddress blogAddress -> blogPage(request, response);
-        };
+        String path = PATH_HELPER.getPathWithinApplication(request);
+        if (!path.startsWith(BlogAddressResolver.PATH_PREFIX)) {
+            return app(HttpStatus.OK);
+        }
+        // /@alpha/12 → 주소 alpha, 블로그 안 경로 /12. 블로그 안 경로가 없으면 첫 화면(/)
+        String rest = path.substring(BlogAddressResolver.PATH_PREFIX.length());
+        int slash = rest.indexOf('/');
+        String address = slash < 0 ? rest : rest.substring(0, slash);
+        String blogPath = slash < 0 ? "/" : rest.substring(slash);
+        return blogPage(request, response, address, blogPath);
     }
 
-    private ResponseEntity<Resource> blogPage(HttpServletRequest request, HttpServletResponse response) {
-        Optional<Blog> found = blogHostResolver.findBlog(request);
+    /** 규칙에 맞지 않거나 예약어인 주소, 없는 블로그는 404다. */
+    private ResponseEntity<Resource> blogPage(HttpServletRequest request, HttpServletResponse response,
+                                              String address, String path) {
+        Optional<Blog> found = blogAddressResolver.findBlog(address);
         if (found.isEmpty()) {
             return app(HttpStatus.NOT_FOUND);
         }
         Blog blog = found.get();
         Long viewerId = LoginMembers.currentId();
-        String path = request.getRequestURI();
 
         // 글 주소는 글이 어느 블로그에 있는지로 판단한다. 이사 전 블로그에 남은 글은 옛 주소에서 그대로 보인다.
         // 옛 블로그가 지워졌어도 옮긴 글은 새 블로그로 301, 옮기지 않은 글은 함께 지워져 404다(BLOG-07)
@@ -100,7 +107,7 @@ public class SpaForwardController {
         if (postPath.matches()) {
             Long postId = Long.valueOf(postPath.group(1));
             return switch (postVisibilityPolicy.decide(postId, blog, viewerId)) {
-                case PostAccess.MovedTo movedTo -> redirect(request, movedTo.blog());
+                case PostAccess.MovedTo movedTo -> redirect(request, movedTo.blog(), path);
                 case PostAccess.NotFound notFound -> app(HttpStatus.NOT_FOUND);
                 // 구독 안내는 화면이 API의 403 SUBSCRIBERS_ONLY로 그린다
                 case PostAccess.Owner owner -> postPage(request, blog, postId);
@@ -123,7 +130,7 @@ public class SpaForwardController {
             }
             Blog target = blog.getMovedToBlog();
             // 이사 간 블로그가 삭제되면 리다이렉트도 끊기고 없는 블로그다 (R-08)
-            return target.isDeleted() ? app(HttpStatus.NOT_FOUND) : redirect(request, target);
+            return target.isDeleted() ? app(HttpStatus.NOT_FOUND) : redirect(request, target, path);
         }
         return isManagePath(path) ? app(HttpStatus.OK) : visited(blog, request, response, app(HttpStatus.OK));
     }
@@ -155,14 +162,14 @@ public class SpaForwardController {
                 .append(meta("og:type", "article"))
                 .append(meta("og:site_name", preview.blogName()))
                 .append(meta("og:title", preview.title()))
-                .append(meta("og:url", blogHostResolver.blogUrl(request, blog, "/" + preview.postId())));
+                .append(meta("og:url", blogAddressResolver.blogUrl(request, blog, "/" + preview.postId())));
         if (preview.description() != null && !preview.description().isBlank()) {
             tags.append(meta("og:description", preview.description()))
                     .append("<meta name=\"description\" content=\"").append(HtmlUtils.htmlEscape(preview.description()))
                     .append("\">\n");
         }
         if (preview.imagePath() != null) {
-            tags.append(meta("og:image", blogHostResolver.blogUrl(request, blog, preview.imagePath())));
+            tags.append(meta("og:image", blogAddressResolver.blogUrl(request, blog, preview.imagePath())));
         }
         tags.append("<meta name=\"twitter:card\" content=\"")
                 .append(preview.imagePath() != null ? "summary_large_image" : "summary").append("\">\n");
@@ -193,11 +200,12 @@ public class SpaForwardController {
                 .body(new ByteArrayResource(html.getBytes(StandardCharsets.UTF_8)));
     }
 
-    private ResponseEntity<Resource> redirect(HttpServletRequest request, Blog target) {
+    /** 같은 블로그 안 경로(path)를 새 블로그 주소로 301. */
+    private ResponseEntity<Resource> redirect(HttpServletRequest request, Blog target, String path) {
         String query = request.getQueryString();
-        String pathAndQuery = request.getRequestURI() + (query == null ? "" : "?" + query);
+        String pathAndQuery = path + (query == null ? "" : "?" + query);
         return ResponseEntity.status(HttpStatus.MOVED_PERMANENTLY)
-                .location(URI.create(blogHostResolver.blogUrl(request, target, pathAndQuery)))
+                .location(URI.create(blogAddressResolver.blogUrl(request, target, pathAndQuery)))
                 .build();
     }
 
@@ -211,11 +219,6 @@ public class SpaForwardController {
     /** 프론트를 빌드하지 않았을 때(개발 중 백엔드만 띄움) 보여 줄 안내. */
     private Resource notBuilt() {
         return new ByteArrayResource(NOT_BUILT.getBytes(StandardCharsets.UTF_8));
-    }
-
-    private boolean isUnderPlatform(HttpServletRequest request) {
-        return request.getServerName() != null
-                && request.getServerName().toLowerCase(Locale.ROOT).endsWith("." + blogHostResolver.platform());
     }
 
     private boolean isManagePath(String path) {

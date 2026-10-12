@@ -3,7 +3,7 @@ package com.nhnacademy.blog.post.presentation;
 import com.nhnacademy.blog.blog.domain.Blog;
 import com.nhnacademy.blog.global.auth.BlogOwnerGuard;
 import com.nhnacademy.blog.global.auth.LoginMember;
-import com.nhnacademy.blog.global.host.BlogHostResolver;
+import com.nhnacademy.blog.global.host.BlogAddressResolver;
 import com.nhnacademy.blog.global.host.CurrentBlog;
 import com.nhnacademy.blog.global.web.Idempotent;
 import com.nhnacademy.blog.global.web.RequestValidator;
@@ -38,14 +38,14 @@ public class PostManageController {
     private final PostService postService;
     private final BlogOwnerGuard blogOwnerGuard;
     private final RequestValidator requestValidator;
-    private final BlogHostResolver blogHostResolver;
+    private final BlogAddressResolver blogAddressResolver;
 
     public PostManageController(PostService postService, BlogOwnerGuard blogOwnerGuard,
-                                RequestValidator requestValidator, BlogHostResolver blogHostResolver) {
+                                RequestValidator requestValidator, BlogAddressResolver blogAddressResolver) {
         this.postService = postService;
         this.blogOwnerGuard = blogOwnerGuard;
         this.requestValidator = requestValidator;
-        this.blogHostResolver = blogHostResolver;
+        this.blogAddressResolver = blogAddressResolver;
     }
 
     /**
@@ -101,7 +101,7 @@ public class PostManageController {
     }
 
     private String postUrl(HttpServletRequest request, Blog blog, Post post) {
-        return blogHostResolver.blogUrl(request, blog, "/" + post.getId());
+        return blogAddressResolver.blogUrl(request, blog, "/" + post.getId());
     }
 
 }

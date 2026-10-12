@@ -20,7 +20,7 @@ app:
   upload:
     dir: /Users/chosun-nhn54/IdeaProjects/blog/uploads
   domain:
-    # /etc/hosts에 127.0.0.1 blog.test alpha.blog.test ... (quickstart)
+    # /etc/hosts에 127.0.0.1 blog.test (quickstart). 블로그는 http://blog.test:8080/@주소
     platform: blog.test
   auth:
     # 개발용 서명 키. 운영은 JWT_SECRET 환경 변수

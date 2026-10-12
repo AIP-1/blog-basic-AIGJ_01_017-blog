@@ -3,9 +3,9 @@ package com.nhnacademy.blog.search.presentation;
 import com.nhnacademy.blog.blog.domain.Blog;
 import com.nhnacademy.blog.global.auth.LoginMembers;
 import com.nhnacademy.blog.global.error.BusinessException;
-import com.nhnacademy.blog.global.host.BlogHostResolver;
+import com.nhnacademy.blog.global.host.BlogAddressResolver;
 import com.nhnacademy.blog.global.host.CurrentBlogArgumentResolver;
-import com.nhnacademy.blog.global.host.RequestHost;
+import com.nhnacademy.blog.global.host.RequestBlog;
 import com.nhnacademy.blog.global.web.PageQuery;
 import com.nhnacademy.blog.global.web.PageResponse;
 import com.nhnacademy.blog.image.application.PostThumbnails;
@@ -22,12 +22,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 검색. 같은 주소(GET /api/search)가 요청 Host에 따라 두 가지다(contracts/rest-api.md SRCH).
+ * 검색. 같은 주소(GET /api/search)가 X-Blog-Address 헤더가 있는지에 따라 두 가지다(contracts/rest-api.md SRCH).
  * <ul>
  *   <li>블로그 주소: 그 블로그 안 글 검색 (T047, SRCH-01). 블로그가 없거나 볼 수 없으면 404</li>
  *   <li>플랫폼 주소: 전체 검색 (T065, SRCH-02). type=post(기본)는 모든 블로그의 글, type=blog는 블로그</li>
  * </ul>
- * Spring은 Host로 메서드를 고를 수 없어서 한 메서드에서 나눈다. 블로그 주소의 판단은 @CurrentBlog와 같은 코드다.
+ * 한 메서드에서 헤더로 나눈다. 블로그 주소의 판단은 @CurrentBlog와 같은 코드다.
  */
 @RestController
 public class SearchController {
@@ -35,16 +35,16 @@ public class SearchController {
     private final SearchService searchService;
     private final BlogSearchService blogSearchService;
     private final PostThumbnails postThumbnails;
-    private final BlogHostResolver blogHostResolver;
+    private final BlogAddressResolver blogAddressResolver;
     private final CurrentBlogArgumentResolver currentBlog;
 
     public SearchController(SearchService searchService, BlogSearchService blogSearchService,
-                            PostThumbnails postThumbnails, BlogHostResolver blogHostResolver,
+                            PostThumbnails postThumbnails, BlogAddressResolver blogAddressResolver,
                             CurrentBlogArgumentResolver currentBlog) {
         this.searchService = searchService;
         this.blogSearchService = blogSearchService;
         this.postThumbnails = postThumbnails;
-        this.blogHostResolver = blogHostResolver;
+        this.blogAddressResolver = blogAddressResolver;
         this.currentBlog = currentBlog;
     }
 
@@ -57,7 +57,7 @@ public class SearchController {
                                   @RequestParam(required = false) Integer size) {
         PageQuery pageQuery = PageQuery.of(page, size, SearchService.PAGE_SIZE);
         Long viewerId = LoginMembers.currentId();
-        if (!(blogHostResolver.resolve(request) instanceof RequestHost.Platform)) {
+        if (!(blogAddressResolver.resolve(request) instanceof RequestBlog.Platform)) {
             Blog blog = currentBlog.resolve(request);
             return posts(searchService.search(blog, viewerId, q, pageQuery), blog);
         }

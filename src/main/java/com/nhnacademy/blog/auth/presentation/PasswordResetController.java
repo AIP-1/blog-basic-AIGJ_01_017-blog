@@ -3,7 +3,7 @@ package com.nhnacademy.blog.auth.presentation;
 import com.nhnacademy.blog.auth.application.PasswordResetService;
 import com.nhnacademy.blog.auth.presentation.dto.PasswordResetConfirmRequest;
 import com.nhnacademy.blog.auth.presentation.dto.PasswordResetRequest;
-import com.nhnacademy.blog.global.host.BlogHostResolver;
+import com.nhnacademy.blog.global.host.BlogAddressResolver;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -19,9 +19,9 @@ import org.springframework.web.bind.annotation.RestController;
 public class PasswordResetController {
 
     private final PasswordResetService passwordResetService;
-    private final BlogHostResolver hostResolver;
+    private final BlogAddressResolver hostResolver;
 
-    public PasswordResetController(PasswordResetService passwordResetService, BlogHostResolver hostResolver) {
+    public PasswordResetController(PasswordResetService passwordResetService, BlogAddressResolver hostResolver) {
         this.passwordResetService = passwordResetService;
         this.hostResolver = hostResolver;
     }
@@ -42,7 +42,7 @@ public class PasswordResetController {
     }
 
     /** 메일 링크가 열 화면 주소. 플랫폼 주소에 지금 요청과 같은 프로토콜·포트로 만든다(개발 :8080·:5173도 그대로). */
-    static String linkBase(BlogHostResolver hostResolver, HttpServletRequest request) {
+    static String linkBase(BlogAddressResolver hostResolver, HttpServletRequest request) {
         return hostResolver.platformUrl(request, "/password-reset?token=");
     }
 

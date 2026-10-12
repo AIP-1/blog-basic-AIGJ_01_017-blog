@@ -7,8 +7,7 @@ import com.nhnacademy.blog.global.auth.SuspensionDetail;
 import com.nhnacademy.blog.global.auth.SuspensionDetails;
 import com.nhnacademy.blog.global.error.BusinessException;
 import com.nhnacademy.blog.global.error.ErrorCode;
-import com.nhnacademy.blog.global.host.BlogHostResolver;
-import com.nhnacademy.blog.global.host.RequestHost;
+import com.nhnacademy.blog.global.host.BlogAddressResolver;
 import com.nhnacademy.blog.member.domain.Member;
 import com.nhnacademy.blog.member.domain.MemberRepository;
 import java.net.URI;
@@ -60,7 +59,7 @@ public class SocialAuthService {
     private final SocialAccountRepository socialAccountRepository;
     private final MemberRepository memberRepository;
     private final CredentialService credentialService;
-    private final BlogHostResolver hostResolver;
+    private final BlogAddressResolver hostResolver;
     private final SuspensionDetails suspensionDetails;
     private final StringRedisTemplate redis;
     private final Clock clock;
@@ -68,7 +67,7 @@ public class SocialAuthService {
 
     public SocialAuthService(OAuthClients clients, SocialAccountRepository socialAccountRepository,
                              MemberRepository memberRepository, CredentialService credentialService,
-                             BlogHostResolver hostResolver, SuspensionDetails suspensionDetails,
+                             BlogAddressResolver hostResolver, SuspensionDetails suspensionDetails,
                              StringRedisTemplate redis, Clock clock) {
         this.clients = clients;
         this.socialAccountRepository = socialAccountRepository;
@@ -311,7 +310,7 @@ public class SocialAuthService {
         };
     }
 
-    /** 로그인 뒤 돌아갈 곳. 우리 서비스 주소(플랫폼·블로그 주소)나 플랫폼 안의 경로만, 아니면 홈. */
+    /** 로그인 뒤 돌아갈 곳. 우리 서비스 주소(플랫폼 호스트, 블로그는 그 아래 /@주소)나 경로만, 아니면 홈. */
     private String safeRedirect(String redirect) {
         if (redirect == null || redirect.isBlank()) {
             return "/";
@@ -322,7 +321,7 @@ public class SocialAuthService {
         try {
             URI uri = URI.create(redirect);
             boolean web = "http".equals(uri.getScheme()) || "https".equals(uri.getScheme());
-            if (web && uri.getHost() != null && !(hostResolver.resolve(uri.getHost()) instanceof RequestHost.Unknown)) {
+            if (web && hostResolver.platform().equalsIgnoreCase(uri.getHost())) {
                 return redirect;
             }
         } catch (IllegalArgumentException e) {

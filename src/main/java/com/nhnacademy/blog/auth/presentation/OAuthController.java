@@ -8,7 +8,7 @@ import com.nhnacademy.blog.global.auth.LoginMember;
 import com.nhnacademy.blog.global.auth.LoginMembers;
 import com.nhnacademy.blog.global.error.BusinessException;
 import com.nhnacademy.blog.global.error.ErrorCode;
-import com.nhnacademy.blog.global.host.BlogHostResolver;
+import com.nhnacademy.blog.global.host.BlogAddressResolver;
 import com.nhnacademy.blog.member.application.MeService;
 import com.nhnacademy.blog.member.domain.Member;
 import com.nhnacademy.blog.member.presentation.dto.MeResponse;
@@ -41,10 +41,10 @@ public class OAuthController {
     private final SocialAuthService socialAuthService;
     private final AuthCookieManager cookieManager;
     private final MeService meService;
-    private final BlogHostResolver hostResolver;
+    private final BlogAddressResolver hostResolver;
 
     public OAuthController(SocialAuthService socialAuthService, AuthCookieManager cookieManager, MeService meService,
-                           BlogHostResolver hostResolver) {
+                           BlogAddressResolver hostResolver) {
         this.socialAuthService = socialAuthService;
         this.cookieManager = cookieManager;
         this.meService = meService;

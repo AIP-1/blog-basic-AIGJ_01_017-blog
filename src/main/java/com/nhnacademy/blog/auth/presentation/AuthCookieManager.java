@@ -7,7 +7,6 @@ import com.nhnacademy.blog.auth.domain.IssuedToken;
 import com.nhnacademy.blog.auth.domain.TokenStore;
 import com.nhnacademy.blog.auth.domain.TokenType;
 import com.nhnacademy.blog.global.auth.LoginMember;
-import com.nhnacademy.blog.global.host.DomainProperties;
 import com.nhnacademy.blog.member.domain.Member;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,7 +20,8 @@ import org.springframework.stereotype.Component;
 
 /**
  * 로그인 쿠키를 주고, 읽고, 지운다 (R-03).
- * 쿠키는 Domain=.{platform}; HttpOnly; SameSite=Lax라 모든 블로그 주소가 같은 로그인 상태를 본다.
+ * 쿠키는 HttpOnly; SameSite=Lax이고 Domain을 두지 않는다. 블로그는 플랫폼 주소 아래 /@주소 경로라(스텝 21)
+ * 플랫폼과 모든 블로그 화면이 같은 주소의 쿠키를 그대로 본다.
  * Access 쿠키는 브라우저를 닫으면 사라진다. Refresh 쿠키는 로그인 유지를 고르면 만료 시각(14일)까지 남는다.
  * 고르지 않으면 브라우저를 닫을 때 사라지고, 그 전에도 무활동 시간(30분)이 지나면 서버에서 끝난다(AUTH-03).
  */
@@ -42,16 +42,13 @@ public class AuthCookieManager {
     private final JwtTokenProvider tokenProvider;
     private final TokenStore tokenStore;
     private final AuthProperties authProperties;
-    private final DomainProperties domainProperties;
 
     public AuthCookieManager(JwtTokenProvider tokenProvider, TokenStore tokenStore, AuthProperties authProperties,
-                             DomainProperties domainProperties,
                              DeviceTokens deviceTokens) {
         this.deviceTokens = deviceTokens;
         this.tokenProvider = tokenProvider;
         this.tokenStore = tokenStore;
         this.authProperties = authProperties;
-        this.domainProperties = domainProperties;
     }
 
     /** 로그인·가입 성공 때 부른다. */
@@ -93,7 +90,7 @@ public class AuthCookieManager {
     }
 
     /**
-     * 소셜 로그인 state 쿠키 (T099). 블로그 주소와 나눌 필요가 없어 지금 주소(플랫폼)에만 두고(Domain 없음),
+     * 소셜 로그인 state 쿠키 (T099). 로그인 쿠키와 같이 지금 주소에만 두고(Domain 없음),
      * /api/auth/oauth 아래에만 보낸다. 제공사에서 돌아오는 이동은 다른 사이트에서 오는 GET이라 SameSite=Lax여야 따라온다.
      */
     public void issueOAuthState(HttpServletResponse response, String state, Duration maxAge) {
@@ -136,7 +133,6 @@ public class AuthCookieManager {
     /** maxAge가 null이면 브라우저를 닫을 때 사라지는 쿠키다. */
     private void addCookie(HttpServletResponse response, String name, String value, Duration maxAge) {
         ResponseCookie.ResponseCookieBuilder cookie = ResponseCookie.from(name, value)
-                .domain(domainProperties.cookieDomain())
                 .path("/")
                 .httpOnly(true)
                 .secure(authProperties.cookieSecure())

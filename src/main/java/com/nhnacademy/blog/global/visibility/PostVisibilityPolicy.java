@@ -33,7 +33,7 @@ public class PostVisibilityPolicy {
 
     /**
      * @param postId      글 번호
-     * @param requestBlog 요청 Host의 블로그. 어느 주소에서 불러도 같은 API(*)면 null
+     * @param requestBlog 요청(X-Blog-Address)의 블로그. 어느 주소에서 불러도 같은 API(*)면 null
      * @param viewerId    보는 사람. 비회원이면 null
      */
     public PostAccess decide(Long postId, Blog requestBlog, Long viewerId) {

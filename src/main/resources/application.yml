@@ -46,7 +46,7 @@ app:
   upload:
     dir: ${APP_UPLOAD_DIR:./uploads}
   domain:
-    # 플랫폼 주소. 블로그 주소는 {address}.{platform}
+    # 플랫폼 주소. 블로그 주소는 {platform}/@{address} (스텝 21)
     platform: blog.com
   auth:
     access-token-ttl: 30m

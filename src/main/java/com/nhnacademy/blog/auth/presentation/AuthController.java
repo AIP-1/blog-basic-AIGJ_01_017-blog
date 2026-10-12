@@ -4,7 +4,7 @@ import com.nhnacademy.blog.auth.application.AuthService;
 import com.nhnacademy.blog.auth.presentation.dto.LoginRequest;
 import com.nhnacademy.blog.auth.presentation.dto.NicknameAvailabilityResponse;
 import com.nhnacademy.blog.auth.presentation.dto.SignupRequest;
-import com.nhnacademy.blog.global.host.BlogHostResolver;
+import com.nhnacademy.blog.global.host.BlogAddressResolver;
 import com.nhnacademy.blog.member.application.MeService;
 import com.nhnacademy.blog.member.domain.Member;
 import com.nhnacademy.blog.member.presentation.dto.MeResponse;
@@ -31,10 +31,10 @@ public class AuthController {
     private final AuthService authService;
     private final MeService meService;
     private final AuthCookieManager cookieManager;
-    private final BlogHostResolver hostResolver;
+    private final BlogAddressResolver hostResolver;
 
     public AuthController(AuthService authService, MeService meService, AuthCookieManager cookieManager,
-                          BlogHostResolver hostResolver) {
+                          BlogAddressResolver hostResolver) {
         this.authService = authService;
         this.meService = meService;
         this.cookieManager = cookieManager;
@@ -66,7 +66,7 @@ public class AuthController {
 
     /**
      * 로그아웃 (T020, AUTH-02). 토큰을 Redis에서 무효로 만들고 쿠키를 지운다.
-     * 쿠키가 .{플랫폼} 도메인이라 한 번 지우면 모든 블로그 주소에서 로그아웃된다.
+     * 블로그도 플랫폼 주소 아래 /@주소 경로라 쿠키가 하나다. 한 번 지우면 모든 블로그 화면에서 로그아웃된다.
      */
     @PostMapping("/api/auth/logout")
     @PreAuthorize("isAuthenticated()")
