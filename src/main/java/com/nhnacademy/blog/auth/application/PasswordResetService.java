@@ -19,8 +19,7 @@ import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.HexFormat;
 import java.util.Optional;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -45,28 +44,27 @@ public class PasswordResetService {
     private static final String COOLDOWN_PREFIX = "password-reset:cooldown:";
     private static final String LOCK_NOTICE_PREFIX = "password-reset:lock-notice:";
 
-    private static final Logger log = LoggerFactory.getLogger(PasswordResetService.class);
-
     private final PasswordResetTokenRepository tokenRepository;
     private final MemberRepository memberRepository;
     private final PasswordEncoder passwordEncoder;
-    private final EmailSender emailSender;
     private final AttemptLimiter attemptLimiter;
     private final AttemptLimitProperties attemptLimitProperties;
     private final StringRedisTemplate redis;
+    private final ApplicationEventPublisher events;
     private final Clock clock;
     private final SecureRandom random = new SecureRandom();
 
     public PasswordResetService(PasswordResetTokenRepository tokenRepository, MemberRepository memberRepository,
-                                PasswordEncoder passwordEncoder, EmailSender emailSender, AttemptLimiter attemptLimiter,
-                                AttemptLimitProperties attemptLimitProperties, StringRedisTemplate redis, Clock clock) {
+                                PasswordEncoder passwordEncoder, AttemptLimiter attemptLimiter,
+                                AttemptLimitProperties attemptLimitProperties, StringRedisTemplate redis,
+                                ApplicationEventPublisher events, Clock clock) {
         this.tokenRepository = tokenRepository;
         this.memberRepository = memberRepository;
         this.passwordEncoder = passwordEncoder;
-        this.emailSender = emailSender;
         this.attemptLimiter = attemptLimiter;
         this.attemptLimitProperties = attemptLimitProperties;
         this.redis = redis;
+        this.events = events;
         this.clock = clock;
     }
 
@@ -145,16 +143,16 @@ public class PasswordResetService {
                 .filter(member -> !member.isWithdrawn() && member.getPasswordHash() != null);
     }
 
-    /** 토큰을 만들어 해시만 저장하고, 원문은 링크에 넣어 메일로만 보낸다. 메일이 실패해도 응답은 같다(로그로 남김). */
+    /**
+     * 토큰을 만들어 해시만 저장하고, 원문은 링크에 넣어 메일로만 보낸다. 메일은 커밋 뒤 다른 스레드에서 간다(ResetMailListener).
+     * 요청이 SMTP를 기다리지 않아야 응답 시간으로 가입 여부가 드러나지 않는다.
+     */
     private void send(Member member, String linkBase, String subject, String template) {
         String token = newToken();
         tokenRepository.save(PasswordResetToken.issue(member.getId(), hash(token),
                 LocalDateTime.now(clock).plus(TOKEN_TTL)));
-        try {
-            emailSender.send(member.getEmail(), subject, template.formatted(linkBase + token));
-        } catch (RuntimeException e) {
-            log.warn("비밀번호 재설정 메일을 보내지 못했습니다(회원 {}): {}", member.getId(), e.toString());
-        }
+        events.publishEvent(new ResetMailRequested(member.getId(), member.getEmail(), subject,
+                template.formatted(linkBase + token)));
     }
 
     private String newToken() {

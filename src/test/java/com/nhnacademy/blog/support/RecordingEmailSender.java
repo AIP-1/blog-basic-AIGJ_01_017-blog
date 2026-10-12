@@ -31,6 +31,18 @@ public class RecordingEmailSender implements EmailSender {
         return mails.stream().filter(mail -> mail.to().equals(email)).toList();
     }
 
+    /** 재설정 메일은 다른 스레드에서 가므로(ResetMailListener) 그 이메일로 count통이 올 때까지 5초 기다린다. */
+    public List<Mail> awaitTo(String email, int count) throws InterruptedException {
+        long deadline = System.currentTimeMillis() + 5000;
+        while (to(email).size() < count) {
+            if (System.currentTimeMillis() > deadline) {
+                throw new AssertionError(email + "로 메일 " + count + "통이 5초 안에 오지 않았습니다");
+            }
+            Thread.sleep(20);
+        }
+        return to(email);
+    }
+
     /** 그 이메일로 마지막에 보낸 메일의 재설정 토큰. */
     public Optional<String> lastResetToken(String email) {
         List<Mail> received = to(email);

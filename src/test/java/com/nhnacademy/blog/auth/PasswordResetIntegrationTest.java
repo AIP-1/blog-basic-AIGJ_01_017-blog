@@ -47,7 +47,7 @@ class PasswordResetIntegrationTest extends IntegrationTestSupport {
         Member member = testMembers.createWithPassword(PASSWORD);
 
         requestReset(member.getEmail()).andExpect(status().isAccepted());
-        assertThat(mailbox.to(member.getEmail())).singleElement()
+        assertThat(mailbox.awaitTo(member.getEmail(), 1)).singleElement()
                 .satisfies(mail -> assertThat(mail.text()).contains("http://blog.test/password-reset?token=", "30분"));
         String token = mailbox.lastResetToken(member.getEmail()).orElseThrow();
         // DB에는 원문이 아니라 해시만 있다
@@ -67,6 +67,7 @@ class PasswordResetIntegrationTest extends IntegrationTestSupport {
     void expiredWrongOrBlankTokenIsRejected() throws Exception {
         Member member = testMembers.createWithPassword(PASSWORD);
         requestReset(member.getEmail()).andExpect(status().isAccepted());
+        mailbox.awaitTo(member.getEmail(), 1);
         String token = mailbox.lastResetToken(member.getEmail()).orElseThrow();
 
         jdbcTemplate.update("UPDATE password_reset_token SET expires_at = NOW() - INTERVAL 1 MINUTE WHERE member_id = ?",
@@ -82,6 +83,7 @@ class PasswordResetIntegrationTest extends IntegrationTestSupport {
     void weakNewPasswordKeepsTheLinkUsable() throws Exception {
         Member member = testMembers.createWithPassword(PASSWORD);
         requestReset(member.getEmail()).andExpect(status().isAccepted());
+        mailbox.awaitTo(member.getEmail(), 1);
         String token = mailbox.lastResetToken(member.getEmail()).orElseThrow();
 
         reset(token, "short").andExpect(status().isBadRequest())
@@ -93,10 +95,12 @@ class PasswordResetIntegrationTest extends IntegrationTestSupport {
     void newPasswordRetiresOtherLinks() throws Exception {
         Member member = testMembers.createWithPassword(PASSWORD);
         requestReset(member.getEmail()).andExpect(status().isAccepted());
+        mailbox.awaitTo(member.getEmail(), 1);
         String first = mailbox.lastResetToken(member.getEmail()).orElseThrow();
         // 1분 제한은 Redis 키라 테스트에서는 직접 지우고 한 통 더 받는다
         redis.delete("password-reset:cooldown:" + member.getEmail());
         requestReset(member.getEmail()).andExpect(status().isAccepted());
+        mailbox.awaitTo(member.getEmail(), 2);
         String second = mailbox.lastResetToken(member.getEmail()).orElseThrow();
         assertThat(second).isNotEqualTo(first);
 
@@ -116,7 +120,7 @@ class PasswordResetIntegrationTest extends IntegrationTestSupport {
         Member member = testMembers.createWithPassword(PASSWORD);
         requestReset(member.getEmail()).andExpect(status().isAccepted());
         requestReset(member.getEmail()).andExpect(status().isTooManyRequests());
-        assertThat(mailbox.to(member.getEmail())).hasSize(1);
+        assertThat(mailbox.awaitTo(member.getEmail(), 1)).hasSize(1);
     }
 
     @Test
@@ -128,7 +132,7 @@ class PasswordResetIntegrationTest extends IntegrationTestSupport {
         }
         login(member.getEmail(), PASSWORD).andExpect(status().isTooManyRequests());
         login(member.getEmail(), "wrong-password9").andExpect(status().isTooManyRequests());
-        assertThat(mailbox.to(member.getEmail())).singleElement()
+        assertThat(mailbox.awaitTo(member.getEmail(), 1)).singleElement()
                 .satisfies(mail -> assertThat(mail.subject()).contains("로그인이 잠시 막혔습니다"));
 
         // 본인은 메일의 링크로 비밀번호를 바꾸고 바로 들어온다
