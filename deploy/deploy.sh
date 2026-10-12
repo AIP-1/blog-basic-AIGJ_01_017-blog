@@ -41,6 +41,11 @@ docker run -d --name "$REDIS" --network "$NETWORK" --restart unless-stopped \
   redis:7.4 redis-server --requirepass "$REDIS_PASSWORD" --appendonly yes >/dev/null
 
 echo "== 앱"
+# 소셜 로그인 키·메일 계정은 없어도 된다(그 기능만 꺼진다). 메일 비밀번호가 있으면 실제로 보내고, 없으면 로그에만 남긴다
+MAIL_SENDER=log
+if [ -n "${MAIL_PASSWORD:-}" ]; then
+  MAIL_SENDER=smtp
+fi
 mkdir -p "$UPLOAD_DIR"
 docker rm -f "$APP" >/dev/null 2>&1 || true
 # -e 이름 (값 없이): 이 셸의 환경 변수를 그대로 넘긴다. 비밀번호가 명령줄에 찍히지 않는다
@@ -53,6 +58,8 @@ docker run -d --name "$APP" --network "$NETWORK" --restart unless-stopped \
   -e DB_USERNAME -e DB_PASSWORD \
   -e REDIS_HOST="$REDIS" -e REDIS_PORT=6379 -e REDIS_PASSWORD \
   -e JWT_SECRET \
+  -e KAKAO_CLIENT_ID -e KAKAO_CLIENT_SECRET -e GOOGLE_CLIENT_ID -e GOOGLE_CLIENT_SECRET \
+  -e MAIL_USERNAME -e MAIL_PASSWORD -e APP_MAIL_SENDER="$MAIL_SENDER" \
   -e APP_UPLOAD_DIR=/app/uploads \
   "$IMAGE" >/dev/null
 
