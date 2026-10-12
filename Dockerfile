@@ -26,4 +26,5 @@ WORKDIR /app
 COPY --from=backend /app/app.jar app.jar
 ENV SPRING_PROFILES_ACTIVE=prod TZ=Asia/Seoul
 EXPOSE 8460
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# 앱은 시계가 한국 시간이라고 본다. 서버 시간대와 상관없이 JVM 시간대를 고정한다(pom.xml surefire와 같다)
+ENTRYPOINT ["java", "-Duser.timezone=Asia/Seoul", "-jar", "app.jar"]
