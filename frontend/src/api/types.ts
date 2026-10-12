@@ -20,7 +20,14 @@ export interface Me {
   role: 'USER' | 'ADMIN'
   hasPassword: boolean
   primaryBlog: BlogRef | null
+  /** 연결된 소셜 계정, 연동한 순서 (OWN-03) */
+  socialAccounts: LinkedSocial[]
   unreadNotificationCount: number
+}
+
+export interface LinkedSocial {
+  provider: 'KAKAO' | 'GOOGLE'
+  linkedAt: string
 }
 
 export interface MemberSummary {

@@ -4,6 +4,7 @@ import { ApiError, api } from '../../api/client'
 import { errorMessage } from '../../api/errors'
 import type { Me, SuspensionDetail } from '../../api/types'
 import { safeRedirect } from '../../app/host'
+import { SOCIAL_PROVIDERS, socialAuthorizeUrl, socialErrorMessage } from '../../app/social'
 import { useMe } from '../../app/useMe'
 import PlatformHeader from '../../components/PlatformHeader'
 import SuspensionNotice from '../../components/SuspensionNotice'
@@ -19,7 +20,8 @@ export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  // 소셜 로그인이 실패하면 서버가 /login?error=…로 돌려보낸다(T099)
+  const [error, setError] = useState<string | null>(socialErrorMessage(params.get('error')))
   const [suspension, setSuspension] = useState<SuspensionDetail | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -81,6 +83,14 @@ export default function LoginPage() {
           <button className="btn primary" type="submit" disabled={submitting}>로그인</button>
           <div className="row between small"><Link to="/password-reset">비밀번호를 잊었어요</Link><Link to="/signup">회원가입</Link></div>
         </form>
+        <div className="stack" style={{ gap: 8, marginTop: 20 }} aria-label="소셜 로그인">
+          {SOCIAL_PROVIDERS.map((provider) => (
+            <a key={provider.path} className="btn" href={socialAuthorizeUrl(provider.path, 'login', params.get('redirect'))}>
+              {provider.name}로 계속하기
+            </a>
+          ))}
+          <span className="hint">처음이면 닉네임만 정하고 가입됩니다. 이미 이메일로 가입했다면 로그인한 뒤 마이페이지에서 연결해 주세요.</span>
+        </div>
       </main>
     </div>
   )

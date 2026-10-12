@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router'
 import AdminPage from '../pages/admin/AdminPage'
 import LoginPage from '../pages/auth/LoginPage'
 import PasswordResetPage from '../pages/auth/PasswordResetPage'
+import SignupSocialPage from '../pages/auth/SignupSocialPage'
 import SignupPage from '../pages/auth/SignupPage'
 import BlogCreatePage from '../pages/blog/BlogCreatePage'
 import BlogMainPage from '../pages/blog/BlogMainPage'
@@ -28,6 +29,7 @@ export function PlatformRoutes() {
       <Route path="/" element={<HomePage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
+      <Route path="/signup/social" element={<SignupSocialPage />} />
       <Route path="/password-reset" element={<PasswordResetPage />} />
       <Route path="/blogs/new" element={<BlogCreatePage />} />
       <Route path="/me" element={<MyPage />} />
