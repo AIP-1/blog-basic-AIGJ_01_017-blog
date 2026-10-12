@@ -149,7 +149,8 @@ class SocialLoginIntegrationTest extends IntegrationTestSupport {
                 + "m.suspended_until = NOW() + INTERVAL 1 DAY WHERE s.provider_user_id = ?", kakaoId);
 
         Flow flow = flow("kakao", "login", null, kakaoId, new Cookie[0]);
-        assertThat(flow.location()).isEqualTo("/login?error=MEMBER_SUSPENDED");
+        // 이메일 로그인의 403 MEMBER_SUSPENDED와 같은 안내를 그리도록 기한을 붙인다(사유 기록이 없으면 사유는 없음)
+        assertThat(flow.location()).startsWith("/login?error=MEMBER_SUSPENDED&until=");
         assertThat(flow.loginCookies()).isEmpty();
     }
 

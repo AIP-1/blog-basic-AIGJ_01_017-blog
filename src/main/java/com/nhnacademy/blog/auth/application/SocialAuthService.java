@@ -3,6 +3,8 @@ package com.nhnacademy.blog.auth.application;
 import com.nhnacademy.blog.auth.domain.SocialAccount;
 import com.nhnacademy.blog.auth.domain.SocialAccountRepository;
 import com.nhnacademy.blog.auth.domain.SocialProvider;
+import com.nhnacademy.blog.global.auth.SuspensionDetail;
+import com.nhnacademy.blog.global.auth.SuspensionDetails;
 import com.nhnacademy.blog.global.error.BusinessException;
 import com.nhnacademy.blog.global.error.ErrorCode;
 import com.nhnacademy.blog.global.host.BlogHostResolver;
@@ -10,6 +12,8 @@ import com.nhnacademy.blog.global.host.RequestHost;
 import com.nhnacademy.blog.member.domain.Member;
 import com.nhnacademy.blog.member.domain.MemberRepository;
 import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Duration;
@@ -57,18 +61,21 @@ public class SocialAuthService {
     private final MemberRepository memberRepository;
     private final CredentialService credentialService;
     private final BlogHostResolver hostResolver;
+    private final SuspensionDetails suspensionDetails;
     private final StringRedisTemplate redis;
     private final Clock clock;
     private final SecureRandom random = new SecureRandom();
 
     public SocialAuthService(OAuthClients clients, SocialAccountRepository socialAccountRepository,
                              MemberRepository memberRepository, CredentialService credentialService,
-                             BlogHostResolver hostResolver, StringRedisTemplate redis, Clock clock) {
+                             BlogHostResolver hostResolver, SuspensionDetails suspensionDetails,
+                             StringRedisTemplate redis, Clock clock) {
         this.clients = clients;
         this.socialAccountRepository = socialAccountRepository;
         this.memberRepository = memberRepository;
         this.credentialService = credentialService;
         this.hostResolver = hostResolver;
+        this.suspensionDetails = suspensionDetails;
         this.redis = redis;
         this.clock = clock;
     }
@@ -238,9 +245,24 @@ public class SocialAuthService {
             return Completion.to("/login?error=OAUTH_FAILED");
         }
         if (member.get().isSuspendedAt(LocalDateTime.now(clock))) {
-            return Completion.to("/login?error=MEMBER_SUSPENDED");
+            return Completion.to(suspendedNotice(suspensionDetails.of(member.get())));
         }
         return new Completion(safeRedirect(redirect), member.get());
+    }
+
+    /**
+     * 정지 안내 주소. 로그인 화면이 이메일 로그인(403 MEMBER_SUSPENDED)과 같은 사유·기한을 그리게 붙인다.
+     * 본인이 방금 로그인한 계정의 정보라 본인 브라우저에만 보인다. 기한이 없으면 영구 정지.
+     */
+    private static String suspendedNotice(SuspensionDetail detail) {
+        StringBuilder location = new StringBuilder("/login?error=MEMBER_SUSPENDED");
+        if (detail.reasonMessage() != null) {
+            location.append("&reasonMessage=").append(URLEncoder.encode(detail.reasonMessage(), StandardCharsets.UTF_8));
+        }
+        if (detail.suspendedUntil() != null) {
+            location.append("&until=").append(URLEncoder.encode(detail.suspendedUntil().toString(), StandardCharsets.UTF_8));
+        }
+        return location.toString();
     }
 
     /** 마이페이지 연동. 다른 회원에 연결된 계정, 같은 제공사가 이미 연결됨은 거절(R-07). 이미 내 것이면 그대로 성공. */

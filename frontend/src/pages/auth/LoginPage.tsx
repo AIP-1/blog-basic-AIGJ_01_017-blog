@@ -21,8 +21,12 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(false)
   // 소셜 로그인이 실패하면 서버가 /login?error=…로 돌려보낸다(T099)
-  const [error, setError] = useState<string | null>(socialErrorMessage(params.get('error')))
-  const [suspension, setSuspension] = useState<SuspensionDetail | null>(null)
+  const [error, setError] = useState<string | null>(params.get('error') === 'MEMBER_SUSPENDED'
+    ? null : socialErrorMessage(params.get('error')))
+  // 소셜 로그인한 계정이 정지 중이면 서버가 사유·기한을 붙여 돌려보낸다(이메일 로그인과 같은 안내)
+  const [suspension, setSuspension] = useState<SuspensionDetail | null>(params.get('error') === 'MEMBER_SUSPENDED'
+    ? { reason: null, reasonMessage: params.get('reasonMessage'), suspendedUntil: params.get('until') }
+    : null)
   const [submitting, setSubmitting] = useState(false)
 
   async function submit(event: FormEvent) {
