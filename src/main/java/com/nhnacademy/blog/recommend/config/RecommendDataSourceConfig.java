@@ -23,6 +23,9 @@ public class RecommendDataSourceConfig {
 
     public static final String QUALIFIER = "recommend";
 
+    /** 연결마다 정하는 HNSW 검색 후보 수. 의미 검색의 최대 결과 수(app.search.semantic.max-results)보다 커야 한다. */
+    static final int HNSW_EF_SEARCH = 200;
+
     @Bean(defaultCandidate = false)
     @Qualifier(QUALIFIER)
     public HikariDataSource recommendDataSource(RecommendProperties properties) {
@@ -33,6 +36,9 @@ public class RecommendDataSourceConfig {
                 .password(properties.datasource().password())
                 .build();
         dataSource.setPoolName("recommend");
+        // HNSW 인덱스 검색은 기본으로 40개(hnsw.ef_search)까지만 후보를 돌려준다. 의미 검색은 가까운 순 100개까지 보므로
+        // 연결마다 넉넉히 올린다(T121). 확장을 아직 만들기 전(처음 Flyway 전)에도 이름에 점이 있는 설정은 SET할 수 있다.
+        dataSource.setConnectionInitSql("SET hnsw.ef_search = " + HNSW_EF_SEARCH);
         return dataSource;
     }
 

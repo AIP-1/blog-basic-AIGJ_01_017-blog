@@ -1,12 +1,14 @@
 import type { PostSummary } from '../api/types'
 import { formatDateTime } from '../app/format'
 import { blogUrl } from '../app/host'
+import { similarityText } from '../app/searchMode'
 
 /**
  * 플랫폼 주소(홈 최신 글, 전체 검색)의 글 한 줄. 글마다 블로그가 달라서 제목과 블로그 이름은
  * 그 블로그 주소(blog.com/@{address})로 가는 a다(블로그 안 목록의 PostItem은 같은 블로그 안이라 Link).
+ * similarity가 있으면(의미 검색) 가까움 점수를 함께 보인다.
  */
-export default function PlatformPostItem({ post }: { post: PostSummary }) {
+export default function PlatformPostItem({ post, similarity }: { post: PostSummary; similarity?: number }) {
   return (
     <article className={post.thumbnailUrl ? 'post-item has-thumb' : 'post-item'}>
       <div className="stack" style={{ gap: 2 }}>
@@ -17,6 +19,7 @@ export default function PlatformPostItem({ post }: { post: PostSummary }) {
           <span>{formatDateTime(post.publishedAt)}</span>
           <span>공감 {post.likeCount}</span>
           <span>댓글 {post.commentCount}</span>
+          {similarity !== undefined && <span>가까움 <span className="num">{similarityText(similarity)}</span></span>}
         </div>
       </div>
       {/* 썸네일은 플랫폼 주소에서도 같은 서버의 /uploads라 그대로 연다 */}

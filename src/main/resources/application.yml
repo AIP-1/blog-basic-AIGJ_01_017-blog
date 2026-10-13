@@ -72,6 +72,12 @@ app:
     view-weight: 1
     like-weight: 3
     comment-weight: 5
+  search:
+    semantic:
+      # 의미 검색(OWN-07, R-02). 코사인 유사도가 이보다 낮은 글은 뺀다. bge-m3로 잰 값: 관련 있는 글 0.42~0.58, 관련 없는 글 0.21~0.39
+      min-similarity: 0.40
+      # 가까운 순으로 이만큼까지만 보고 그 안에서 10개씩 나눈다(추천 DB 연결의 hnsw.ef_search 200보다 작아야 한다)
+      max-results: 100
   ranking:
     # 블로그 점수 = 정시 전 blog-window 동안 조회·공감·댓글(가중치는 popular와 같음) + 새 구독자×subscribe-weight (R-13, HOME-04)
     blog-window: 7d

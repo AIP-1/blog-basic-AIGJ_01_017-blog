@@ -23,8 +23,14 @@ import org.springframework.stereotype.Service;
 @Service
 public class PostEmbeddingService {
 
-    /** 임베딩에 넣는 본문 글자 수. 글 앞부분이 주제를 잘 나타내고, 모델 입력 길이와 계산 시간을 줄인다. */
+    /** 임베딩에 넣는 글자 수. 글 앞부분이 주제를 잘 나타내고, 모델 입력 길이와 계산 시간을 줄인다. */
     static final int MAX_TEXT_LENGTH = 2000;
+
+    /**
+     * 넣는 글자 방식의 번호(post_embedding.text_version). 1 = 제목 + 본문, 2 = 제목 + 태그 + 본문(스텝 22, T120).
+     * text()를 바꾸면 이 번호를 올린다. 그러면 서버가 뜰 때 sync()가 옛 방식 임베딩을 다시 만든다.
+     */
+    public static final int TEXT_VERSION = 2;
 
     private static final Logger log = LoggerFactory.getLogger(PostEmbeddingService.class);
 
@@ -47,7 +53,8 @@ public class PostEmbeddingService {
                 postEmbeddingRepository.delete(postId);
                 return;
             }
-            postEmbeddingRepository.save(postId, embeddingClient.embed(text(post)));
+            String text = text(post, postRepository.findTagNames(postId));
+            postEmbeddingRepository.save(postId, embeddingClient.embed(text), TEXT_VERSION);
         } catch (RuntimeException e) {
             log.warn("글 {}의 임베딩을 만들지 못했습니다: {}", postId, e.toString());
         }
@@ -62,19 +69,19 @@ public class PostEmbeddingService {
     }
 
     /**
-     * 임베딩 표를 발행 글과 맞춘다. 임베딩이 없는 발행 글은 만들고, 지워진 글의 임베딩은 지운다.
-     * 서버가 뜰 때(이미 있던 글, Ollama가 꺼져 있던 사이의 글) 한 번 돈다. 만든 수를 돌려준다.
+     * 임베딩 표를 발행 글과 맞춘다. 임베딩이 없거나 옛 방식(TEXT_VERSION이 아님)인 발행 글은 만들고, 지워진 글의 임베딩은 지운다.
+     * 서버가 뜰 때(이미 있던 글, Ollama가 꺼져 있던 사이의 글, 넣는 글자 방식이 바뀐 뒤) 한 번 돈다. 만든 수를 돌려준다.
      */
     public int sync() {
         try {
             List<Long> published = postRepository.findPublishedIds();
-            Set<Long> embedded = new HashSet<>(postEmbeddingRepository.findAllPostIds());
-            Set<Long> stale = new HashSet<>(embedded);
+            Set<Long> stale = new HashSet<>(postEmbeddingRepository.findAllPostIds());
             published.forEach(stale::remove);
             postEmbeddingRepository.deleteAll(stale);
+            Set<Long> current = new HashSet<>(postEmbeddingRepository.findPostIdsByTextVersion(TEXT_VERSION));
             int created = 0;
             for (Long postId : published) {
-                if (!embedded.contains(postId)) {
+                if (!current.contains(postId)) {
                     refresh(postId);
                     created++;
                 }
@@ -86,10 +93,14 @@ public class PostEmbeddingService {
         }
     }
 
-    /** 제목 + 본문 글자 앞부분. 제목이 주제를 가장 잘 말해 주므로 앞에 둔다. */
-    static String text(Post post) {
+    /**
+     * 제목, 태그, 본문 글자를 줄로 나눠 이은 앞부분. 제목과 태그가 주제를 가장 잘 말해 주므로 앞에 둔다.
+     * 태그가 없으면 태그 줄을 넣지 않는다.
+     */
+    static String text(Post post, List<String> tagNames) {
         String body = post.getContentText() == null ? "" : post.getContentText();
-        String text = post.getTitle() + "\n" + body;
+        String tags = tagNames.isEmpty() ? "" : "태그: " + String.join(", ", tagNames) + "\n";
+        String text = post.getTitle() + "\n" + tags + body;
         return text.length() > MAX_TEXT_LENGTH ? text.substring(0, MAX_TEXT_LENGTH) : text;
     }
 

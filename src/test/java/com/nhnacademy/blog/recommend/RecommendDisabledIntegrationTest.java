@@ -61,6 +61,15 @@ class RecommendDisabledIntegrationTest extends IntegrationTestSupport {
                 .andExpect(status().isNotFound());
     }
 
+    @Test
+    void semanticSearchIsUnavailableButKeywordSearchWorks() throws Exception {
+        mockMvc.perform(get("/api/search").param("q", "추천 끔").param("mode", "semantic"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.code").value("SEMANTIC_SEARCH_UNAVAILABLE"));
+        mockMvc.perform(get("/api/search").param("q", "추천 끔"))
+                .andExpect(status().isOk());
+    }
+
     private long publish(Blog blog, Cookie[] cookies, String visibility) throws Exception {
         String response = mockMvc.perform(post("/api/posts")
                         .header(TestBlogs.HEADER, blog.getAddress())

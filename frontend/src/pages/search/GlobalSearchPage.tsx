@@ -2,27 +2,32 @@ import { type FormEvent, useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { ApiError, api } from '../../api/client'
 import { errorMessage } from '../../api/errors'
-import type { FoundBlog, PageResponse, PostSummary } from '../../api/types'
+import type { FoundBlog, PageResponse, PostSummary, SemanticHit } from '../../api/types'
 import { blogUrl } from '../../app/host'
+import { type SearchMode, searchMode, searchQuery } from '../../app/searchMode'
 import { useMe } from '../../app/useMe'
 import AuthorName from '../../components/AuthorName'
 import Pagination from '../../components/Pagination'
 import PlatformHeader from '../../components/PlatformHeader'
 import PlatformPostItem from '../../components/PlatformPostItem'
+import SearchModeTabs from '../../components/SearchModeTabs'
 
 type Tab = 'post' | 'blog'
 type Result = { tab: 'post'; page: PageResponse<PostSummary> } | { tab: 'blog'; page: PageResponse<FoundBlog> }
+  | { tab: 'semantic'; page: PageResponse<SemanticHit> }
 
 /**
  * 전체 검색 (SRCH-02, 목업 search). 플랫폼 머리글의 검색창으로 온다. 글·블로그 탭은 같은 API를 type만 바꿔 부르고,
  * 검색어·탭·페이지는 주소(?q=&type=&page=)에 둬서 새로고침·공유해도 같다. 서버가 남에게 보이는 글·블로그만 준다.
+ * "의미로 찾기"(?mode=semantic, OWN-07)는 글만 뜻이 가까운 순으로 찾는다(블로그 탭 없음).
  */
 export default function GlobalSearchPage() {
   const me = useMe()
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const q = params.get('q') ?? ''
-  const tab: Tab = params.get('type') === 'blog' ? 'blog' : 'post'
+  const mode = searchMode(params.get('mode'))
+  const tab: Tab = mode === 'keyword' && params.get('type') === 'blog' ? 'blog' : 'post'
   const page = Math.max(Number(params.get('page')) || 1, 1)
   const [input, setInput] = useState(q)
   const [result, setResult] = useState<Result | null>(null)
@@ -33,12 +38,15 @@ export default function GlobalSearchPage() {
     if (!q.trim()) {
       return
     }
-    const query = new URLSearchParams({ q, type: tab, page: String(page) })
-    const loading = tab === 'post'
-      ? api<PageResponse<PostSummary>>(`/api/search?${query}`, { allowAnonymous: true })
-        .then((found): Result => ({ tab: 'post', page: found }))
-      : api<PageResponse<FoundBlog>>(`/api/search?${query}`, { allowAnonymous: true })
-        .then((found): Result => ({ tab: 'blog', page: found }))
+    const query = searchQuery({ q, type: tab, page: String(page) }, mode)
+    const loading = mode === 'semantic'
+      ? api<PageResponse<SemanticHit>>(`/api/search?${query}`, { allowAnonymous: true })
+        .then((found): Result => ({ tab: 'semantic', page: found }))
+      : tab === 'post'
+        ? api<PageResponse<PostSummary>>(`/api/search?${query}`, { allowAnonymous: true })
+          .then((found): Result => ({ tab: 'post', page: found }))
+        : api<PageResponse<FoundBlog>>(`/api/search?${query}`, { allowAnonymous: true })
+          .then((found): Result => ({ tab: 'blog', page: found }))
     loading
       .then((found) => {
         if (active) {
@@ -56,20 +64,29 @@ export default function GlobalSearchPage() {
     return () => {
       active = false
     }
-  }, [q, tab, page])
+  }, [q, tab, mode, page])
 
-  function href(next: { type?: Tab; page?: number }) {
-    return `/search?${new URLSearchParams({ q, type: next.type ?? tab, page: String(next.page ?? 1) })}`
+  function href(next: { type?: Tab; mode?: SearchMode; page?: number }) {
+    const nextMode = next.mode ?? mode
+    const base: Record<string, string> = { q, page: String(next.page ?? 1) }
+    if (nextMode === 'keyword') {
+      base.type = next.type ?? tab
+    }
+    return `/search?${searchQuery(base, nextMode)}`
   }
 
   function submit(event: FormEvent) {
     event.preventDefault()
     if (input.trim()) {
-      navigate(`/search?${new URLSearchParams({ q: input.trim(), type: tab })}`)
+      const base: Record<string, string> = { q: input.trim() }
+      if (mode === 'keyword') {
+        base.type = tab
+      }
+      navigate(`/search?${searchQuery(base, mode)}`)
     }
   }
 
-  const shown = result && result.tab === tab ? result : null
+  const shown = result && result.tab === (mode === 'semantic' ? 'semantic' : tab) ? result : null
 
   return (
     <div className="app">
@@ -82,7 +99,8 @@ export default function GlobalSearchPage() {
                    onChange={(event) => setInput(event.target.value)} />
             <button className="btn primary" type="submit" disabled={!input.trim()}>검색</button>
           </form>
-          {q.trim() && (
+          {q.trim() && <SearchModeTabs mode={mode} onChange={(next) => navigate(href({ mode: next }))} />}
+          {q.trim() && mode === 'keyword' && (
             <div className="tabs" role="tablist">
               <button type="button" role="tab" aria-selected={tab === 'post'} className={tab === 'post' ? 'on' : undefined}
                       onClick={() => navigate(href({ type: 'post' }))}>글</button>
@@ -95,8 +113,15 @@ export default function GlobalSearchPage() {
           {shown && (
             <p className="small muted num">{tab === 'post' ? '글' : '블로그'} {shown.page.totalElements}개</p>
           )}
-          {shown && shown.page.content.length === 0 && (
-            <p className="muted">'{q}'에 맞는 {tab === 'post' ? '글이' : '블로그가'} 없습니다. 다른 검색어로 찾아 보세요.</p>
+          {shown && shown.page.content.length === 0 && (shown.tab === 'semantic'
+            ? <p className="muted">'{q}'와 뜻이 가까운 글이 없습니다. 다른 말로 찾아 보세요.</p>
+            : <p className="muted">'{q}'에 맞는 {tab === 'post' ? '글이' : '블로그가'} 없습니다. 다른 검색어로 찾아 보세요.</p>)}
+          {shown?.tab === 'semantic' && (
+            <div className="post-list">
+              {shown.page.content.map((hit) => (
+                <PlatformPostItem key={hit.post.id} post={hit.post} similarity={hit.similarity} />
+              ))}
+            </div>
           )}
           {shown?.tab === 'post' && (
             <div className="post-list">

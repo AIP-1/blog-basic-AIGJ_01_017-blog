@@ -25,13 +25,14 @@ public class PostEmbeddingRepository {
         this.jdbc = jdbc;
     }
 
-    /** 없으면 넣고, 있으면 바꾼다(글을 고칠 때). */
-    public void save(long postId, float[] embedding) {
+    /** 없으면 넣고, 있으면 바꾼다(글을 고칠 때). textVersion은 넣은 글자의 방식 번호다(PostEmbeddingService.TEXT_VERSION). */
+    public void save(long postId, float[] embedding, int textVersion) {
         jdbc.update("""
-                INSERT INTO post_embedding (post_id, embedding, updated_at)
-                VALUES (:postId, CAST(:embedding AS vector), now())
-                ON CONFLICT (post_id) DO UPDATE SET embedding = EXCLUDED.embedding, updated_at = now()
-                """, Map.of("postId", postId, "embedding", toLiteral(embedding)));
+                INSERT INTO post_embedding (post_id, embedding, text_version, updated_at)
+                VALUES (:postId, CAST(:embedding AS vector), :textVersion, now())
+                ON CONFLICT (post_id) DO UPDATE
+                    SET embedding = EXCLUDED.embedding, text_version = EXCLUDED.text_version, updated_at = now()
+                """, Map.of("postId", postId, "embedding", toLiteral(embedding), "textVersion", textVersion));
     }
 
     public void delete(long postId) {
@@ -48,6 +49,12 @@ public class PostEmbeddingRepository {
         return jdbc.queryForList("SELECT post_id FROM post_embedding", Map.of(), Long.class);
     }
 
+    /** 이 방식으로 넣은 글자로 만든 임베딩의 글 번호. 다른 번호는 옛 방식이라 다시 만든다. */
+    public List<Long> findPostIdsByTextVersion(int textVersion) {
+        return jdbc.queryForList("SELECT post_id FROM post_embedding WHERE text_version = :textVersion",
+                Map.of("textVersion", textVersion), Long.class);
+    }
+
     /**
      * 이 글과 임베딩이 가까운 다른 글 번호를 가까운 순으로 limit개. 이 글의 임베딩이 없으면 빈 목록.
      * {@code <=>}는 pgvector의 코사인 거리(1 - 코사인 유사도)다. 작을수록 비슷하다.
@@ -61,6 +68,34 @@ public class PostEmbeddingRepository {
                 ORDER BY other.embedding <=> me.embedding, other.post_id DESC
                 LIMIT :limit
                 """, new MapSqlParameterSource().addValue("postId", postId).addValue("limit", limit), Long.class);
+    }
+
+    /**
+     * 검색어 임베딩과 가까운 글을 가까운 순으로 limit개 (의미 검색, T121). 코사인 유사도가 minSimilarity보다 낮은 글은 뺀다.
+     * within이 있으면 그 글 번호 안에서만 찾는다(블로그 안 검색: 이 표는 블로그를 모르므로 MySQL이 고른 번호를 받는다).
+     * HNSW 인덱스는 한 번에 hnsw.ef_search개까지만 돌려주므로, 연결마다 그 값을 limit보다 크게 둔다(RecommendDataSourceConfig).
+     */
+    public List<NearPost> findNearestTo(float[] query, double minSimilarity, int limit, Collection<Long> within) {
+        if (within != null && within.isEmpty()) {
+            return List.of();
+        }
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("query", toLiteral(query))
+                .addValue("maxDistance", 1 - minSimilarity)
+                .addValue("limit", limit);
+        String onlyWithin = "";
+        if (within != null) {
+            onlyWithin = "AND post_id IN (:within)";
+            params.addValue("within", within);
+        }
+        return jdbc.query("""
+                SELECT post_id, 1 - (embedding <=> CAST(:query AS vector)) AS similarity
+                FROM post_embedding
+                WHERE embedding <=> CAST(:query AS vector) <= :maxDistance
+                """ + onlyWithin + """
+                ORDER BY embedding <=> CAST(:query AS vector), post_id DESC
+                LIMIT :limit
+                """, params, (row, rowNum) -> new NearPost(row.getLong("post_id"), row.getDouble("similarity")));
     }
 
     /** float[] → '[0.1,0.2,...]' (pgvector가 받는 글자 모양). */
