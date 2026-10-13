@@ -85,10 +85,12 @@ echo "== PostgreSQL 표 비우기"
 TABLE_LIST=$(echo "$TABLES" | sed 's/.*/"&"/' | paste -sd, -)
 psql_q -c "TRUNCATE $TABLE_LIST, post_embedding RESTART IDENTITY CASCADE"
 
-# MySQL에서 칸 하나를 PostgreSQL COPY 글자 형식으로 꺼내는 식(@ 자리에 칸 이름). MySQL 문자열에서 '\\'는 \ 하나, '\t'는 탭이다.
-# NULL은 \N, 글자 안의 \ 탭 줄바꿈은 \\ \t \n \r 로 바꾼다. 참/거짓(0·1)과 시각 글자는 PostgreSQL이 그대로 받는다
+# MySQL에서 칸 하나를 PostgreSQL COPY 글자 형식으로 꺼내는 식(@ 자리에 칸 이름).
+# NULL은 \N, 글자 안의 \ 탭 줄바꿈은 \\ \t \n \r 로 바꾼다(역슬래시를 맨 먼저). 참/거짓(0·1)과 시각 글자는 PostgreSQL이 그대로 받는다.
+# 특수 글자는 '\t' 같은 문자열 이스케이프 대신 글자 번호(92 = \, 9 = 탭, 10 = 줄바꿈, 13 = CR)로 쓴다.
+# 그래야 서버의 sql_mode에 NO_BACKSLASH_ESCAPES가 있든 없든 같은 결과다
 read -r -d '' CELL <<'SQL' || true
-IFNULL(REPLACE(REPLACE(REPLACE(REPLACE(CAST(`@` AS CHAR), '\\', '\\\\'), '\t', '\\t'), '\n', '\\n'), '\r', '\\r'), '\\N')
+IFNULL(REPLACE(REPLACE(REPLACE(REPLACE(CAST(`@` AS CHAR), CHAR(92 USING utf8mb4), CHAR(92, 92 USING utf8mb4)), CHAR(9 USING utf8mb4), CHAR(92, 116 USING utf8mb4)), CHAR(10 USING utf8mb4), CHAR(92, 110 USING utf8mb4)), CHAR(13 USING utf8mb4), CHAR(92, 114 USING utf8mb4)), CHAR(92, 78 USING utf8mb4))
 SQL
 
 echo "== 옮기기"
