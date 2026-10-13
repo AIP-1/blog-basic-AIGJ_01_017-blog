@@ -26,13 +26,13 @@ public class Member extends BaseTimeEntity {
     @Column(name = "profile_image_id")
     private Long profileImageId;
 
-    @Column(name = "email")
+    @Column(name = "email", columnDefinition = "citext")
     private String email;
 
     @Column(name = "password_hash", length = 100)
     private String passwordHash;
 
-    @Column(name = "nickname", nullable = false, length = 20)
+    @Column(name = "nickname", nullable = false, length = 20, columnDefinition = "citext")
     private String nickname;
 
     @Enumerated(EnumType.STRING)
