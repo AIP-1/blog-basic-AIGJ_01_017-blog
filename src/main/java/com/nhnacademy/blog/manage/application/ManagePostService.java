@@ -65,7 +65,7 @@ public class ManagePostService {
         }
         if (filter.q() != null) {
             String pattern = LikePatterns.contains(filter.q());
-            condition = condition.and((root, query, cb) -> cb.like(root.get("title"), pattern, LikePatterns.ESCAPE));
+            condition = condition.and((root, query, cb) -> LikePatterns.containsIgnoreCase(cb, root.get("title"), pattern));
         }
         // 정렬은 newestFirst가 쿼리에 직접 건다. 페이지 요청에는 정렬을 넣지 않는다(넣으면 그것으로 덮인다)
         Page<Post> posts = postRepository.findAll(condition, page.toPageable(Sort.unsorted()));

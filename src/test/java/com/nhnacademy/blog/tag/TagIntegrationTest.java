@@ -122,14 +122,14 @@ class TagIntegrationTest extends IntegrationTestSupport {
     }
 
     @Test
-    void accentOnlyDifferenceIsTheSameTagLikeTheDatabaseSays() throws Exception {
-        // DB 정렬 규칙(utf8mb4_0900_ai_ci)은 악센트도 무시해 Café와 cafe를 같은 이름(UNIQUE)으로 본다
+    void caseOnlyDifferenceIsTheSameTagButAccentIsNot() throws Exception {
+        // tag.name은 citext라 대소문자만 다른 이름은 같은 태그(UNIQUE)고, 악센트가 다르면 다른 태그다(스텝 23, R-02)
         publish("[\"Café\"]");
-        long id = publish("[\"cafe\", \"résumé\", \"resume\"]");
+        long id = publish("[\"CAFÉ\", \"cafe\", \"Resume\", \"resume\"]");
 
         mockMvc.perform(get("/api/posts/" + id).header(TestBlogs.HEADER, blog.getAddress()))
-                .andExpect(jsonPath("$.tags", contains("Café", "résumé")));
-        assertThat(tagCount()).isEqualTo(2);
+                .andExpect(jsonPath("$.tags", contains("Café", "Resume", "cafe")));
+        assertThat(tagCount()).isEqualTo(3);
     }
 
     @Test
@@ -155,7 +155,7 @@ class TagIntegrationTest extends IntegrationTestSupport {
         publish("[\"spring\", \"alpha\"]");
         publishPrivate("[\"spring\", \"secret\"]");
         long blinded = publish("[\"blind-only\"]");
-        jdbcTemplate.update("UPDATE post SET is_blinded = 1 WHERE id = ?", blinded);
+        jdbcTemplate.update("UPDATE post SET is_blinded = TRUE WHERE id = ?", blinded);
 
         // 다른 사람: 비공개 글(secret)이나 관리자가 숨긴 글(blind-only)에만 단 태그는 없다. 글 수가 같으면 이름순
         String anonymous = "[{\"name\":\"spring\",\"postCount\":2},{\"name\":\"alpha\",\"postCount\":1},"

@@ -15,7 +15,6 @@ import com.nhnacademy.blog.member.domain.MemberStatus;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Locale;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -55,10 +54,10 @@ public class AdminMemberService {
         LocalDateTime now = LocalDateTime.now(clock);
         Specification<Member> condition = Specification.unrestricted();
         if (q != null && !q.isBlank()) {
-            String pattern = LikePatterns.contains(q.strip().toLowerCase(Locale.ROOT));
+            String pattern = LikePatterns.contains(q.strip());
             condition = condition.and((root, query, cb) -> cb.or(
-                    cb.like(cb.lower(root.get("email")), pattern, LikePatterns.ESCAPE),
-                    cb.like(cb.lower(root.get("nickname")), pattern, LikePatterns.ESCAPE)));
+                    LikePatterns.containsIgnoreCase(cb, root.get("email"), pattern),
+                    LikePatterns.containsIgnoreCase(cb, root.get("nickname"), pattern)));
         }
         if (status != null && !status.isBlank()) {
             condition = condition.and(status(status, now));

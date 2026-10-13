@@ -172,7 +172,7 @@ public class CategoryService {
         return parent;
     }
 
-    /** 같은 자리(parent가 null이면 최상위)에 같은 이름이 있는가. 대소문자는 DB 정렬 규칙대로 같게 본다. */
+    /** 같은 자리(parent가 null이면 최상위)에 같은 이름이 있는가. 대소문자는 DB(citext)대로 같게 본다. */
     private boolean nameTaken(Blog blog, Category parent, String name) {
         return parent == null
                 ? categoryRepository.existsByBlogIdAndParentIsNullAndName(blog.getId(), name)

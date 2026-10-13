@@ -10,7 +10,7 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     /** 블로그의 카테고리 전부, 주인이 정한 순서대로. */
     List<Category> findByBlogIdOrderBySortOrderAscIdAsc(Long blogId);
 
-    /** 같은 블로그의 최상위 카테고리 중 같은 이름이 있는가. 대소문자는 DB 정렬 규칙(ai_ci)대로 같게 본다. */
+    /** 같은 블로그의 최상위 카테고리 중 같은 이름이 있는가. 대소문자는 같게 본다(name은 citext). */
     boolean existsByBlogIdAndParentIsNullAndName(Long blogId, String name);
 
     /** 같은 상위 아래 하위 카테고리 중 같은 이름이 있는가 (CAT-03). */
