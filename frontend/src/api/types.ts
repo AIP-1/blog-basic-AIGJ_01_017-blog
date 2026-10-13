@@ -26,7 +26,7 @@ export interface Me {
 }
 
 export interface LinkedSocial {
-  provider: 'KAKAO'
+  provider: 'KAKAO' | 'GOOGLE'
   linkedAt: string
 }
 

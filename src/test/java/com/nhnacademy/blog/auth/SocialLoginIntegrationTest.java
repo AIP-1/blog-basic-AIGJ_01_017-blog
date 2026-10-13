@@ -28,9 +28,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 /**
- * 카카오 로그인·가입·연동·해제·재인증 (T099, T100, AUTH-01 소셜, OWN-03, AUTH-06, spec US10 시나리오 10·11, R-07).
+ * 소셜 로그인·가입·연동·해제·재인증 (T099, T100, AUTH-01 소셜, OWN-03, AUTH-06, spec US10 시나리오 10·11, R-07).
  * 제공사는 가짜(FakeOAuthClients): 콜백의 code가 곧 제공사 회원 번호다. 테스트마다 다른 번호를 쓴다.
- * 구글은 운영 주소가 https가 아니라 뺐다(2026-10-12 지원 결정). 모르는 제공사(google 포함)는 404다.
  */
 class SocialLoginIntegrationTest extends IntegrationTestSupport {
 
@@ -87,7 +86,7 @@ class SocialLoginIntegrationTest extends IntegrationTestSupport {
     @Test
     void takenNicknameIsRejectedAndTheTokenStaysUsable() throws Exception {
         Member existing = testMembers.create();
-        Flow first = flow("kakao", "login", null, uniqueId(), new Cookie[0]);
+        Flow first = flow("google", "login", null, uniqueId(), new Cookie[0]);
         String token = first.location().replaceAll(".*token=([^&]+).*", "$1");
 
         mockMvc.perform(post("/api/auth/oauth/signup")
@@ -126,8 +125,10 @@ class SocialLoginIntegrationTest extends IntegrationTestSupport {
 
         // state는 한 번만: 같은 state로 콜백을 다시 오면 실패
         assertThat(callback("kakao", kakaoId, state)).isEqualTo("http://blog.test/login?error=OAUTH_FAILED");
-        // 모르는 state도 실패
+        // 모르는 state, 다른 제공사의 state도 실패
         assertThat(callback("kakao", kakaoId, "made-up")).isEqualTo("http://blog.test/login?error=OAUTH_FAILED");
+        String googleState = state(authorize("google", "login", null, new Cookie[0]));
+        assertThat(callback("kakao", kakaoId, googleState)).isEqualTo("http://blog.test/login?error=OAUTH_FAILED");
     }
 
     @Test
@@ -154,25 +155,25 @@ class SocialLoginIntegrationTest extends IntegrationTestSupport {
     }
 
     @Test
-    void emailMemberLinksKakaoAndTakenOrDuplicateIsRejected() throws Exception {
+    void linkAddsAnotherProviderAndRejectsTakenOrDuplicateProvider() throws Exception {
         Member member = testMembers.create();
         Cookie[] cookies = testMembers.loginCookies(member);
-        String kakaoId = uniqueId();
+        String googleId = uniqueId();
 
-        assertThat(flow("kakao", "link", null, kakaoId, cookies).location()).isEqualTo("/me?linked=kakao");
+        assertThat(flow("google", "link", null, googleId, cookies).location()).isEqualTo("/me?linked=google");
         mockMvc.perform(get("/api/me").cookie(cookies))
-                .andExpect(jsonPath("$.socialAccounts[0].provider").value("KAKAO"));
+                .andExpect(jsonPath("$.socialAccounts[0].provider").value("GOOGLE"));
 
-        // 카카오 계정을 하나 더 → 거절(제공사당 하나)
-        assertThat(flow("kakao", "link", null, uniqueId(), cookies).location())
+        // 같은 제공사 하나 더 → 거절
+        assertThat(flow("google", "link", null, uniqueId(), cookies).location())
                 .isEqualTo("/me?error=PROVIDER_ALREADY_LINKED");
-        // 다른 회원에 연결된 카카오 계정 → 거절
+        // 다른 회원에 연결된 구글 계정 → 거절
         Member other = testMembers.create();
-        assertThat(flow("kakao", "link", null, kakaoId, testMembers.loginCookies(other)).location())
+        assertThat(flow("google", "link", null, googleId, testMembers.loginCookies(other)).location())
                 .isEqualTo("/me?error=SOCIAL_ALREADY_LINKED");
 
-        // 연동한 카카오로 로그인하면 이 회원이다(이메일이 같아서가 아니라 연동해서)
-        Flow login = flow("kakao", "login", null, kakaoId, new Cookie[0]);
+        // 연동한 구글로 로그인하면 이 회원이다(이메일이 같아서가 아니라 연동해서)
+        Flow login = flow("google", "login", null, googleId, new Cookie[0]);
         mockMvc.perform(get("/api/me").cookie(login.loginCookies())).andExpect(jsonPath("$.id").value(member.getId()));
     }
 
@@ -186,21 +187,22 @@ class SocialLoginIntegrationTest extends IntegrationTestSupport {
 
     @Test
     void lastLoginMethodCannotBeUnlinked() throws Exception {
-        // 이메일 회원은 카카오를 해제해도 비밀번호가 남는다. 연결되지 않은 것을 다시 해제하면 할 일이 없다
+        // 이메일 회원은 소셜을 모두 해제해도 비밀번호가 남는다
         Member emailMember = testMembers.create();
         Cookie[] emailCookies = testMembers.loginCookies(emailMember);
         flow("kakao", "link", null, uniqueId(), emailCookies);
         unlink("kakao", emailCookies).andExpect(status().isNoContent());
         mockMvc.perform(get("/api/me").cookie(emailCookies)).andExpect(jsonPath("$.socialAccounts").isEmpty());
-        unlink("kakao", emailCookies).andExpect(status().isNoContent());
 
-        // 카카오로만 가입한 회원: 카카오가 유일한 로그인 수단이라 409
+        // 소셜로만 가입한 회원: 둘 중 하나는 해제되고, 마지막 하나는 409
         String kakaoId = signUpWithSocial("kakao");
         Cookie[] socialCookies = flow("kakao", "login", null, kakaoId, new Cookie[0]).loginCookies();
-        unlink("kakao", socialCookies).andExpect(status().isConflict())
+        flow("google", "link", null, uniqueId(), socialCookies);
+        unlink("kakao", socialCookies).andExpect(status().isNoContent());
+        unlink("google", socialCookies).andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("LAST_LOGIN_METHOD"));
-        // 모르는 제공사(뺀 구글 포함)는 404
-        unlink("google", socialCookies).andExpect(status().isNotFound());
+        // 연결되지 않은 제공사는 할 일이 없다
+        unlink("kakao", socialCookies).andExpect(status().isNoContent());
         unlink("naver", socialCookies).andExpect(status().isNotFound());
     }
 
@@ -229,9 +231,9 @@ class SocialLoginIntegrationTest extends IntegrationTestSupport {
     void reauthMarkIsUsedOnce() throws Exception {
         Member member = testMembers.create();
         Cookie[] cookies = testMembers.loginCookies(member);
-        String kakaoId = uniqueId();
-        flow("kakao", "link", null, kakaoId, cookies);
-        assertThat(flow("kakao", "reauth", null, kakaoId, cookies).location()).isEqualTo("/me/withdraw?reauth=ok");
+        String googleId = uniqueId();
+        flow("google", "link", null, googleId, cookies);
+        assertThat(flow("google", "reauth", null, googleId, cookies).location()).isEqualTo("/me/withdraw?reauth=ok");
         // 이메일 회원도 비밀번호 대신 소셜 재인증으로 탈퇴할 수 있고, 비밀번호로도 여전히 된다
         withdraw(cookies, "{\"password\":\"wrong-password1\"}").andExpect(status().isUnauthorized());
         withdraw(cookies, "{}").andExpect(status().isNoContent());

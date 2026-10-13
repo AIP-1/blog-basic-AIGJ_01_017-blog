@@ -102,7 +102,7 @@ docker run -d --name "$APP" --network "$NETWORK" --restart unless-stopped \
   -e DB_USERNAME -e DB_PASSWORD \
   -e REDIS_HOST="$REDIS" -e REDIS_PORT=6379 -e REDIS_PASSWORD \
   -e JWT_SECRET \
-  -e KAKAO_CLIENT_ID -e KAKAO_CLIENT_SECRET \
+  -e KAKAO_CLIENT_ID -e KAKAO_CLIENT_SECRET -e GOOGLE_CLIENT_ID -e GOOGLE_CLIENT_SECRET \
   -e MAIL_USERNAME -e MAIL_PASSWORD -e APP_MAIL_SENDER="$MAIL_SENDER" \
   -e APP_RECOMMEND_ENABLED="$RECOMMEND_ENABLED" \
   -e RECOMMEND_DB_URL="jdbc:postgresql://${RECOMMEND_DB}:5432/recommend" -e RECOMMEND_DB_USERNAME=blog -e RECOMMEND_DB_PASSWORD \
@@ -118,7 +118,7 @@ for _ in $(seq 1 90); do
     exit 1
   fi
   if docker logs "$APP" 2>&1 | grep -q "Started BlogApplication"; then
-    echo "배포 완료: http://now-log.java21.net (nginx 적용 전에는 http://s2.java21.net:$PORT)"
+    echo "배포 완료: https://now-log.java21.net (nginx를 거치지 않고 보려면 http://s2.java21.net:$PORT)"
     # 이번에 바뀐 옛 이미지만 지운다(docker image prune은 다른 학생 이미지까지 지울 수 있어 쓰지 않는다)
     new_image="$(docker image inspect --format '{{.Id}}' "$IMAGE")"
     if [ -n "$old_image" ] && [ "$old_image" != "$new_image" ]; then
