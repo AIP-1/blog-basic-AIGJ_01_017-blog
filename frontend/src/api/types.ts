@@ -267,6 +267,12 @@ export interface UploadedImage {
   thumbnailUrl: string
 }
 
+/** 의미 검색 결과 한 줄 (GET /api/search?mode=semantic, OWN-07). similarity는 코사인 유사도 0~1, 소수 둘째 자리 */
+export interface SemanticHit {
+  post: PostSummary
+  similarity: number
+}
+
 /** 전체 검색의 블로그 한 줄 (GET /api/search?type=blog, SRCH-02) */
 export interface FoundBlog {
   blog: { id: number; address: string; name: string; description: string | null; profileImageUrl: string | null }
