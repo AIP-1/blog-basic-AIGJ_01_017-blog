@@ -9,6 +9,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.nhnacademy.blog.IntegrationTestSupport;
 import com.nhnacademy.blog.blog.domain.Blog;
+import com.nhnacademy.blog.category.domain.Category;
+import com.nhnacademy.blog.category.domain.CategoryRepository;
 import com.nhnacademy.blog.image.domain.Image;
 import com.nhnacademy.blog.image.domain.ImageRepository;
 import com.nhnacademy.blog.member.domain.Member;
@@ -45,6 +47,9 @@ class SpaForwardIntegrationTest extends IntegrationTestSupport {
 
     @Autowired
     ImageRepository imageRepository;
+
+    @Autowired
+    CategoryRepository categoryRepository;
 
     @Test
     void platformPagesServeTheApp() throws Exception {
@@ -168,6 +173,30 @@ class SpaForwardIntegrationTest extends IntegrationTestSupport {
 
         mockMvc.perform(blogPage(blog.getAddress(), "/" + post.getId()))
                 .andExpect(status().isOk());
+    }
+
+    /** 하위 카테고리 글: 상위 카테고리의 비공개 여부까지 읽어야 한다(트랜잭션 밖이라 지연 로딩이 안 된다). */
+    @Test
+    void postInSubcategoryIsCheckedWithParentCategory() throws Exception {
+        Member owner = testMembers.create();
+        Blog blog = testBlogs.create(owner);
+        Category dev = categoryRepository.save(Category.create(blog, null, "개발", 0));
+        Category backend = categoryRepository.save(Category.create(blog, dev, "백엔드", 0));
+        Post post = postRepository.save(Post.published(blog, backend, "제목",
+                new PostBody("<p>본문</p>", "본문", "본문"), Visibility.PUBLIC, null, LocalDateTime.now()));
+
+        mockMvc.perform(blogPage(blog.getAddress(), "/" + post.getId()))
+                .andExpect(status().isOk());
+        mockMvc.perform(blogPage(blog.getAddress(), "/" + post.getId())
+                        .cookie(testMembers.loginCookies(testMembers.create())))
+                .andExpect(status().isOk());
+        mockMvc.perform(blogPage(blog.getAddress(), "/" + post.getId()).cookie(testMembers.loginCookies(owner)))
+                .andExpect(status().isOk());
+
+        dev.changePrivate(true);
+        categoryRepository.save(dev);
+        mockMvc.perform(blogPage(blog.getAddress(), "/" + post.getId()))
+                .andExpect(status().isNotFound());
     }
 
     @Test
