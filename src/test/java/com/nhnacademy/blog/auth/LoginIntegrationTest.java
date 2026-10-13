@@ -119,7 +119,7 @@ class LoginIntegrationTest extends IntegrationTestSupport {
     @Test
     void suspendedMemberGetsReasonOnlyWithRightPassword() throws Exception {
         Member member = testMembers.createWithPassword(PASSWORD);
-        jdbcTemplate.update("UPDATE member SET status = 'SUSPENDED', suspended_until = NOW() + INTERVAL 7 DAY"
+        jdbcTemplate.update("UPDATE member SET status = 'SUSPENDED', suspended_until = NOW() + INTERVAL '7 day'"
                 + " WHERE id = ?", member.getId());
         moderationLogRepository.save(ModerationLog.record(testMembers.admin(), ModerationAction.SUSPEND,
                 ModerationTargetType.MEMBER, member.getId(), SanctionReason.SPAM, null));

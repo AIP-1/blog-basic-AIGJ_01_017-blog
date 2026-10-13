@@ -175,7 +175,7 @@ class CommentIntegrationTest extends IntegrationTestSupport {
 
     @Test
     void commentsDisabledPostRejects() throws Exception {
-        jdbcTemplate.update("UPDATE post SET is_comment_allowed = 0 WHERE id = ?", post.getId());
+        jdbcTemplate.update("UPDATE post SET is_comment_allowed = FALSE WHERE id = ?", post.getId());
 
         write(reader, post, "{\"content\":\"\"}", UUID.randomUUID().toString())
                 .andExpect(status().isForbidden())
@@ -206,7 +206,7 @@ class CommentIntegrationTest extends IntegrationTestSupport {
         commentRepository.save(Comment.write(post, reader, "비밀 이야기", true));
         Comment blinded = commentRepository.save(Comment.write(post, reader, "광고", false));
         Comment deleted = commentRepository.save(Comment.write(post, reader, "지운 댓글", false));
-        jdbcTemplate.update("UPDATE comment SET is_blinded = 1 WHERE id = ?", blinded.getId());
+        jdbcTemplate.update("UPDATE comment SET is_blinded = TRUE WHERE id = ?", blinded.getId());
         jdbcTemplate.update("UPDATE comment SET deleted_at = NOW() WHERE id = ?", deleted.getId());
         Member stranger = testMembers.create();
 

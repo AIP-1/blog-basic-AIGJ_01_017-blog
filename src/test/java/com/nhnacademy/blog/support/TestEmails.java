@@ -28,7 +28,7 @@ public class TestEmails {
     }
 
     public void expireLatest(String email) {
-        jdbcTemplate.update("UPDATE email_verification SET expires_at = NOW() - INTERVAL 1 MINUTE WHERE email = ?",
+        jdbcTemplate.update("UPDATE email_verification SET expires_at = NOW() - INTERVAL '1 minute' WHERE email = ?",
                 email);
     }
 

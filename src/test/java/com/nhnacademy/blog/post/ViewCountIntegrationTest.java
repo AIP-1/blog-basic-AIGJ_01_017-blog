@@ -68,7 +68,7 @@ class ViewCountIntegrationTest extends IntegrationTestSupport {
         assertThat(viewLogRows(post)).isEqualTo(1);
 
         // 5분이 지난 것으로 기록을 옮기면 다시 센다
-        jdbcTemplate.update("UPDATE view_log SET viewed_at = viewed_at - INTERVAL 6 MINUTE WHERE post_id = ?",
+        jdbcTemplate.update("UPDATE view_log SET viewed_at = viewed_at - INTERVAL '6 minute' WHERE post_id = ?",
                 post.getId());
         view(post, member).andExpect(status().isNoContent());
         assertThat(viewCount(post)).isEqualTo(2);

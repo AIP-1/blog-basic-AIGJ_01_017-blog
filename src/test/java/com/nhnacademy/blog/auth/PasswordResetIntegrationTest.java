@@ -70,7 +70,7 @@ class PasswordResetIntegrationTest extends IntegrationTestSupport {
         mailbox.awaitTo(member.getEmail(), 1);
         String token = mailbox.lastResetToken(member.getEmail()).orElseThrow();
 
-        jdbcTemplate.update("UPDATE password_reset_token SET expires_at = NOW() - INTERVAL 1 MINUTE WHERE member_id = ?",
+        jdbcTemplate.update("UPDATE password_reset_token SET expires_at = NOW() - INTERVAL '1 minute' WHERE member_id = ?",
                 member.getId());
         reset(token, NEW_PASSWORD).andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("RESET_TOKEN_INVALID"));

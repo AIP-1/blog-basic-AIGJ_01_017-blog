@@ -137,8 +137,8 @@ class BlogCreateIntegrationTest extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.code").value("BLOG_LIMIT_EXCEEDED"));
 
         // 삭제한 블로그는 한도에 세지 않는다
-        jdbcTemplate.update("UPDATE blog SET deleted_at = NOW() WHERE member_id = ? AND is_primary = 0 LIMIT 1",
-                member.getId());
+        jdbcTemplate.update("UPDATE blog SET deleted_at = NOW() WHERE id = (SELECT MIN(id) FROM blog"
+                + " WHERE member_id = ? AND is_primary = FALSE)", member.getId());
         create(uniqueAddress()).andExpect(status().isCreated());
     }
 
@@ -160,7 +160,7 @@ class BlogCreateIntegrationTest extends IntegrationTestSupport {
         assertThat(statuses).filteredOn(code -> code == 201).hasSize(5);
         assertThat(statuses).filteredOn(code -> code == 409).hasSize(2);
         assertThat(jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM blog WHERE member_id = ? AND is_primary = 1", Integer.class, member.getId()))
+                "SELECT COUNT(*) FROM blog WHERE member_id = ? AND is_primary = TRUE", Integer.class, member.getId()))
                 .isEqualTo(1);
     }
 

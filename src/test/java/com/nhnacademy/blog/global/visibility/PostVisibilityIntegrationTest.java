@@ -104,7 +104,7 @@ class PostVisibilityIntegrationTest extends IntegrationTestSupport {
     @Test
     void blindedPostIsShownOnlyToOwnerWithFlag() {
         Post post = published(Visibility.PUBLIC);
-        sql("UPDATE post SET is_blinded = 1 WHERE id = ?", post.getId());
+        sql("UPDATE post SET is_blinded = TRUE WHERE id = ?", post.getId());
 
         assertThat(policy.decide(post.getId(), blog, other.getId())).isInstanceOf(PostAccess.NotFound.class);
         assertThat(policy.decide(post.getId(), blog, owner.getId()))
@@ -125,12 +125,12 @@ class PostVisibilityIntegrationTest extends IntegrationTestSupport {
     @Test
     void restrictedBlogOrSuspendedOwnerHidesPosts() {
         Post post = published(Visibility.PUBLIC);
-        sql("UPDATE blog SET is_restricted = 1 WHERE id = ?", blog.getId());
+        sql("UPDATE blog SET is_restricted = TRUE WHERE id = ?", blog.getId());
 
         assertThat(policy.decide(post.getId(), blog, other.getId())).isInstanceOf(PostAccess.NotFound.class);
         assertThat(policy.decide(post.getId(), blog, owner.getId())).isInstanceOf(PostAccess.Owner.class);
 
-        sql("UPDATE blog SET is_restricted = 0 WHERE id = ?", blog.getId());
+        sql("UPDATE blog SET is_restricted = FALSE WHERE id = ?", blog.getId());
         sql("UPDATE member SET status = 'SUSPENDED' WHERE id = ?", owner.getId());
         assertThat(policy.decide(post.getId(), blog, other.getId())).isInstanceOf(PostAccess.NotFound.class);
     }
@@ -157,7 +157,7 @@ class PostVisibilityIntegrationTest extends IntegrationTestSupport {
         Post draft = postRepository.save(Post.draft(blog, null, "임시", new PostBody("<p>x</p>", "x", "x"), Visibility.PUBLIC, null));
         Post blinded = published(Visibility.PUBLIC);
         Post deleted = published(Visibility.PUBLIC);
-        sql("UPDATE post SET is_blinded = 1 WHERE id = ?", blinded.getId());
+        sql("UPDATE post SET is_blinded = TRUE WHERE id = ?", blinded.getId());
         sql("UPDATE post SET deleted_at = NOW() WHERE id = ?", deleted.getId());
         subscriptionRepository.save(Subscription.subscribe(other, blog));
 
