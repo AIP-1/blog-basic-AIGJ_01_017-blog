@@ -16,24 +16,24 @@
 ## 기술
 
 - 백엔드: Java 21, Spring Boot 4.1(Web MVC, Security, Data JPA, Validation, Cache, Data Redis, Flyway), Maven
-- DB: MySQL 8.4(주 데이터), Redis 7.4(캐시·연타 방지·시도 제한), PostgreSQL 17 + pgvector(비슷한 글 추천 임베딩)
+- DB: PostgreSQL 17 + pgvector(주 데이터와 글 임베딩, 스텝 23에서 MySQL을 합침), Redis 7.4(캐시·연타 방지·시도 제한)
 - 임베딩: Ollama + bge-m3(로컬)
 - 프론트: React + TypeScript + Vite, Tiptap 에디터. 빌드 결과를 jar 안 `static/`에 넣어 한 서버로 배포한다
-- 테스트: JUnit 5, MockMvc, Testcontainers(MySQL·Redis·pgvector), Vitest
+- 테스트: JUnit 5, MockMvc, Testcontainers(PostgreSQL pgvector·Redis), Vitest
 
 ## 실행
 
 모두 이 저장소 맨 위 폴더에서.
 
 ```bash
-docker compose up -d                 # MySQL, Redis, PostgreSQL(pgvector), Ollama
+docker compose up -d                 # PostgreSQL(pgvector), Redis, Ollama
 ./scripts/build-frontend.sh          # 프론트를 빌드해 src/main/resources/static으로 복사
 ./mvnw spring-boot:run               # http://blog.test:8080 (처음 뜰 때 Flyway가 테이블 생성)
 ```
 
 - 플랫폼은 `http://blog.test:8080`, 블로그는 그 아래 `http://blog.test:8080/@{주소}`다(스텝 21). `/etc/hosts`에 `127.0.0.1 blog.test` 한 줄이면 된다(`quickstart.md`).
 - Ollama는 이미 만들어 둔 docker 볼륨 `ollama`를 쓴다(`docker-compose.yml`의 `external: true`). 없으면 `docker volume create ollama` 뒤 `docker exec blog-ollama ollama pull bge-m3`.
-- Ollama가 꺼져 있어도 서버는 뜬다. 그동안 쓴 글은 비슷한 글 추천만 비어 있고, 다음에 서버가 뜰 때 채운다.
+- Ollama가 꺼져 있어도 서버는 뜬다. 그동안 쓴 글은 비슷한 글 추천만 비어 있고(의미 검색은 503 안내), 다음에 서버가 뜰 때 채운다.
 
 프론트를 고치면서 볼 때는 개발 서버를 쓴다(`/api`를 8080으로 넘김).
 
@@ -56,13 +56,12 @@ cd frontend && npm test      # Vitest
 
 | 대상 | 주소 | 계정 |
 | --- | --- | --- |
-| MySQL | `localhost:3306`, DB `blog` | `blog` / `blog` (root / `root`) |
-| PostgreSQL | `localhost:5432`, DB `recommend` | `blog` / `blog` |
+| PostgreSQL | `localhost:5432`, DB `blog` | `blog` / `blog` |
 | Redis | `localhost:6379` | 없음 |
 | Ollama | `http://localhost:11434` | 없음 |
 | 서비스 관리자 | `blog.test:8080/login` | `admin@blog.test` / `admin1234!` (Flyway `V2__admin_account.sql`, 운영 전에 바꿀 것) |
 
-운영 환경 변수: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`, `RECOMMEND_DB_URL`, `RECOMMEND_DB_USERNAME`, `RECOMMEND_DB_PASSWORD`, `OLLAMA_URL`, `JWT_SECRET`, `APP_UPLOAD_DIR`, `APP_PLATFORM_DOMAIN`.
+운영 환경 변수: `DB_URL`(`jdbc:postgresql://…`), `DB_USERNAME`, `DB_PASSWORD`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`, `OLLAMA_URL`, `APP_RECOMMEND_ENABLED`, `JWT_SECRET`, `APP_UPLOAD_DIR`, `APP_PLATFORM_DOMAIN`. 실습 서버에서는 `deploy/deploy.sh`가 GitHub secrets로 채운다. 운영 데이터를 MySQL에서 옮길 때는 `deploy/migrate-from-mysql.sh`(스텝 24).
 
 ## 배포용 jar
 
@@ -79,7 +78,6 @@ src/main/java/com/nhnacademy/blog/
   auth/ member/ blog/ post/ category/ tag/ comment/ reaction/ image/
   search/ home/ manage/ recommend/ subscription/ admin/
     각 기능 안: domain/(엔티티·Repository) → application/(Service) → presentation/(Controller, dto/)
-src/main/resources/db/migration/   주 DB(MySQL) Flyway
-src/main/resources/db/recommend/   추천 DB(PostgreSQL) Flyway
+src/main/resources/db/migration/   주 DB(PostgreSQL) Flyway
 frontend/src/                      React 앱(app/ 라우터, pages/, components/, api/)
 ```
