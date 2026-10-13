@@ -10,7 +10,7 @@ import jakarta.persistence.Table;
 
 /**
  * 블로그 주인이 차단한 회원 (T084, MNG-04). 블로그·회원마다 하나(UNIQUE). 차단된 회원은 그 블로그에 댓글·방명록을 쓰거나 구독할 수 없다.
- * 주인이 쓰는 기능이라 서비스 관리 이력에는 남기지 않는다. 넣기는 INSERT IGNORE(저장소)로 해서 이 생성자는 읽을 때만 쓴다.
+ * 주인이 쓰는 기능이라 서비스 관리 이력에는 남기지 않는다. 넣기는 ON CONFLICT DO NOTHING(저장소)으로 해서 이 생성자는 읽을 때만 쓴다.
  */
 @Entity
 @Table(name = "blog_blocked_member")

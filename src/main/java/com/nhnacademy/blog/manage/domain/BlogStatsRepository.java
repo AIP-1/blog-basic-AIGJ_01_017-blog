@@ -8,7 +8,7 @@ import org.springframework.stereotype.Repository;
 
 /**
  * 방문 통계 (T082·T083, MNG-03, R-14). 엔티티 없이 SQL로 다룬다(행을 하나씩 다루는 일이 없고, 모으고 세는 일만 있어서).
- * blog_visit: 블로그·날짜·방문자마다 한 행(UNIQUE)이라 INSERT IGNORE로 하루 한 번만 센다.
+ * blog_visit: 블로그·날짜·방문자마다 한 행(UNIQUE)이라 ON CONFLICT DO NOTHING으로 하루 한 번만 센다.
  * blog_daily_stat·blog_referrer_daily: 새벽 작업이 전날까지를 모아 둔 값. blog.total_visitor_count: 모아 둔 날들의 합.
  */
 @Repository
@@ -23,8 +23,9 @@ public class BlogStatsRepository {
     /** 방문 하나. 같은 날 같은 방문자는 두 번째부터 무시한다(넣은 행 수 0). */
     public int recordVisit(Long blogId, LocalDate date, String visitorKey, ReferrerType type, String host) {
         return jdbc.update("""
-                INSERT IGNORE INTO blog_visit (blog_id, visit_date, visitor_key, referrer_type, referrer_host)
-                VALUES (?, ?, ?, ?, ?)""", blogId, date, visitorKey, type.name(), host);
+                INSERT INTO blog_visit (blog_id, visit_date, visitor_key, referrer_type, referrer_host)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT DO NOTHING""", blogId, date, visitorKey, type.name(), host);
     }
 
     // ---------- 새벽 모으기 ----------
@@ -50,9 +51,9 @@ public class BlogStatsRepository {
     /** 누적 방문자 = 모아 둔 날들의 합(오늘은 빼고). 다시 계산하므로 두 번 돌려도 두 번 더해지지 않는다. */
     public void refreshTotals() {
         jdbc.update("""
-                UPDATE blog b JOIN (SELECT blog_id, SUM(visitor_count) AS total FROM blog_daily_stat GROUP BY blog_id) s
-                  ON s.blog_id = b.id
-                SET b.total_visitor_count = s.total, b.updated_at = b.updated_at""");
+                UPDATE blog b SET total_visitor_count = s.total
+                FROM (SELECT blog_id, SUM(visitor_count) AS total FROM blog_daily_stat GROUP BY blog_id) s
+                WHERE s.blog_id = b.id""");
     }
 
     /** 오래된 방문 기록 지우기(모은 뒤 7일 보관). */

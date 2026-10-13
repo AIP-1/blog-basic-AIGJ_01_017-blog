@@ -17,8 +17,9 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
      */
     @Modifying
     @Query(value = """
-            INSERT IGNORE INTO report (reporter_id, target_type, target_id, reason, description, status)
-            VALUES (:reporterId, :targetType, :targetId, :reason, :description, 'PENDING')""", nativeQuery = true)
+            INSERT INTO report (reporter_id, target_type, target_id, reason, description, status)
+            VALUES (:reporterId, :targetType, :targetId, :reason, :description, 'PENDING')
+            ON CONFLICT DO NOTHING""", nativeQuery = true)
     int insertIfAbsent(@Param("reporterId") Long reporterId, @Param("targetType") String targetType,
                        @Param("targetId") Long targetId, @Param("reason") String reason,
                        @Param("description") String description);

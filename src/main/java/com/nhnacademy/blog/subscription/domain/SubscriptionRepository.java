@@ -22,7 +22,8 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
      * "있나 보고 넣기"를 두 번에 나누면 연타한 두 요청이 둘 다 넣으려다 하나가 UNIQUE 오류가 난다(공감과 같은 방법).
      */
     @Modifying
-    @Query(value = "INSERT IGNORE INTO subscription (member_id, blog_id) VALUES (:memberId, :blogId)", nativeQuery = true)
+    @Query(value = "INSERT INTO subscription (member_id, blog_id) VALUES (:memberId, :blogId) ON CONFLICT DO NOTHING",
+            nativeQuery = true)
     int insertIfAbsent(@Param("memberId") Long memberId, @Param("blogId") Long blogId);
 
     /** 구독 지우기. 지운 행 수(0 또는 1). */

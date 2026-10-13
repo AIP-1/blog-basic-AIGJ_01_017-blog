@@ -11,7 +11,7 @@ import jakarta.persistence.Table;
 /**
  * 저장한 글 (T074, SOC-03). 회원·글마다 하나(UNIQUE member_id, post_id). 저장할 때의 제목과 블로그 이름을 남겨,
  * 나중에 글을 볼 수 없게 되어도 목록에 "볼 수 없는 글"로 그 이름만 보여 준다(헌법 원칙 II의 정해진 예외).
- * 넣기는 INSERT IGNORE(PostBookmarkRepository)로 해서 이 생성자는 읽을 때만 쓴다.
+ * 넣기는 ON CONFLICT DO NOTHING(PostBookmarkRepository)으로 해서 이 생성자는 읽을 때만 쓴다.
  */
 @Entity
 @Table(name = "post_bookmark")

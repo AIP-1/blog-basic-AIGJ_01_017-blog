@@ -26,17 +26,17 @@ public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificat
 
     /**
      * 관리자 숨김·해제 (ADMIN-03). 작성자가 고친 것이 아니라 수정 시각은 그대로 둔다(글 머리의 "수정 …"이 바뀌지 않게).
-     * updated_at은 DB의 ON UPDATE CURRENT_TIMESTAMP라, 같은 UPDATE에서 지금 값으로 직접 넣어야 그대로 남는다.
+     * updated_at은 엔티티를 고칠 때 JPA(@LastModifiedDate)가 채우는 값이라, 이런 벌크 UPDATE에서는 바뀌지 않는다.
      */
     @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("update Post p set p.blinded = :blinded, p.updatedAt = p.updatedAt where p.id = :id")
+    @Query("update Post p set p.blinded = :blinded where p.id = :id")
     int changeBlinded(@Param("id") Long id, @Param("blinded") boolean blinded);
 
     /**
      * 글을 다른 블로그로 옮긴다 (BLOG-06). 카테고리는 미분류. 작성자가 글을 고친 것이 아니라서 수정 시각은 그대로 둔다.
      */
     @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("update Post p set p.blog = :target, p.category = null, p.updatedAt = p.updatedAt where p.id in :ids")
+    @Query("update Post p set p.blog = :target, p.category = null where p.id in :ids")
     int moveTo(@Param("ids") Collection<Long> ids, @Param("target") Blog target);
 
     /** 블로그의 지우지 않은 글 번호(임시저장·예약 포함). 블로그 삭제·탈퇴에서 함께 지울 글. */
@@ -58,10 +58,10 @@ public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificat
 
     /**
      * 카테고리를 지울 때 그 카테고리의 글을 미분류로 옮긴다 (CAT-01). 삭제된 글도 함께 옮겨 외래 키가 남지 않게 한다.
-     * updated_at은 MySQL ON UPDATE로 바뀌지 않게 그대로 다시 넣는다. 작성자가 고친 것이 아니라서 수정 시각을 남기지 않는다.
+     * 작성자가 고친 것이 아니라서 수정 시각을 남기지 않는다(벌크 UPDATE라 updated_at이 바뀌지 않는다).
      */
     @Modifying(clearAutomatically = true)
-    @Query("update Post p set p.category = null, p.updatedAt = p.updatedAt where p.category.id = :categoryId")
+    @Query("update Post p set p.category = null where p.category.id = :categoryId")
     int uncategorize(@Param("categoryId") Long categoryId);
 
     /** 글을 지우면 그 글의 공감도 지운다 (POST-03). 공감 엔티티는 스텝 7에서 만들므로 SQL로 지운다. */
@@ -81,12 +81,12 @@ public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificat
      * 작성자가 글을 고친 것이 아니라서 updated_at은 그대로 둔다.
      */
     @Modifying(clearAutomatically = true)
-    @Query("update Post p set p.commentCount = p.commentCount + :delta, p.updatedAt = p.updatedAt where p.id = :postId")
+    @Query("update Post p set p.commentCount = p.commentCount + :delta where p.id = :postId")
     int addCommentCount(@Param("postId") Long postId, @Param("delta") int delta);
 
     /** 조회수 하나 올리기 (POST-09). 댓글 수와 같은 한 줄 UPDATE이고, 조회는 글을 고친 것이 아니라 updated_at을 그대로 둔다. */
     @Modifying(clearAutomatically = true)
-    @Query("update Post p set p.viewCount = p.viewCount + 1, p.updatedAt = p.updatedAt where p.id = :postId")
+    @Query("update Post p set p.viewCount = p.viewCount + 1 where p.id = :postId")
     int increaseViewCount(@Param("postId") Long postId);
 
     /**
@@ -109,22 +109,23 @@ public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificat
 
     /** 공감 수 늘리기·줄이기 (SOC-01). 댓글 수와 같은 방식이다. */
     @Modifying(clearAutomatically = true)
-    @Query("update Post p set p.likeCount = p.likeCount + :delta, p.updatedAt = p.updatedAt where p.id = :postId")
+    @Query("update Post p set p.likeCount = p.likeCount + :delta where p.id = :postId")
     int addLikeCount(@Param("postId") Long postId, @Param("delta") int delta);
 
     /**
-     * 공감을 켜고 끈 뒤 응답에 넣을 지금 공감 수. 잠그며 읽어야(FOR UPDATE) 다른 트랜잭션이 막 커밋한 값이 보인다.
-     * 평범한 SELECT는 이 트랜잭션이 처음 읽은 때의 스냅샷(REPEATABLE READ)을 보여 줘서, 잠금을 기다린 요청은 옛 수를 돌려준다.
-     * lockById로 이미 잠근 행이라 더 기다리지 않는다.
+     * 공감을 켜고 끈 뒤 응답에 넣을 지금 공감 수. lockById로 이미 잠근 행이라 더 기다리지 않는다.
+     * PostgreSQL 기본 격리(READ COMMITTED)는 문장마다 새로 커밋된 값을 보므로 평범한 SELECT로도 되지만,
+     * 격리 수준을 올려도(REPEATABLE READ면 트랜잭션 첫 스냅샷을 본다) 맞도록 잠그며 읽는다.
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select p.likeCount from Post p where p.id = :postId")
     int findLikeCount(@Param("postId") Long postId);
 
     /**
-     * 글 행을 잠근다(SELECT ... FOR UPDATE). 공감·댓글을 넣고 수를 고치는 트랜잭션이 맨 먼저 부른다.
-     * 공감·댓글 INSERT는 외래 키 확인 때문에 글 행에 공유 잠금을 걸고, 뒤의 수 UPDATE는 배타 잠금이 필요하다.
-     * 두 트랜잭션이 공유 잠금을 쥔 채 서로 배타 잠금을 기다리면 데드락이 난다. 처음부터 배타 잠금을 잡아 차례로 줄 세운다.
+     * 글 행을 잠근다(SELECT ... FOR UPDATE). 공감·댓글·조회 기록을 넣고 수를 고치는 트랜잭션이 맨 먼저 부른다.
+     * 같은 글을 고치는 트랜잭션을 차례로 줄 세워, 뒤 요청이 앞 요청이 커밋한 기록과 수를 보고 판단하게 한다.
+     * (MySQL에서는 공감·댓글 INSERT의 외래 키 공유 잠금과 수 UPDATE의 배타 잠금이 엇갈려 데드락도 났다. PostgreSQL의 외래 키 확인은
+     * FOR KEY SHARE라 키가 아닌 칸의 UPDATE와 부딪히지 않지만, 줄 세우기는 그대로 필요하다.)
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select p.id from Post p where p.id = :postId")

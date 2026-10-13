@@ -30,10 +30,10 @@ public class PopularScoreRepository {
                 SELECT post_id, :likeWeight FROM post_like WHERE created_at >= :since
                 UNION ALL
                 SELECT post_id, :commentWeight FROM comment
-                WHERE created_at >= :since AND deleted_at IS NULL AND is_blinded = 0
+                WHERE created_at >= :since AND deleted_at IS NULL AND is_blinded = FALSE
             ) activity
             JOIN post p ON p.id = activity.post_id
-            WHERE p.status = 'PUBLISHED' AND p.visibility = 'PUBLIC' AND p.deleted_at IS NULL AND p.is_blinded = 0%s
+            WHERE p.status = 'PUBLISHED' AND p.visibility = 'PUBLIC' AND p.deleted_at IS NULL AND p.is_blinded = FALSE%s
             GROUP BY activity.post_id
             ORDER BY score DESC, activity.post_id DESC
             LIMIT :limit

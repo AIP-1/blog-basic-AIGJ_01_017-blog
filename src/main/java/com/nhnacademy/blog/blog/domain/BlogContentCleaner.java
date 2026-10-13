@@ -21,21 +21,21 @@ public class BlogContentCleaner {
     /** 지운 글 수. 같은 트랜잭션 안에서 부른다(JPA와 같은 연결이다). */
     public int deletePosts(Long blogId, LocalDateTime now) {
         jdbcTemplate.update("""
-                DELETE l FROM post_like l JOIN post p ON p.id = l.post_id
-                WHERE p.blog_id = ? AND p.deleted_at IS NULL""", blogId);
+                DELETE FROM post_like l USING post p
+                WHERE p.id = l.post_id AND p.blog_id = ? AND p.deleted_at IS NULL""", blogId);
         jdbcTemplate.update("""
-                DELETE n FROM notification n JOIN post p ON n.target_type = 'POST' AND n.target_id = p.id
-                WHERE p.blog_id = ? AND p.deleted_at IS NULL""", blogId);
+                DELETE FROM notification n USING post p
+                WHERE n.target_type = 'POST' AND n.target_id = p.id AND p.blog_id = ? AND p.deleted_at IS NULL""", blogId);
         jdbcTemplate.update("""
-                DELETE n FROM notification n JOIN comment c ON n.target_type = 'COMMENT' AND n.target_id = c.id
-                JOIN post p ON p.id = c.post_id
-                WHERE p.blog_id = ? AND p.deleted_at IS NULL""", blogId);
+                DELETE FROM notification n USING comment c, post p
+                WHERE n.target_type = 'COMMENT' AND n.target_id = c.id AND p.id = c.post_id
+                  AND p.blog_id = ? AND p.deleted_at IS NULL""", blogId);
         jdbcTemplate.update("""
-                UPDATE comment c JOIN post p ON p.id = c.post_id
-                SET c.deleted_at = ?, c.updated_at = c.updated_at
-                WHERE p.blog_id = ? AND p.deleted_at IS NULL AND c.deleted_at IS NULL""", now, blogId);
+                UPDATE comment c SET deleted_at = ?
+                FROM post p
+                WHERE p.id = c.post_id AND p.blog_id = ? AND p.deleted_at IS NULL AND c.deleted_at IS NULL""", now, blogId);
         return jdbcTemplate.update("""
-                UPDATE post SET deleted_at = ?, updated_at = updated_at
+                UPDATE post SET deleted_at = ?
                 WHERE blog_id = ? AND deleted_at IS NULL""", now, blogId);
     }
 
