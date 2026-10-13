@@ -23,7 +23,7 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
-      # Testcontainers가 러너의 docker로 MySQL·Redis·PostgreSQL을 띄운다
+      # Testcontainers가 러너의 docker로 PostgreSQL·Redis를 띄운다
       - run: ./mvnw -B test
 
   deploy:
@@ -37,25 +37,22 @@ jobs:
           docker build -t aigj017/now-log:latest .
           docker save aigj017/now-log:latest | gzip > now-log.tar.gz
 
-      - name: 서버로 이미지·스크립트 보내기 (~/now-log)
+      - name: 서버로 이미지·스크립트 보내기 (~/now-log, 데이터 옮기기 스크립트도 함께)
         uses: appleboy/scp-action@v1
         with:
           host: ${{ secrets.SSH_ADDRESS }}
           port: ${{ secrets.SSH_PORT }}
           username: ${{ secrets.SSH_ID }}
           password: ${{ secrets.SSH_PASSWORD }}
-          source: now-log.tar.gz,deploy/deploy.sh
+          source: now-log.tar.gz,deploy/deploy.sh,deploy/migrate-from-mysql.sh
           target: now-log
           strip_components: 0
 
       - name: 서버에서 실행
         uses: appleboy/ssh-action@v1
         env:
-          DB_ADDRESS: ${{ secrets.DB_ADDRESS }}
-          DB_PORT: ${{ secrets.DB_PORT }}
-          DB_NAME: ${{ secrets.DB_NAME }}
-          DB_USERNAME: ${{ secrets.DB_USERNAME }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          # 주 DB(PostgreSQL) 계정 blog의 비밀번호. 이름은 추천 DB였던 때의 것 그대로다(스텝 24)
+          RECOMMEND_DB_PASSWORD: ${{ secrets.RECOMMEND_DB_PASSWORD }}
           REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           # 없어도 되는 값(비어 있으면 그 기능만 꺼짐): 카카오·구글 로그인 키, 메일 계정
@@ -65,13 +62,11 @@ jobs:
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
           MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
-          # 비슷한 글 추천 DB 비밀번호. 있으면 deploy.sh가 PostgreSQL·Ollama를 띄우고 추천을 켠다
-          RECOMMEND_DB_PASSWORD: ${{ secrets.RECOMMEND_DB_PASSWORD }}
         with:
           host: ${{ secrets.SSH_ADDRESS }}
           port: ${{ secrets.SSH_PORT }}
           username: ${{ secrets.SSH_ID }}
           password: ${{ secrets.SSH_PASSWORD }}
-          envs: DB_ADDRESS,DB_PORT,DB_NAME,DB_USERNAME,DB_PASSWORD,REDIS_PASSWORD,JWT_SECRET,KAKAO_CLIENT_ID,KAKAO_CLIENT_SECRET,GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET,MAIL_USERNAME,MAIL_PASSWORD,RECOMMEND_DB_PASSWORD
+          envs: RECOMMEND_DB_PASSWORD,REDIS_PASSWORD,JWT_SECRET,KAKAO_CLIENT_ID,KAKAO_CLIENT_SECRET,GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET,MAIL_USERNAME,MAIL_PASSWORD
           command_timeout: 10m
           script: bash ~/now-log/deploy/deploy.sh
