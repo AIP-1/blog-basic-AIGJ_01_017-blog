@@ -12,7 +12,6 @@ import com.nhnacademy.blog.IntegrationTestSupport;
 import com.nhnacademy.blog.TestRecommendConfiguration;
 import com.nhnacademy.blog.blog.domain.Blog;
 import com.nhnacademy.blog.member.domain.Member;
-import com.nhnacademy.blog.recommend.config.RecommendDataSourceConfig;
 import com.nhnacademy.blog.support.TestBlogs;
 import com.nhnacademy.blog.support.TestMembers;
 import jakarta.servlet.http.Cookie;
@@ -24,7 +23,6 @@ import java.util.function.BooleanSupplier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
@@ -51,8 +49,7 @@ class SemanticSearchIntegrationTest extends IntegrationTestSupport {
     TestBlogs testBlogs;
 
     @Autowired
-    @Qualifier(RecommendDataSourceConfig.QUALIFIER)
-    NamedParameterJdbcTemplate recommendJdbc;
+    NamedParameterJdbcTemplate embeddingJdbc;
 
     Blog blog;
     Cookie[] owner;
@@ -228,12 +225,12 @@ class SemanticSearchIntegrationTest extends IntegrationTestSupport {
     }
 
     private String embedding(long postId) {
-        return recommendJdbc.query("SELECT embedding::text FROM post_embedding WHERE post_id = :id",
+        return embeddingJdbc.query("SELECT embedding::text FROM post_embedding WHERE post_id = :id",
                 Map.of("id", postId), rs -> rs.next() ? rs.getString(1) : null);
     }
 
     private Integer textVersion(long postId) {
-        return recommendJdbc.queryForObject("SELECT text_version FROM post_embedding WHERE post_id = :id",
+        return embeddingJdbc.queryForObject("SELECT text_version FROM post_embedding WHERE post_id = :id",
                 Map.of("id", postId), Integer.class);
     }
 

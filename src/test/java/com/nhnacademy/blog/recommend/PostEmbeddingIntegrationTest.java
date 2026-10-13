@@ -11,7 +11,6 @@ import com.nhnacademy.blog.IntegrationTestSupport;
 import com.nhnacademy.blog.blog.domain.Blog;
 import com.nhnacademy.blog.member.domain.Member;
 import com.nhnacademy.blog.recommend.application.PostEmbeddingService;
-import com.nhnacademy.blog.recommend.config.RecommendDataSourceConfig;
 import com.nhnacademy.blog.support.TestBlogs;
 import com.nhnacademy.blog.support.TestMembers;
 import jakarta.servlet.http.Cookie;
@@ -21,7 +20,6 @@ import java.util.function.BooleanSupplier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -48,8 +46,7 @@ class PostEmbeddingIntegrationTest extends IntegrationTestSupport {
     PostEmbeddingService postEmbeddingService;
 
     @Autowired
-    @Qualifier(RecommendDataSourceConfig.QUALIFIER)
-    NamedParameterJdbcTemplate recommendJdbc;
+    NamedParameterJdbcTemplate embeddingJdbc;
 
     Blog blog;
     Cookie[] owner;
@@ -78,28 +75,29 @@ class PostEmbeddingIntegrationTest extends IntegrationTestSupport {
     @Test
     void syncFillsMissingEmbeddingsAndDropsDeletedOnes() throws Exception {
         long id = publish("동기화 글", "본문");
-        await(() -> embedding(id) != null);
-        recommendJdbc.update("DELETE FROM post_embedding WHERE post_id = :id", Map.of("id", id));
-        recommendJdbc.update("INSERT INTO post_embedding (post_id, embedding) VALUES (:id, array_fill(0.1, ARRAY[1024])::vector)",
-                Map.of("id", 999_999_999L));
+        long gone = publish("몰래 지운 글", "본문");
+        await(() -> embedding(id) != null && embedding(gone) != null);
+        embeddingJdbc.update("DELETE FROM post_embedding WHERE post_id = :id", Map.of("id", id));
+        // 삭제 이벤트 없이 지운 글(임베딩 서버가 꺼져 있던 사이에 지운 것과 같다)
+        embeddingJdbc.update("UPDATE post SET deleted_at = now() WHERE id = :id", Map.of("id", gone));
 
         assertThat(postEmbeddingService.sync()).isGreaterThanOrEqualTo(1);
 
         assertThat(embedding(id)).isNotNull();
-        assertThat(embedding(999_999_999L)).isNull();
+        assertThat(embedding(gone)).isNull();
     }
 
     @Test
     void syncRemakesEmbeddingsMadeTheOldWay() throws Exception {
         long id = publish("옛 방식 글", "본문");
         await(() -> embedding(id) != null);
-        recommendJdbc.update("UPDATE post_embedding SET text_version = 1, embedding = array_fill(0.1, ARRAY[1024])::vector"
+        embeddingJdbc.update("UPDATE post_embedding SET text_version = 1, embedding = array_fill(0.1, ARRAY[1024])::vector"
                 + " WHERE post_id = :id", Map.of("id", id));
         String old = embedding(id);
 
         postEmbeddingService.sync();
 
-        assertThat(recommendJdbc.queryForObject("SELECT text_version FROM post_embedding WHERE post_id = :id",
+        assertThat(embeddingJdbc.queryForObject("SELECT text_version FROM post_embedding WHERE post_id = :id",
                 Map.of("id", id), Integer.class)).isEqualTo(PostEmbeddingService.TEXT_VERSION);
         assertThat(embedding(id)).isNotEqualTo(old);
     }
@@ -111,7 +109,7 @@ class PostEmbeddingIntegrationTest extends IntegrationTestSupport {
     }
 
     private String embedding(long postId) {
-        return recommendJdbc.query("SELECT embedding::text FROM post_embedding WHERE post_id = :id",
+        return embeddingJdbc.query("SELECT embedding::text FROM post_embedding WHERE post_id = :id",
                 Map.of("id", postId), rs -> rs.next() ? rs.getString(1) : null);
     }
 
