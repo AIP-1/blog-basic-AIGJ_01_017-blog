@@ -32,7 +32,8 @@ spring:
 
 app:
   recommend:
-    # 비슷한 글 추천(OWN-06). 1차 배포는 끈다: PostgreSQL·Ollama 없이 앱만 띄우고, "비슷한 글"은 빈 목록
+    # 비슷한 글 추천(OWN-06). deploy.sh가 RECOMMEND_DB_PASSWORD가 있으면 PostgreSQL·Ollama 컨테이너를 띄우고 true로 넘긴다.
+    # 없으면 false: 추천 DB 없이 앱만 뜨고, "비슷한 글"은 빈 목록
     enabled: ${APP_RECOMMEND_ENABLED:false}
     datasource:
       url: ${RECOMMEND_DB_URL:}
