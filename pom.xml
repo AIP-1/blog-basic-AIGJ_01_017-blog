@@ -51,10 +51,6 @@
             <artifactId>spring-boot-starter-flyway</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.flywaydb</groupId>
-            <artifactId>flyway-mysql</artifactId>
-        </dependency>
-        <dependency>
             <!-- 인증 코드·비밀번호 재설정 메일 SMTP 발송 (T088). app.mail.sender=smtp일 때만 쓴다 -->
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-mail</artifactId>
@@ -99,12 +95,7 @@
             <version>${twelvemonkeys.version}</version>
         </dependency>
 
-        <dependency>
-            <groupId>com.mysql</groupId>
-            <artifactId>mysql-connector-j</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-        <!-- 비슷한 글 추천(OWN-06) 전용 두 번째 DB: PostgreSQL + pgvector (R-02, 스텝 10) -->
+        <!-- 주 DB: PostgreSQL + pgvector (R-02, 스텝 23에서 MySQL과 추천 DB를 합침) -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
@@ -113,6 +104,11 @@
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
+        <!-- pgvector의 vector 칸을 엔티티 float[]로 읽고, 쿼리에서 cosine_distance를 쓴다 (의미 검색·비슷한 글, T126) -->
+        <dependency>
+            <groupId>org.hibernate.orm</groupId>
+            <artifactId>hibernate-vector</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -147,11 +143,6 @@
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>testcontainers-junit-jupiter</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>testcontainers-mysql</artifactId>
             <scope>test</scope>
         </dependency>
         <!-- 패키지 경계·계층 방향을 테스트로 검사 (스텝 19b, ArchitectureTest) -->

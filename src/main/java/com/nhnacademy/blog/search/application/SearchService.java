@@ -25,7 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 검색 (research R-16). 제목, 본문 글자(content_text), 태그 이름 중 하나에 검색어가 들어간 글.
- * 대소문자는 DB 정렬 규칙(utf8mb4_0900_ai_ci)으로 무시한다. 보는 사람이 볼 수 있는 글만, 최신순 10개씩.
+ * 대소문자는 무시한다(ILIKE, LikePatterns). 보는 사람이 볼 수 있는 글만, 최신순 10개씩.
  * <ul>
  *   <li>블로그 안 검색 (T047, SRCH-01): 그 블로그의 글. 주인에게는 자기 비공개 글도(블로그 화면과 같은 listedIn)</li>
  *   <li>전체 검색 (T065, SRCH-02): 모든 블로그의 글(홈 최신 글과 같은 visibleTo), 또는 이름·소개로 찾은 블로그</li>
@@ -87,8 +87,8 @@ public class SearchService {
                     cb.or(cb.notEqual(owner.get("status"), MemberStatus.SUSPENDED),
                             cb.and(cb.isNotNull(owner.get("suspendedUntil")),
                                     cb.lessThanOrEqualTo(owner.<LocalDateTime>get("suspendedUntil"), now))),
-                    cb.or(cb.like(root.get("name"), pattern, LikePatterns.ESCAPE),
-                            cb.like(root.get("description"), pattern, LikePatterns.ESCAPE)));
+                    cb.or(LikePatterns.containsIgnoreCase(cb, root.get("name"), pattern),
+                            LikePatterns.containsIgnoreCase(cb, root.get("description"), pattern)));
         };
         return blogRepository.findBy(condition, query -> query.project("member")
                 .page(page.toPageable(NEWEST_BLOG)));
@@ -103,10 +103,10 @@ public class SearchService {
             Subquery<Long> tagged = criteria.subquery(Long.class);
             Root<Post> sameRow = tagged.correlate(root);
             Join<PostTag, Tag> tag = sameRow.join("postTags").join("tag");
-            tagged.select(tag.get("id")).where(cb.like(tag.get("name"), pattern, LikePatterns.ESCAPE));
+            tagged.select(tag.get("id")).where(LikePatterns.containsIgnoreCase(cb, tag.get("name"), pattern));
             return cb.or(
-                    cb.like(root.get("title"), pattern, LikePatterns.ESCAPE),
-                    cb.like(root.get("contentText"), pattern, LikePatterns.ESCAPE),
+                    LikePatterns.containsIgnoreCase(cb, root.get("title"), pattern),
+                    LikePatterns.containsIgnoreCase(cb, root.get("contentText"), pattern),
                     cb.exists(tagged));
         };
     }

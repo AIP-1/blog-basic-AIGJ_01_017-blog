@@ -111,7 +111,7 @@ class SidebarIntegrationTest extends IntegrationTestSupport {
     @Test
     void privateCategoryIsHiddenFromOthers() throws Exception {
         Category secret = categoryRepository.save(Category.create(blog, null, "일기", 0));
-        jdbcTemplate.update("UPDATE category SET is_private = 1 WHERE id = ?", secret.getId());
+        jdbcTemplate.update("UPDATE category SET is_private = TRUE WHERE id = ?", secret.getId());
 
         sidebar(null).andExpect(jsonPath("$.modules[1].data.categories", hasSize(0)));
         sidebar(testMembers.loginCookies(owner))
@@ -144,7 +144,7 @@ class SidebarIntegrationTest extends IntegrationTestSupport {
         Comment blinded = commentRepository.save(Comment.write(publicPost, reader, "광고", false));
         Comment deleted = commentRepository.save(Comment.write(publicPost, reader, "지운 댓글", false));
         Comment onPrivate = commentRepository.save(Comment.write(privatePost, owner, "메모", false));
-        jdbcTemplate.update("UPDATE comment SET is_blinded = 1 WHERE id = ?", blinded.getId());
+        jdbcTemplate.update("UPDATE comment SET is_blinded = TRUE WHERE id = ?", blinded.getId());
         jdbcTemplate.update("UPDATE comment SET deleted_at = NOW() WHERE id = ?", deleted.getId());
         // 같은 시각에 들어가도 순서가 정해지게 작성 시각을 벌린다 (normal이 가장 오래됨)
         writtenMinutesAgo(normal, 4);
@@ -171,7 +171,7 @@ class SidebarIntegrationTest extends IntegrationTestSupport {
     }
 
     private void writtenMinutesAgo(Comment comment, int minutes) {
-        jdbcTemplate.update("UPDATE comment SET created_at = NOW(6) - INTERVAL ? MINUTE WHERE id = ?", minutes,
+        jdbcTemplate.update("UPDATE comment SET created_at = NOW() - ? * INTERVAL '1 minute' WHERE id = ?", minutes,
                 comment.getId());
     }
 

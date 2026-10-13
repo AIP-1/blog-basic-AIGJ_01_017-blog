@@ -106,7 +106,8 @@ class SignupIntegrationTest extends IntegrationTestSupport {
         String email = TestEmails.unique();
         String code = receiveCode(email);
 
-        signup(email, code, "password1", existing.getNickname())
+        // 대소문자만 다른 닉네임도 같은 닉네임이다(member.nickname은 citext)
+        signup(email, code, "password1", existing.getNickname().toUpperCase())
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("NICKNAME_TAKEN"));
         // 실패한 가입은 코드를 쓰지 않았으므로 같은 코드로 다시 할 수 있다

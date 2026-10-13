@@ -54,14 +54,14 @@ public class Post extends BaseTimeEntity {
     private String title;
 
     /** 서버 정화(HtmlSanitizer)를 거친 본문. */
-    @Column(name = "content_html", nullable = false, columnDefinition = "mediumtext")
+    @Column(name = "content_html", nullable = false, columnDefinition = "text")
     private String contentHtml;
 
     @Column(name = "summary", length = 300)
     private String summary;
 
     /** 본문에서 태그를 뺀 글자. 블로그 안 검색이 본다 (SRCH-01, research R-16). */
-    @Column(name = "content_text", nullable = false, columnDefinition = "mediumtext")
+    @Column(name = "content_text", nullable = false, columnDefinition = "text")
     private String contentText;
 
     @Enumerated(EnumType.STRING)

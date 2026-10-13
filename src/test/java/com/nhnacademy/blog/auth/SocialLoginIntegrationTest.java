@@ -145,8 +145,8 @@ class SocialLoginIntegrationTest extends IntegrationTestSupport {
     @Test
     void suspendedMemberIsSentToLoginWithNotice() throws Exception {
         String kakaoId = signUpWithSocial("kakao");
-        jdbcTemplate.update("UPDATE member m JOIN social_account s ON s.member_id = m.id SET m.status = 'SUSPENDED', "
-                + "m.suspended_until = NOW() + INTERVAL 1 DAY WHERE s.provider_user_id = ?", kakaoId);
+        jdbcTemplate.update("UPDATE member m SET status = 'SUSPENDED', suspended_until = NOW() + INTERVAL '1 day' "
+                + "FROM social_account s WHERE s.member_id = m.id AND s.provider_user_id = ?", kakaoId);
 
         Flow flow = flow("kakao", "login", null, kakaoId, new Cookie[0]);
         // 이메일 로그인의 403 MEMBER_SUSPENDED와 같은 안내를 그리도록 기한을 붙인다(사유 기록이 없으면 사유는 없음)

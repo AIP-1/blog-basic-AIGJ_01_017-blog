@@ -38,7 +38,7 @@ public class TestBlogs {
     }
 
     public void restrict(Blog blog) {
-        jdbcTemplate.update("UPDATE blog SET is_restricted = 1 WHERE id = ?", blog.getId());
+        jdbcTemplate.update("UPDATE blog SET is_restricted = TRUE WHERE id = ?", blog.getId());
     }
 
     public void move(Blog from, Blog to) {

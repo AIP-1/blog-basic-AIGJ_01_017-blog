@@ -84,7 +84,8 @@ class AdminIntegrationTest extends IntegrationTestSupport {
     void suspendHidesBlogsBlocksNextRequestAndIsLoggedAndNotified() throws Exception {
         long post = publish("정지 전 글");
 
-        send(get("/api/admin/members").param("q", owner.getEmail().substring(0, 8)), null, adminCookies, null)
+        // 검색은 대소문자를 무시한다(ILIKE)
+        send(get("/api/admin/members").param("q", owner.getEmail().substring(0, 8).toUpperCase()), null, adminCookies, null)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].id").value(owner.getId()))
                 .andExpect(jsonPath("$.content[0].status").value("ACTIVE"));
@@ -140,7 +141,7 @@ class AdminIntegrationTest extends IntegrationTestSupport {
     void suspensionEndsByItselfWhenThePeriodIsOver() throws Exception {
         send(post("/api/admin/members/" + owner.getId() + "/suspension"), null, adminCookies,
                 "{\"period\":\"30D\",\"reason\":\"ABUSE\"}").andExpect(status().isNoContent());
-        jdbcTemplate.update("UPDATE member SET suspended_until = NOW() - INTERVAL 1 MINUTE WHERE id = ?", owner.getId());
+        jdbcTemplate.update("UPDATE member SET suspended_until = NOW() - INTERVAL '1 minute' WHERE id = ?", owner.getId());
 
         send(get("/api/me"), null, ownerCookies, null).andExpect(status().isOk());
         send(get("/api/blog"), blog.getAddress(), readerCookies, null).andExpect(status().isOk());

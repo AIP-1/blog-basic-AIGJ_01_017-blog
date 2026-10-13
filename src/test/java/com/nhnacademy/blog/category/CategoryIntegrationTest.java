@@ -228,7 +228,7 @@ class CategoryIntegrationTest extends IntegrationTestSupport {
                 "SELECT category_id FROM post WHERE id IN (?, ?)", Long.class, first.getId(), second.getId()))
                 .containsOnlyNulls();
         assertThat(jdbcTemplate.queryForList(
-                "SELECT CAST(updated_at AS CHAR) FROM post WHERE blog_id = ?", String.class, blog.getId()))
+                "SELECT CAST(updated_at AS TEXT) FROM post WHERE blog_id = ?", String.class, blog.getId()))
                 .allSatisfy(updatedAt -> assertThat(updatedAt).startsWith("2026-01-01 00:00:00"));
         mockMvc.perform(get("/api/categories").header(TestBlogs.HEADER, blog.getAddress()).cookie(ownerCookies))
                 .andExpect(jsonPath("$.uncategorizedCount").value(2))

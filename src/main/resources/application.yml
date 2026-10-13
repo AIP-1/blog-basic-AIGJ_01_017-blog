@@ -3,6 +3,16 @@ spring:
     name: blog
   profiles:
     default: dev
+  datasource:
+    hikari:
+      data-source-properties:
+        # 글자 값을 타입 없이(unknown) 보낸다. varchar로 보내면 PostgreSQL이 citext 칸(이메일·닉네임·태그 등)과
+        # text끼리 비교해 대소문자를 가린다(citext = varchar → false). 타입이 없으면 칸의 타입(citext)을 따른다 (스텝 23, R-02)
+        stringtype: unspecified
+      # pgvector HNSW 인덱스 검색은 기본으로 가까운 40개까지만 후보로 본다. 의미 검색은 가까운 순 100개까지 보고(max-results),
+      # 가시성 조건을 같은 쿼리에서 거르므로 후보를 넉넉히 보고(ef_search), 조건에 맞는 글이 모자라면 인덱스를 더 읽는다(iterative_scan).
+      # 이름에 점이 있는 설정은 vector 확장이 아직 없을 때(처음 Flyway 전)에도 SET할 수 있다
+      connection-init-sql: "SET hnsw.ef_search = 200; SET hnsw.iterative_scan = strict_order"
   jpa:
     open-in-view: false
     hibernate:
@@ -76,7 +86,7 @@ app:
     semantic:
       # 의미 검색(OWN-07, R-02). 코사인 유사도가 이보다 낮은 글은 뺀다. bge-m3로 잰 값: 관련 있는 글 0.42~0.58, 관련 없는 글 0.21~0.39
       min-similarity: 0.40
-      # 가까운 순으로 이만큼까지만 보고 그 안에서 10개씩 나눈다(추천 DB 연결의 hnsw.ef_search 200보다 작아야 한다)
+      # 가까운 순으로 이만큼까지만 보고 그 안에서 10개씩 나눈다(DB 연결의 hnsw.ef_search 200보다 작아야 한다)
       max-results: 100
   ranking:
     # 블로그 점수 = 정시 전 blog-window 동안 조회·공감·댓글(가중치는 popular와 같음) + 새 구독자×subscribe-weight (R-13, HOME-04)

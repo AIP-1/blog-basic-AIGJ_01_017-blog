@@ -11,7 +11,6 @@ import com.nhnacademy.blog.IntegrationTestSupport;
 import com.nhnacademy.blog.blog.domain.Blog;
 import com.nhnacademy.blog.member.domain.Member;
 import com.nhnacademy.blog.recommend.application.PostEmbeddingService;
-import com.nhnacademy.blog.recommend.domain.PostEmbeddingRepository;
 import com.nhnacademy.blog.support.TestBlogs;
 import com.nhnacademy.blog.support.TestMembers;
 import jakarta.servlet.http.Cookie;
@@ -25,7 +24,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
- * 추천을 끈 1차 배포(app.recommend.enabled=false). 추천 DB·임베딩 부품 없이 앱이 뜨고,
+ * 추천을 끈 서버(app.recommend.enabled=false). 임베딩 서버(Ollama)를 쓰는 부품 없이 앱이 뜨고,
  * 비슷한 글은 빈 목록이며, 볼 수 없는 원본 글은 켜 둘 때와 같이 404다.
  */
 @TestPropertySource(properties = "app.recommend.enabled=false")
@@ -45,7 +44,6 @@ class RecommendDisabledIntegrationTest extends IntegrationTestSupport {
 
     @Test
     void startsWithoutRecommendPartsAndGivesEmptyList() throws Exception {
-        assertThat(context.getBeanNamesForType(PostEmbeddingRepository.class)).isEmpty();
         assertThat(context.getBeanNamesForType(PostEmbeddingService.class)).isEmpty();
 
         Member member = testMembers.create();

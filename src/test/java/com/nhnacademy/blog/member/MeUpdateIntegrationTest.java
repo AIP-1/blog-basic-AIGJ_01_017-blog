@@ -59,7 +59,7 @@ class MeUpdateIntegrationTest extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.email").value(member.getEmail()));
         send(get("/api/me"), cookies, null).andExpect(jsonPath("$.nickname").value(nickname));
 
-        // 대소문자만 다른 다른 회원의 닉네임도 같은 닉네임이다(DB 정렬 규칙)
+        // 대소문자만 다른 다른 회원의 닉네임도 같은 닉네임이다(nickname은 citext)
         send(patch("/api/me"), cookies, "{\"nickname\":\"" + other.getNickname().toUpperCase() + "\"}")
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("NICKNAME_TAKEN"));

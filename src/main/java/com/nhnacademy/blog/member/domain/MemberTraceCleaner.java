@@ -21,22 +21,23 @@ public class MemberTraceCleaner {
     public void clean(Long memberId, LocalDateTime now) {
         // 공감: 글의 공감 수를 먼저 하나씩 줄이고 지운다
         jdbcTemplate.update("""
-                UPDATE post p JOIN post_like l ON l.post_id = p.id
-                SET p.like_count = p.like_count - 1, p.updated_at = p.updated_at
-                WHERE l.member_id = ?""", memberId);
+                UPDATE post p SET like_count = p.like_count - 1
+                FROM post_like l
+                WHERE l.post_id = p.id AND l.member_id = ?""", memberId);
         jdbcTemplate.update("DELETE FROM post_like WHERE member_id = ?", memberId);
         // 구독: 구독자 수는 행을 세므로 지우기만 하면 맞는다
         jdbcTemplate.update("DELETE FROM subscription WHERE member_id = ?", memberId);
         // 댓글: 글마다 지울 댓글 수만큼 댓글 수를 줄이고 소프트 삭제
         jdbcTemplate.update("""
-                UPDATE post p JOIN (SELECT post_id, COUNT(*) AS n FROM comment
-                                    WHERE member_id = ? AND deleted_at IS NULL GROUP BY post_id) c ON c.post_id = p.id
-                SET p.comment_count = p.comment_count - c.n, p.updated_at = p.updated_at""", memberId);
+                UPDATE post p SET comment_count = p.comment_count - c.n
+                FROM (SELECT post_id, COUNT(*) AS n FROM comment
+                      WHERE member_id = ? AND deleted_at IS NULL GROUP BY post_id) c
+                WHERE c.post_id = p.id""", memberId);
         jdbcTemplate.update("""
-                UPDATE comment SET deleted_at = ?, updated_at = updated_at
+                UPDATE comment SET deleted_at = ?
                 WHERE member_id = ? AND deleted_at IS NULL""", now, memberId);
         jdbcTemplate.update("""
-                UPDATE guestbook SET deleted_at = ?, updated_at = updated_at
+                UPDATE guestbook SET deleted_at = ?
                 WHERE member_id = ? AND deleted_at IS NULL""", now, memberId);
         // 저장한 글은 본인만 보는 목록이라 함께 지운다 (T077, SOC-03)
         jdbcTemplate.update("DELETE FROM post_bookmark WHERE member_id = ?", memberId);

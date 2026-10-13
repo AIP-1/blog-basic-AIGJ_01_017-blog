@@ -11,7 +11,8 @@ public interface BlogBlockedMemberRepository extends JpaRepository<BlogBlockedMe
 
     /** 차단. 이미 차단했으면(UNIQUE) 0. */
     @Modifying
-    @Query(value = "INSERT IGNORE INTO blog_blocked_member (blog_id, blocked_member_id, memo) VALUES (:blogId, :memberId, :memo)",
+    @Query(value = "INSERT INTO blog_blocked_member (blog_id, blocked_member_id, memo) VALUES (:blogId, :memberId, :memo)"
+            + " ON CONFLICT DO NOTHING",
             nativeQuery = true)
     int insertIfAbsent(@Param("blogId") Long blogId, @Param("memberId") Long memberId, @Param("memo") String memo);
 

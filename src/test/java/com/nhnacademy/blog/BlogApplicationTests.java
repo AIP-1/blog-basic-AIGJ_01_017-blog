@@ -19,11 +19,12 @@ class BlogApplicationTests extends IntegrationTestSupport {
     void flywayCreatesAllErdTables() {
         Integer tables = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM information_schema.tables "
-                        + "WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE' "
+                        + "WHERE table_schema = current_schema() AND table_type = 'BASE TABLE' "
                         + "AND table_name <> 'flyway_schema_history'",
                 Integer.class);
 
-        assertThat(tables).isEqualTo(26);
+        // ERD의 26개와 글 임베딩(post_embedding)
+        assertThat(tables).isEqualTo(27);
     }
 
 }

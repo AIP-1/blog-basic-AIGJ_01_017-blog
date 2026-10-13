@@ -28,7 +28,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 엔티티를 실제 MySQL(schema.sql)에 저장하고 다시 읽어 컬럼 매핑과 기본값을 확인한다.
+ * 엔티티를 실제 PostgreSQL(Flyway V1)에 저장하고 다시 읽어 컬럼 매핑과 기본값을 확인한다.
  */
 @Transactional
 class EntityMappingTest extends IntegrationTestSupport {

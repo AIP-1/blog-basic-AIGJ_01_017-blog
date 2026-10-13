@@ -38,7 +38,7 @@ public class Category {
     @JoinColumn(name = "blog_id", nullable = false)
     private Blog blog;
 
-    @Column(name = "name", nullable = false, length = 30)
+    @Column(name = "name", nullable = false, length = 30, columnDefinition = "citext")
     private String name;
 
     @Column(name = "sort_order", nullable = false)

@@ -15,7 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 태그 이름 바꾸기·지우기 (T098, TAG-04). 주인 검사는 컨트롤러가 먼저 했다.
- * 같은 블로그에 같은 이름(대소문자·악센트 무시, DB UNIQUE(blog_id, name)와 같은 규칙)은 둘 수 없다. 지워도 글은 남는다.
+ * 같은 블로그에 같은 이름(대소문자 무시, DB UNIQUE(blog_id, name)와 같은 규칙)은 둘 수 없다. 지워도 글은 남는다.
  */
 @Service
 public class TagManageService {

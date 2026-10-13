@@ -1,27 +1,5 @@
-# 개발용 MySQL 8, Redis, 비슷한 글 추천용 PostgreSQL(pgvector)·Ollama, 가짜 메일함 Mailpit. 실행: docker compose up -d
+# 개발용 PostgreSQL(pgvector, 주 DB), Redis, 임베딩 모델 Ollama, 가짜 메일함 Mailpit. 실행: docker compose up -d
 services:
-  mysql:
-    image: mysql:8.4
-    container_name: blog-mysql
-    environment:
-      MYSQL_DATABASE: blog
-      MYSQL_USER: blog
-      MYSQL_PASSWORD: blog
-      MYSQL_ROOT_PASSWORD: root
-      TZ: Asia/Seoul
-    command:
-      - --character-set-server=utf8mb4
-      - --collation-server=utf8mb4_0900_ai_ci
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql-data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
-
   redis:
     image: redis:7.4
     container_name: blog-redis
@@ -33,12 +11,12 @@ services:
       timeout: 3s
       retries: 20
 
-  # 비슷한 글 추천(OWN-06) 전용 두 번째 DB. 글 id와 임베딩만 둔다 (R-02)
+  # 주 DB. 글 임베딩(비슷한 글·의미 검색)도 여기에 둔다 (R-02, 스텝 23에서 MySQL을 합침)
   postgres:
     image: pgvector/pgvector:pg17
     container_name: blog-postgres
     environment:
-      POSTGRES_DB: recommend
+      POSTGRES_DB: blog
       POSTGRES_USER: blog
       POSTGRES_PASSWORD: blog
       TZ: Asia/Seoul
@@ -47,7 +25,7 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "blog", "-d", "recommend"]
+      test: ["CMD", "pg_isready", "-U", "blog", "-d", "blog"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -70,7 +48,6 @@ services:
       - "8025:8025"
 
 volumes:
-  mysql-data:
   postgres-data:
   ollama:
     external: true

@@ -38,7 +38,7 @@ public class TestPosts {
     }
 
     public void blind(Post post) {
-        jdbcTemplate.update("UPDATE post SET is_blinded = 1 WHERE id = ?", post.getId());
+        jdbcTemplate.update("UPDATE post SET is_blinded = TRUE WHERE id = ?", post.getId());
     }
 
     public void delete(Post post) {

@@ -9,7 +9,6 @@ import static org.mockito.Mockito.when;
 import com.nhnacademy.blog.global.error.BusinessException;
 import com.nhnacademy.blog.global.error.ErrorCode;
 import com.nhnacademy.blog.global.web.PageQuery;
-import com.nhnacademy.blog.post.domain.PostRepository;
 import com.nhnacademy.blog.recommend.domain.PostEmbeddingRepository;
 import java.time.Clock;
 import java.util.Optional;
@@ -21,7 +20,7 @@ import org.springframework.web.client.ResourceAccessException;
  */
 class SemanticSearchServiceTest {
 
-    PostRepository postRepository = mock(PostRepository.class);
+    PostEmbeddingRepository postEmbeddingRepository = mock(PostEmbeddingRepository.class);
     SemanticSearchProperties properties = new SemanticSearchProperties(0.4, 100);
     PageQuery page = PageQuery.of(null, null, 10);
 
@@ -29,8 +28,8 @@ class SemanticSearchServiceTest {
     void embeddingServerDownIsUnavailable() {
         QueryEmbeddings down = mock(QueryEmbeddings.class);
         when(down.embed(anyString())).thenThrow(new ResourceAccessException("Connection refused"));
-        SemanticSearchService service = new SemanticSearchService(postRepository, Optional.of(down),
-                Optional.of(mock(PostEmbeddingRepository.class)), properties, Clock.systemUTC());
+        SemanticSearchService service = new SemanticSearchService(Optional.of(down), postEmbeddingRepository,
+                properties, Clock.systemUTC());
 
         assertThatThrownBy(() -> service.searchAll(null, "자바", page))
                 .isInstanceOfSatisfying(BusinessException.class,
@@ -40,7 +39,7 @@ class SemanticSearchServiceTest {
 
     @Test
     void emptyQueryIsCheckedBeforeAvailability() {
-        SemanticSearchService service = new SemanticSearchService(postRepository, Optional.empty(), Optional.empty(),
+        SemanticSearchService service = new SemanticSearchService(Optional.empty(), postEmbeddingRepository,
                 properties, Clock.systemUTC());
 
         assertThatThrownBy(() -> service.searchAll(null, " ", page))

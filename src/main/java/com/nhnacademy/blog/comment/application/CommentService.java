@@ -122,7 +122,7 @@ public class CommentService {
                              boolean secret) {
         Post post = writablePost(blog, postId, member);
         spamGuard.requireNoBannedWord(post.getBlog(), content);
-        // 댓글 INSERT(외래 키 공유 잠금) 뒤 댓글 수 UPDATE(배타 잠금)가 동시에 엇갈리면 데드락이라 글 행부터 잠근다
+        // 같은 글에 동시에 다는 댓글을 차례로 처리하려고 글 행부터 잠근다(PostRepository.lockById)
         postRepository.lockById(post.getId());
         Member author = memberRepository.getReferenceById(member.id());
         Comment comment = commentRepository.save(parentId == null

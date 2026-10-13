@@ -11,7 +11,6 @@ import com.jayway.jsonpath.JsonPath;
 import com.nhnacademy.blog.IntegrationTestSupport;
 import com.nhnacademy.blog.blog.domain.Blog;
 import com.nhnacademy.blog.member.domain.Member;
-import com.nhnacademy.blog.recommend.config.RecommendDataSourceConfig;
 import com.nhnacademy.blog.support.TestBlogs;
 import com.nhnacademy.blog.support.TestMembers;
 import jakarta.servlet.http.Cookie;
@@ -21,7 +20,6 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -45,8 +43,7 @@ class SimilarPostIntegrationTest extends IntegrationTestSupport {
     TestBlogs testBlogs;
 
     @Autowired
-    @Qualifier(RecommendDataSourceConfig.QUALIFIER)
-    NamedParameterJdbcTemplate recommendJdbc;
+    NamedParameterJdbcTemplate embeddingJdbc;
 
     Blog blog;
     Cookie[] owner;
@@ -106,7 +103,7 @@ class SimilarPostIntegrationTest extends IntegrationTestSupport {
 
         long post = publish(blog, owner, "임베딩 없음 " + mark, "PUBLIC");
         await(() -> hasEmbedding(post));
-        recommendJdbc.update("DELETE FROM post_embedding WHERE post_id = :id", Map.of("id", post));
+        embeddingJdbc.update("DELETE FROM post_embedding WHERE post_id = :id", Map.of("id", post));
         similar(post, null).andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(0));
     }
 
@@ -133,7 +130,7 @@ class SimilarPostIntegrationTest extends IntegrationTestSupport {
     }
 
     private boolean hasEmbedding(long postId) {
-        return Boolean.TRUE.equals(recommendJdbc.queryForObject(
+        return Boolean.TRUE.equals(embeddingJdbc.queryForObject(
                 "SELECT EXISTS (SELECT 1 FROM post_embedding WHERE post_id = :id)", Map.of("id", postId), Boolean.class));
     }
 

@@ -16,7 +16,7 @@ public interface TagRepository extends JpaRepository<Tag, Long> {
 
     List<Tag> findByBlogId(Long blogId);
 
-    /** 이름이 들어 있는 블로그 태그. 비교는 DB 정렬 규칙대로 대소문자를 구분하지 않는다. */
+    /** 이름이 들어 있는 블로그 태그. 비교는 대소문자를 구분하지 않는다(name은 citext). */
     List<Tag> findByBlogIdAndNameIn(Long blogId, Collection<String> names);
 
     /** 이 태그를 단 글 번호(지운 글 포함). 태그 이름을 바꾸거나 지울 때 그 글들의 추천 임베딩을 다시 만드는 데 쓴다 (T120). */
@@ -27,8 +27,8 @@ public interface TagRepository extends JpaRepository<Tag, Long> {
      * 이미 있는 태그를 번호로 공유 잠금(FOR SHARE)하며 읽는다. 잠그며 읽으면 다른 트랜잭션이 막 지운 태그는 나오지 않고
      * (그러면 새로 만든다), 이 트랜잭션이 끝날 때까지 그 태그를 지우는 쪽이 기다린다. 잠그지 않으면 읽은 뒤 지워진 태그에
      * 글을 연결하다 외래 키 오류(500)가 난다.
-     * 이름이 아니라 번호(기본 키)로 잠그는 이유: 이름으로 잠그면 아직 없는 이름의 "빈 자리"(gap)까지 잠겨,
-     * 같은 새 태그를 동시에 넣는 트랜잭션들이 서로 기다리다 데드락이 난다(TagIntegrationTest 동시 저장 테스트).
+     * 이름이 아니라 번호(기본 키)로 잠그는 이유: MySQL에서는 이름으로 잠그면 아직 없는 이름의 "빈 자리"(gap)까지 잠겨
+     * 데드락이 났다. PostgreSQL에는 빈 자리 잠금이 없지만, 있는 행만 정확히 잠그는 지금 방식을 그대로 둔다.
      */
     @Lock(LockModeType.PESSIMISTIC_READ)
     @Query("select t from Tag t where t.id in :ids")
@@ -49,18 +49,17 @@ public interface TagRepository extends JpaRepository<Tag, Long> {
     int deleteUnused(@Param("tagIds") Collection<Long> tagIds);
 
     /**
-     * 없으면 만든다. 같은 이름(DB 정렬 규칙 기준)이 있거나 다른 트랜잭션이 막 만들었으면 아무것도 하지 않는다(0행).
+     * 없으면 만든다. 같은 이름(대소문자 무시, citext)이 있거나 다른 트랜잭션이 막 만들었으면 아무것도 하지 않는다(0행).
      * 동시에 같은 새 태그를 만들어도 UNIQUE 위반(500)이 나지 않는다.
      */
     @Modifying
-    @Query(value = "INSERT IGNORE INTO tag (blog_id, name) VALUES (:blogId, :name)", nativeQuery = true)
+    @Query(value = "INSERT INTO tag (blog_id, name) VALUES (:blogId, :name) ON CONFLICT DO NOTHING", nativeQuery = true)
     int insertIfAbsent(@Param("blogId") Long blogId, @Param("name") String name);
 
     /**
-     * insertIfAbsent 뒤에 읽는 용도. 잠그며 읽어야 다른 트랜잭션이 막 커밋한 태그가 보인다
-     * (평범한 SELECT는 이 트랜잭션의 옛 스냅샷을 읽는다, 학습 문서 33).
-     * 공유 잠금(FOR SHARE)이다. INSERT IGNORE가 중복을 만나면 그 행에 이미 공유 잠금을 걸어 두는데,
-     * 여러 트랜잭션이 거기서 배타 잠금(FOR UPDATE)으로 올리려 하면 서로 기다려 데드락이 난다.
+     * insertIfAbsent 뒤에 읽는 용도. 다른 트랜잭션이 같은 이름을 넣는 중이면 insertIfAbsent(ON CONFLICT DO NOTHING)가
+     * 그 트랜잭션이 끝나기를 기다리고, 그 뒤 이 SELECT가 막 커밋된 행을 읽는다(READ COMMITTED는 문장마다 새로 본다).
+     * 공유 잠금(FOR SHARE)으로 읽어, 이 트랜잭션이 끝날 때까지 그 태그를 지우는 쪽이 기다린다.
      */
     @Lock(LockModeType.PESSIMISTIC_READ)
     @Query("select t from Tag t where t.blog.id = :blogId and t.name = :name")

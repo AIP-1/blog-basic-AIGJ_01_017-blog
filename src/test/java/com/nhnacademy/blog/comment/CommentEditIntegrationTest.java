@@ -98,7 +98,7 @@ class CommentEditIntegrationTest extends IntegrationTestSupport {
 
     @Test
     void blindedDeletedOrHiddenCommentsCannotBeEdited() throws Exception {
-        jdbcTemplate.update("UPDATE comment SET is_blinded = 1 WHERE id = ?", mine.getId());
+        jdbcTemplate.update("UPDATE comment SET is_blinded = TRUE WHERE id = ?", mine.getId());
         // 숨긴 댓글은 작성자에게 보이지만 고칠 수 없다(ADMIN-03)
         list(reader).andExpect(jsonPath("$.content[0].viewer.canEdit").value(false));
         edit(mine, reader, "{\"content\":\"숨김 뒤 고침\"}").andExpect(status().isForbidden());

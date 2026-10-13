@@ -74,14 +74,14 @@ class RankingIntegrationTest extends IntegrationTestSupport {
         publish(blogC, testMembers.loginCookies(c), "C의 글");
         // 지난 시간 칸 안의 활동: A는 공감 40점어치, B는 조회 1, C는 새 구독자 10000(뒤에서 이용 제한)
         for (int i = 0; i < 200; i++) {
-            jdbcTemplate.update("INSERT INTO view_log (post_id, viewer_key, viewed_at) VALUES (?, ?, NOW() - INTERVAL 2 HOUR)",
+            jdbcTemplate.update("INSERT INTO view_log (post_id, viewer_key, viewed_at) VALUES (?, ?, NOW() - INTERVAL '2 hour')",
                     postA, "a:" + i);
         }
-        jdbcTemplate.update("INSERT INTO view_log (post_id, viewer_key, viewed_at) VALUES (?, 'x', NOW() - INTERVAL 2 HOUR)", postB);
-        jdbcTemplate.update("INSERT INTO subscription (member_id, blog_id, created_at) VALUES (?, ?, NOW() - INTERVAL 2 HOUR)",
+        jdbcTemplate.update("INSERT INTO view_log (post_id, viewer_key, viewed_at) VALUES (?, 'x', NOW() - INTERVAL '2 hour')", postB);
+        jdbcTemplate.update("INSERT INTO subscription (member_id, blog_id, created_at) VALUES (?, ?, NOW() - INTERVAL '2 hour')",
                 reader.getId(), blogA.getId());
         for (int i = 0; i < 300; i++) {
-            jdbcTemplate.update("INSERT INTO view_log (post_id, viewer_key, viewed_at) VALUES (?, ?, NOW() - INTERVAL 2 HOUR)",
+            jdbcTemplate.update("INSERT INTO view_log (post_id, viewer_key, viewed_at) VALUES (?, ?, NOW() - INTERVAL '2 hour')",
                     postB, "c:" + i);
         }
         testBlogs.restrict(blogB);
@@ -124,7 +124,7 @@ class RankingIntegrationTest extends IntegrationTestSupport {
         Blog blog = testBlogs.createPrimary(owner);
         long post = publish(blog, testMembers.loginCookies(owner), "많이 본 글");
         for (int i = 0; i < 500; i++) {
-            // DB의 NOW()는 컨테이너 시간대(UTC)라, 앱과 같은 한국 시간을 자바에서 넣는다
+            // 시각은 앱과 같은 한국 시간으로 자바에서 정해 넣는다
             jdbcTemplate.update("INSERT INTO view_log (post_id, viewer_key, viewed_at) VALUES (?, ?, ?)",
                     post, "p:" + i, LocalDateTime.now(ZoneId.of("Asia/Seoul")).minusMinutes(1));
         }

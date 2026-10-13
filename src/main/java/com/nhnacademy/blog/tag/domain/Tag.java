@@ -17,7 +17,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 /**
- * 블로그 태그 (TAG-01). 블로그 안에서 이름이 하나다(UNIQUE blog_id, name — DB 정렬 규칙이라 대소문자를 구분하지 않는다).
+ * 블로그 태그 (TAG-01). 블로그 안에서 이름이 하나다(UNIQUE blog_id, name — name이 citext라 대소문자를 구분하지 않는다).
  * created_at이 없는 테이블이라 공통 부모를 쓰지 않는다.
  * <p>
  * @BatchSize: 글의 태그 이름을 읽을 때(PostTag → Tag 지연 로딩) 태그마다 SELECT를 하나씩 보내지 않고,
@@ -39,7 +39,7 @@ public class Tag {
     @JoinColumn(name = "blog_id", nullable = false)
     private Blog blog;
 
-    @Column(name = "name", nullable = false, length = MAX_NAME_LENGTH)
+    @Column(name = "name", nullable = false, length = MAX_NAME_LENGTH, columnDefinition = "citext")
     private String name;
 
     @LastModifiedDate

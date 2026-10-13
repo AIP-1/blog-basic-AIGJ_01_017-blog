@@ -16,7 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * 공감 (T046, SOC-01). 켜기(PUT)·끄기(DELETE)는 몇 번 와도 결과가 같다(멱등, research R-09).
  * 실제로 넣거나 지운 행이 있을 때만 글의 공감 수를 같은 트랜잭션에서 고친다. 그래서 연타해도 수가 어긋나지 않는다.
- * 여러 사람이 같은 글에 동시에 누르면 데드락이 날 수 있어 글 행을 먼저 잠근다(PostRepository.lockById).
+ * 같은 글에 동시에 누른 요청은 글 행을 먼저 잠가(PostRepository.lockById) 차례로 처리한다.
  */
 @Service
 public class LikeService {

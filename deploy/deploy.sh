@@ -6,11 +6,13 @@
 #   환경 변수                 : 워크플로가 GitHub secrets에서 꺼내 넘긴다(아래 required)
 #
 # 띄우는 컨테이너 (이름은 서버의 다른 학생과 겹치지 않게 aigj017-)
-#   aigj017-redis : 로그인 토큰·시도 횟수·캐시. 같은 docker 네트워크 안에서만 닿고 서버 포트는 열지 않는다
-#   aigj017-recommend-db : 비슷한 글 추천용 PostgreSQL(pgvector). 글 임베딩만 둔다. 서버 포트는 열지 않는다
-#   aigj017-ollama       : 임베딩 모델 서버(bge-m3). 서버 포트는 열지 않는다
-#   (위 둘은 RECOMMEND_DB_PASSWORD가 있을 때만. 없으면 추천만 꺼지고 블로그는 그대로 뜬다)
-#   aigj017-app   : 블로그. 서버 포트 8460(개인 포트 첫 번호) → 학교 nginx(now-log.java21.net)가 여기로 넘긴다
+#   aigj017-redis        : 로그인 토큰·시도 횟수·캐시. 같은 docker 네트워크 안에서만 닿고 서버 포트는 열지 않는다
+#   aigj017-recommend-db : 주 DB PostgreSQL(pgvector). 그 안의 blog DB에 회원·글·임베딩을 모두 둔다(스텝 24).
+#                          이름의 recommend는 처음에 추천 전용으로 만들어서다(볼륨 aigj017-recommend-data). 서버 포트는 열지 않는다
+#   aigj017-ollama       : 임베딩 모델 서버(bge-m3, 비슷한 글·의미 검색). 서버 포트는 열지 않는다
+#   aigj017-app          : 블로그. 서버 포트 8460(개인 포트 첫 번호) → 학교 nginx(now-log.java21.net)가 여기로 넘긴다
+#
+# 백업은 하지 않는다(2026-10-13 지원 결정). docker volume rm, docker system prune --volumes를 쓰면 데이터를 잃는다
 set -euo pipefail
 
 DEPLOY_DIR="$HOME/now-log"
@@ -18,12 +20,13 @@ UPLOAD_DIR="$HOME/uploads"
 NETWORK=aigj017-net
 REDIS=aigj017-redis
 APP=aigj017-app
-RECOMMEND_DB=aigj017-recommend-db
+DB=aigj017-recommend-db
+DB_NAME=blog
 OLLAMA=aigj017-ollama
 IMAGE=aigj017/now-log:latest
 PORT=8460
 
-for name in DB_ADDRESS DB_PORT DB_NAME DB_USERNAME DB_PASSWORD REDIS_PASSWORD JWT_SECRET; do
+for name in RECOMMEND_DB_PASSWORD REDIS_PASSWORD JWT_SECRET; do
   if [ -z "${!name:-}" ]; then
     echo "환경 변수 $name 이 비어 있습니다. GitHub secrets에 등록했는지 확인하세요." >&2
     exit 1
@@ -45,44 +48,45 @@ docker run -d --name "$REDIS" --network "$NETWORK" --restart unless-stopped \
   -v aigj017-redis-data:/data \
   redis:7.4 redis-server --requirepass "$REDIS_PASSWORD" --appendonly yes >/dev/null
 
-echo "== 비슷한 글 추천 (PostgreSQL·Ollama)"
-# 둘 다 데이터(임베딩, 약 1.2GB 모델)를 볼륨에 두고, 이미 떠 있으면 다시 만들지 않는다(앱만 바꿔 띄운다)
-RECOMMEND_ENABLED=false
-if [ -n "${RECOMMEND_DB_PASSWORD:-}" ]; then
-  RECOMMEND_ENABLED=true
-  if [ -z "$(docker ps -q -f "name=^${RECOMMEND_DB}$")" ]; then
-    docker rm -f "$RECOMMEND_DB" >/dev/null 2>&1 || true
-    # POSTGRES_PASSWORD는 이름만 넘겨 명령줄에 찍히지 않게 한다. 볼륨이 비어 있을 때(처음)만 이 값으로 계정을 만든다
-    POSTGRES_PASSWORD="$RECOMMEND_DB_PASSWORD" docker run -d --name "$RECOMMEND_DB" --network "$NETWORK" --restart unless-stopped \
-      -e POSTGRES_DB=recommend -e POSTGRES_USER=blog -e POSTGRES_PASSWORD -e TZ=Asia/Seoul \
-      -v aigj017-recommend-data:/var/lib/postgresql/data \
-      pgvector/pgvector:pg17 >/dev/null
-  fi
-  # 공용 서버라 다른 학생 몫을 덜 쓰게 CPU·메모리를 묶는다(bge-m3를 올리면 2GB 안팎)
-  if [ -z "$(docker ps -q -f "name=^${OLLAMA}$")" ]; then
-    docker rm -f "$OLLAMA" >/dev/null 2>&1 || true
-    docker run -d --name "$OLLAMA" --network "$NETWORK" --restart unless-stopped \
-      --cpus 4 --memory 4g \
-      -v aigj017-ollama:/root/.ollama \
-      ollama/ollama:latest >/dev/null
-  fi
-
-  for _ in $(seq 1 60); do
-    docker exec "$RECOMMEND_DB" pg_isready -U blog -d recommend >/dev/null 2>&1 && break
-    sleep 1
-  done
-  # secret을 바꿨어도 맞도록 매번 계정 비밀번호를 secret 값으로 다시 정한다(컨테이너 안 접속은 비밀번호 없이 된다)
-  echo "ALTER USER blog PASSWORD :'pw';" | RPW="$RECOMMEND_DB_PASSWORD" docker exec -i -e RPW "$RECOMMEND_DB" \
-    sh -c 'psql -q -v ON_ERROR_STOP=1 -U blog -d recommend -v pw="$RPW"' >/dev/null
-
-  for _ in $(seq 1 30); do
-    docker exec "$OLLAMA" ollama list >/dev/null 2>&1 && break
-    sleep 1
-  done
-  # 처음 한 번은 모델을 내려받는다(몇 분). 이미 있으면 바로 끝난다.
-  # 앱보다 먼저 받아 두어야, 앱이 뜰 때 이미 있던 글의 임베딩을 한 번에 채운다(PostEmbeddingListener.onReady)
-  docker exec "$OLLAMA" ollama pull bge-m3 >/dev/null
+echo "== PostgreSQL·Ollama"
+# 둘 다 데이터(DB, 약 1.2GB 모델)를 볼륨에 두고, 이미 떠 있으면 다시 만들지 않는다(앱만 바꿔 띄운다)
+if [ -z "$(docker ps -q -f "name=^${DB}$")" ]; then
+  docker rm -f "$DB" >/dev/null 2>&1 || true
+  # POSTGRES_PASSWORD는 이름만 넘겨 명령줄에 찍히지 않게 한다. 볼륨이 비어 있을 때(처음)만 이 값으로 계정과 recommend DB를 만든다
+  POSTGRES_PASSWORD="$RECOMMEND_DB_PASSWORD" docker run -d --name "$DB" --network "$NETWORK" --restart unless-stopped \
+    -e POSTGRES_DB=recommend -e POSTGRES_USER=blog -e POSTGRES_PASSWORD -e TZ=Asia/Seoul \
+    -v aigj017-recommend-data:/var/lib/postgresql/data \
+    pgvector/pgvector:pg17 >/dev/null
 fi
+# 공용 서버라 다른 학생 몫을 덜 쓰게 CPU·메모리를 묶는다(bge-m3를 올리면 2GB 안팎)
+if [ -z "$(docker ps -q -f "name=^${OLLAMA}$")" ]; then
+  docker rm -f "$OLLAMA" >/dev/null 2>&1 || true
+  docker run -d --name "$OLLAMA" --network "$NETWORK" --restart unless-stopped \
+    --cpus 4 --memory 4g \
+    -v aigj017-ollama:/root/.ollama \
+    ollama/ollama:latest >/dev/null
+fi
+
+for _ in $(seq 1 60); do
+  docker exec "$DB" pg_isready -U blog >/dev/null 2>&1 && break
+  sleep 1
+done
+# secret을 바꿨어도 맞도록 매번 계정 비밀번호를 secret 값으로 다시 정한다(컨테이너 안 접속은 비밀번호 없이 된다)
+echo "ALTER USER blog PASSWORD :'pw';" | RPW="$RECOMMEND_DB_PASSWORD" docker exec -i -e RPW "$DB" \
+  sh -c 'psql -q -v ON_ERROR_STOP=1 -U blog -d recommend -v pw="$RPW"' >/dev/null
+# 주 DB(blog)가 없으면 만든다. 표는 앱이 뜰 때 Flyway가 만든다. 옛 recommend DB(스텝 22까지의 임베딩)는 건드리지 않는다
+if [ -z "$(docker exec "$DB" psql -U blog -d recommend -tAc "SELECT 1 FROM pg_database WHERE datname = '$DB_NAME'")" ]; then
+  docker exec "$DB" createdb -U blog "$DB_NAME"
+  echo "   $DB_NAME DB를 새로 만들었습니다. 운영 데이터를 옮기려면 deploy/migrate-from-mysql.sh를 실행하세요"
+fi
+
+for _ in $(seq 1 30); do
+  docker exec "$OLLAMA" ollama list >/dev/null 2>&1 && break
+  sleep 1
+done
+# 처음 한 번은 모델을 내려받는다(몇 분). 이미 있으면 바로 끝난다.
+# 앱보다 먼저 받아 두어야, 앱이 뜰 때 이미 있던 글의 임베딩을 한 번에 채운다(PostEmbeddingListener.onReady)
+docker exec "$OLLAMA" ollama pull bge-m3 >/dev/null
 
 echo "== 앱"
 # 소셜 로그인 키·메일 계정은 없어도 된다(그 기능만 꺼진다). 메일 비밀번호가 있으면 실제로 보내고, 없으면 로그에만 남긴다
@@ -94,18 +98,16 @@ mkdir -p "$UPLOAD_DIR"
 docker rm -f "$APP" >/dev/null 2>&1 || true
 # -e 이름 (값 없이): 이 셸의 환경 변수를 그대로 넘긴다. 비밀번호가 명령줄에 찍히지 않는다
 # --user: 컨테이너가 내 계정으로 돌아야 ~/uploads에 이미지를 쓸 수 있다
-docker run -d --name "$APP" --network "$NETWORK" --restart unless-stopped \
+DB_PASSWORD="$RECOMMEND_DB_PASSWORD" docker run -d --name "$APP" --network "$NETWORK" --restart unless-stopped \
   -p "$PORT:8460" \
   --user "$(id -u):$(id -g)" \
   -v "$UPLOAD_DIR:/app/uploads" \
-  -e DB_URL="jdbc:mysql://${DB_ADDRESS}:${DB_PORT}/${DB_NAME}?connectionTimeZone=Asia/Seoul&characterEncoding=UTF-8" \
-  -e DB_USERNAME -e DB_PASSWORD \
+  -e DB_URL="jdbc:postgresql://${DB}:5432/${DB_NAME}" -e DB_USERNAME=blog -e DB_PASSWORD \
   -e REDIS_HOST="$REDIS" -e REDIS_PORT=6379 -e REDIS_PASSWORD \
   -e JWT_SECRET \
   -e KAKAO_CLIENT_ID -e KAKAO_CLIENT_SECRET -e GOOGLE_CLIENT_ID -e GOOGLE_CLIENT_SECRET \
   -e MAIL_USERNAME -e MAIL_PASSWORD -e APP_MAIL_SENDER="$MAIL_SENDER" \
-  -e APP_RECOMMEND_ENABLED="$RECOMMEND_ENABLED" \
-  -e RECOMMEND_DB_URL="jdbc:postgresql://${RECOMMEND_DB}:5432/recommend" -e RECOMMEND_DB_USERNAME=blog -e RECOMMEND_DB_PASSWORD \
+  -e APP_RECOMMEND_ENABLED=true \
   -e OLLAMA_URL="http://${OLLAMA}:11434" \
   -e APP_UPLOAD_DIR=/app/uploads \
   "$IMAGE" >/dev/null

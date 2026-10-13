@@ -16,8 +16,9 @@ public interface PostBookmarkRepository extends JpaRepository<PostBookmark, Long
      */
     @Modifying
     @Query(value = """
-            INSERT IGNORE INTO post_bookmark (post_id, member_id, title_snapshot, blog_name_snapshot)
-            VALUES (:postId, :memberId, :title, :blogName)""", nativeQuery = true)
+            INSERT INTO post_bookmark (post_id, member_id, title_snapshot, blog_name_snapshot)
+            VALUES (:postId, :memberId, :title, :blogName)
+            ON CONFLICT DO NOTHING""", nativeQuery = true)
     int insertIfAbsent(@Param("postId") Long postId, @Param("memberId") Long memberId, @Param("title") String title,
                        @Param("blogName") String blogName);
 

@@ -43,7 +43,7 @@ public class Blog extends BaseTimeEntity {
     @JoinColumn(name = "member_id", nullable = false)
     private Member member;
 
-    @Column(name = "address", nullable = false, updatable = false, length = 32)
+    @Column(name = "address", nullable = false, updatable = false, length = 32, columnDefinition = "citext")
     private String address;
 
     @Column(name = "name", nullable = false, length = 50)

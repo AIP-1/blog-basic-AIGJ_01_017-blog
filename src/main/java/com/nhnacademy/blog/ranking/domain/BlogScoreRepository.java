@@ -25,20 +25,20 @@ public class BlogScoreRepository {
                     SELECT post_id, :likeWeight FROM post_like WHERE created_at >= :since AND created_at < :until
                     UNION ALL
                     SELECT post_id, :commentWeight FROM comment
-                    WHERE created_at >= :since AND created_at < :until AND deleted_at IS NULL AND is_blinded = 0
+                    WHERE created_at >= :since AND created_at < :until AND deleted_at IS NULL AND is_blinded = FALSE
                 ) a
                 JOIN post p ON p.id = a.post_id
-                WHERE p.status = 'PUBLISHED' AND p.visibility = 'PUBLIC' AND p.deleted_at IS NULL AND p.is_blinded = 0
+                WHERE p.status = 'PUBLISHED' AND p.visibility = 'PUBLIC' AND p.deleted_at IS NULL AND p.is_blinded = FALSE
                 UNION ALL
                 SELECT blog_id, :subscribeWeight FROM subscription WHERE created_at >= :since AND created_at < :until
             ) s
             JOIN blog b ON b.id = s.blog_id
             JOIN member m ON m.id = b.member_id
-            WHERE b.deleted_at IS NULL AND b.is_restricted = 0 AND b.moved_to_blog_id IS NULL
+            WHERE b.deleted_at IS NULL AND b.is_restricted = FALSE AND b.moved_to_blog_id IS NULL
               AND m.status <> 'WITHDRAWN'
               AND NOT (m.status = 'SUSPENDED' AND (m.suspended_until IS NULL OR m.suspended_until > :until))
               AND EXISTS (SELECT 1 FROM post p2 WHERE p2.blog_id = b.id AND p2.status = 'PUBLISHED'
-                          AND p2.visibility = 'PUBLIC' AND p2.deleted_at IS NULL AND p2.is_blinded = 0)
+                          AND p2.visibility = 'PUBLIC' AND p2.deleted_at IS NULL AND p2.is_blinded = FALSE)
             GROUP BY s.blog_id
             ORDER BY score DESC, s.blog_id DESC
             LIMIT :limit
