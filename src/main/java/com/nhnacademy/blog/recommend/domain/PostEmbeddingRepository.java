@@ -70,6 +70,34 @@ public class PostEmbeddingRepository {
                 """, new MapSqlParameterSource().addValue("postId", postId).addValue("limit", limit), Long.class);
     }
 
+    /**
+     * 검색어 임베딩과 가까운 글을 가까운 순으로 limit개 (의미 검색, T121). 코사인 유사도가 minSimilarity보다 낮은 글은 뺀다.
+     * within이 있으면 그 글 번호 안에서만 찾는다(블로그 안 검색: 이 표는 블로그를 모르므로 MySQL이 고른 번호를 받는다).
+     * HNSW 인덱스는 한 번에 hnsw.ef_search개까지만 돌려주므로, 연결마다 그 값을 limit보다 크게 둔다(RecommendDataSourceConfig).
+     */
+    public List<NearPost> findNearestTo(float[] query, double minSimilarity, int limit, Collection<Long> within) {
+        if (within != null && within.isEmpty()) {
+            return List.of();
+        }
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("query", toLiteral(query))
+                .addValue("maxDistance", 1 - minSimilarity)
+                .addValue("limit", limit);
+        String onlyWithin = "";
+        if (within != null) {
+            onlyWithin = "AND post_id IN (:within)";
+            params.addValue("within", within);
+        }
+        return jdbc.query("""
+                SELECT post_id, 1 - (embedding <=> CAST(:query AS vector)) AS similarity
+                FROM post_embedding
+                WHERE embedding <=> CAST(:query AS vector) <= :maxDistance
+                """ + onlyWithin + """
+                ORDER BY embedding <=> CAST(:query AS vector), post_id DESC
+                LIMIT :limit
+                """, params, (row, rowNum) -> new NearPost(row.getLong("post_id"), row.getDouble("similarity")));
+    }
+
     /** float[] → '[0.1,0.2,...]' (pgvector가 받는 글자 모양). */
     static String toLiteral(float[] embedding) {
         StringJoiner joiner = new StringJoiner(",", "[", "]");

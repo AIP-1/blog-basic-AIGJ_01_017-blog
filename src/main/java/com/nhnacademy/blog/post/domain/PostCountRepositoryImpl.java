@@ -10,6 +10,7 @@ import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Root;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -57,6 +58,15 @@ class PostCountRepositoryImpl implements PostCountRepository {
             counts.put(row.get(0, Long.class), row.get(1, Long.class));
         }
         return counts;
+    }
+
+    @Override
+    public List<Long> findIds(Specification<Post> condition) {
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<Long> query = cb.createQuery(Long.class);
+        Root<Post> post = query.from(Post.class);
+        query.select(post.get("id")).where(condition.toPredicate(post, query, cb));
+        return entityManager.createQuery(query).getResultList();
     }
 
 }
