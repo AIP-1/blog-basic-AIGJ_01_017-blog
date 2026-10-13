@@ -9,7 +9,7 @@ import PlatformHeader from '../../components/PlatformHeader'
 
 /**
  * 소셜 가입 닉네임 확인 (AUTH-01, T099, blog.com/signup/social?token=…&provider=…).
- * 처음 보는 카카오 계정으로 로그인하면 서버가 여기로 보낸다. 토큰은 10분 유효하고, 제공사 이메일은 저장하지 않는다.
+ * 처음 보는 카카오·구글 계정으로 로그인하면 서버가 여기로 보낸다. 토큰은 10분 유효하고, 제공사 이메일은 저장하지 않는다.
  * 가입하면 로그인되어 일반 가입처럼 블로그 개설 안내로 간다.
  */
 export default function SignupSocialPage() {
@@ -75,7 +75,7 @@ export default function SignupSocialPage() {
           ? (
             <div className="stack" style={{ gap: 14 }}>
               <p className="err">가입 시간이 지났습니다. {name} 로그인을 다시 해 주세요.</p>
-              {provider === 'kakao'
+              {provider === 'kakao' || provider === 'google'
                 ? <a className="btn primary" href={socialAuthorizeUrl(provider, 'login')}>{name}로 다시 시작</a>
                 : <Link className="btn primary" to="/login">로그인으로</Link>}
             </div>

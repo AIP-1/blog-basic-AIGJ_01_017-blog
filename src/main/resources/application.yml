@@ -35,9 +35,9 @@ server:
     include-binding-errors: never
 
 app:
-  # 카카오 로그인 앱 키(app.oauth, T099)는 비밀이라 여기에 두지 않는다.
+  # 카카오·구글 로그인 앱 키(app.oauth, T099)는 비밀이라 여기에 두지 않는다.
   # 개발: config/application-dev.yml(git 제외, 틀은 .example), 운영: application-prod.yml의 ${KAKAO_CLIENT_ID} 등(GitHub secrets).
-  # 값이 없으면 카카오 버튼은 "지금은 쓸 수 없습니다"로 돌아온다
+  # 값이 없으면 그 제공사 버튼은 "지금은 쓸 수 없습니다"로 돌아온다
   mail:
     # 메일 보내는 방법 (T088). log: 보내지 않고 서버 로그에만, smtp: spring.mail.*로 실제 발송.
     # 개발에서 Mailpit으로 받아 보려면 config/application-dev.yml(git 제외, 틀은 .example)에서 smtp로 바꾼다

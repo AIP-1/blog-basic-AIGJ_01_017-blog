@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
 /**
- * 테스트용 카카오 (T099). 진짜 제공사 대신, 콜백에 온 code를 그대로 제공사 회원 번호로 돌려준다.
+ * 테스트용 카카오·구글 (T099). 진짜 제공사 대신, 콜백에 온 code를 그대로 제공사 회원 번호로 돌려준다.
  * code가 "fail"로 시작하면 토큰 교환이 실패한 것으로 본다.
  */
 @Component

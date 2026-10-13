@@ -34,7 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
  *   <li>start: 추측할 수 없는 state를 만들어 Redis에 10분 두고(무엇을 하려는지, 돌아갈 곳, 누가 시작했는지),
  *       같은 값을 이 브라우저의 쿠키에도 둔다. 그리고 제공사 로그인 화면 주소를 돌려준다.</li>
  *   <li>callback: 제공사가 돌려보낸 state를 Redis에서 꺼내 한 번 쓰고 지운다. code를 제공사 회원 번호로 바꿔 2분짜리 표(ticket)에 둔다.
- *       콜백 주소는 제공사 콘솔에 등록한 주소라 플랫폼 주소가 아닐 수 있다(개발에서 localhost로 등록한 경우).
+ *       콜백 주소는 제공사 콘솔에 등록한 주소라 플랫폼 주소가 아닐 수 있다(구글은 개발에서 localhost만 받는다).
  *       그래서 로그인 쿠키는 여기서 주지 않고, 시작한 플랫폼 주소의 complete로 표를 들려 보낸다.</li>
  *   <li>complete: 플랫폼 주소에서 표를 꺼내고, 이 브라우저의 state 쿠키가 표의 state와 같은지 본다.
  *       다른 사람이 자기 code가 든 콜백 주소를 내게 열게 해 나를 그 사람 계정으로 로그인시키는 공격(로그인 CSRF)을 막는다.

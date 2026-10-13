@@ -46,17 +46,22 @@ app:
     sender: ${APP_MAIL_SENDER:log}
     from: "now-log <${MAIL_USERNAME:no-reply@now-log.java21.net}>"
   oauth:
-    # 카카오 로그인 (T099). 키가 비어 있으면 카카오 버튼은 "지금은 쓸 수 없습니다"로 돌아온다.
-    # 리다이렉트 URI는 제공사 콘솔에 등록한 주소와 같아야 한다
+    # 카카오·구글 로그인 (T099). 키가 비어 있으면 그 제공사 버튼은 "지금은 쓸 수 없습니다"로 돌아온다.
+    # 리다이렉트 URI는 제공사 콘솔에 등록한 주소와 같아야 한다. 운영은 https(학교 nginx의 Let's Encrypt 인증서, 2026-10-13 확인)
     kakao:
       client-id: ${KAKAO_CLIENT_ID:}
       client-secret: ${KAKAO_CLIENT_SECRET:}
-      redirect-uri: http://now-log.java21.net/api/auth/oauth/kakao/callback
+      redirect-uri: https://now-log.java21.net/api/auth/oauth/kakao/callback
+    google:
+      # 구글은 리다이렉트 URI가 https여야 한다(localhost만 예외)
+      client-id: ${GOOGLE_CLIENT_ID:}
+      client-secret: ${GOOGLE_CLIENT_SECRET:}
+      redirect-uri: https://now-log.java21.net/api/auth/oauth/google/callback
   upload:
     dir: ${APP_UPLOAD_DIR}
   domain:
     platform: ${APP_PLATFORM_DOMAIN:now-log.java21.net}
   auth:
     jwt-secret: ${JWT_SECRET}
-    # 학교 nginx는 http(80)만 받는다. Secure 쿠키는 http에서 저장되지 않으므로 https가 생기기 전까지 끈다
-    cookie-secure: ${APP_COOKIE_SECURE:false}
+    # 학교 nginx가 https를 받는다(Let's Encrypt, 2026-10-13 확인). 로그인 쿠키가 http로 새지 않게 Secure를 켠다
+    cookie-secure: ${APP_COOKIE_SECURE:true}

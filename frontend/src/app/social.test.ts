@@ -5,7 +5,7 @@ describe('socialAuthorizeUrl', () => {
   it('mode와 돌아갈 곳을 쿼리로 붙인다', () => {
     expect(socialAuthorizeUrl('kakao', 'login', 'http://alpha.blog.test/12'))
       .toBe('/api/auth/oauth/kakao/authorize?mode=login&redirect=http%3A%2F%2Falpha.blog.test%2F12')
-    expect(socialAuthorizeUrl('kakao', 'link')).toBe('/api/auth/oauth/kakao/authorize?mode=link')
+    expect(socialAuthorizeUrl('google', 'link')).toBe('/api/auth/oauth/google/authorize?mode=link')
   })
 })
 
@@ -20,7 +20,7 @@ describe('socialErrorMessage', () => {
 describe('providerName', () => {
   it('주소의 provider를 한글 이름으로', () => {
     expect(providerName('kakao')).toBe('카카오')
-    expect(providerName('KAKAO')).toBe('카카오')
+    expect(providerName('GOOGLE')).toBe('구글')
     expect(providerName(null)).toBe('소셜')
   })
 })

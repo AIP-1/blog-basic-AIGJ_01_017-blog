@@ -38,7 +38,7 @@ public class CredentialService {
         this.redis = redis;
     }
 
-    /** 마이페이지에 보일 연결된 소셜 계정(OWN-03). provider는 KAKAO, linkedAt은 연동한 때. 연동한 순서다. */
+    /** 마이페이지에 보일 연결된 소셜 계정(OWN-03). provider는 KAKAO·GOOGLE, linkedAt은 연동한 때. 연동한 순서다. */
     public record LinkedSocial(String provider, LocalDateTime linkedAt) {
     }
 
