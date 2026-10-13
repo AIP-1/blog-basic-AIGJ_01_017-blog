@@ -89,6 +89,21 @@ class PostEmbeddingIntegrationTest extends IntegrationTestSupport {
         assertThat(embedding(999_999_999L)).isNull();
     }
 
+    @Test
+    void syncRemakesEmbeddingsMadeTheOldWay() throws Exception {
+        long id = publish("옛 방식 글", "본문");
+        await(() -> embedding(id) != null);
+        recommendJdbc.update("UPDATE post_embedding SET text_version = 1, embedding = array_fill(0.1, ARRAY[1024])::vector"
+                + " WHERE post_id = :id", Map.of("id", id));
+        String old = embedding(id);
+
+        postEmbeddingService.sync();
+
+        assertThat(recommendJdbc.queryForObject("SELECT text_version FROM post_embedding WHERE post_id = :id",
+                Map.of("id", id), Integer.class)).isEqualTo(PostEmbeddingService.TEXT_VERSION);
+        assertThat(embedding(id)).isNotEqualTo(old);
+    }
+
     private long publish(String title, String text) throws Exception {
         String response = send(post("/api/posts").header("Idempotency-Key", UUID.randomUUID().toString()),
                 body(title, text)).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();

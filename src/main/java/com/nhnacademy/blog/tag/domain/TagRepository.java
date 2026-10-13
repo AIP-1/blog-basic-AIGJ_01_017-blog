@@ -19,6 +19,10 @@ public interface TagRepository extends JpaRepository<Tag, Long> {
     /** 이름이 들어 있는 블로그 태그. 비교는 DB 정렬 규칙대로 대소문자를 구분하지 않는다. */
     List<Tag> findByBlogIdAndNameIn(Long blogId, Collection<String> names);
 
+    /** 이 태그를 단 글 번호(지운 글 포함). 태그 이름을 바꾸거나 지울 때 그 글들의 추천 임베딩을 다시 만드는 데 쓴다 (T120). */
+    @Query("select pt.post.id from PostTag pt where pt.tag.id = :tagId")
+    List<Long> findPostIdsByTagId(@Param("tagId") Long tagId);
+
     /**
      * 이미 있는 태그를 번호로 공유 잠금(FOR SHARE)하며 읽는다. 잠그며 읽으면 다른 트랜잭션이 막 지운 태그는 나오지 않고
      * (그러면 새로 만든다), 이 트랜잭션이 끝날 때까지 그 태그를 지우는 쪽이 기다린다. 잠그지 않으면 읽은 뒤 지워진 태그에

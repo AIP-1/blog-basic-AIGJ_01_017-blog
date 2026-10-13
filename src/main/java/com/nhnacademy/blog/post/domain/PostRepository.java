@@ -103,6 +103,10 @@ public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificat
             + " and p.deletedAt is null")
     List<Long> findPublishedIds();
 
+    /** 글에 단 태그 이름, 가나다순. 추천 임베딩에 넣는 글자를 만들 때 쓴다(트랜잭션 밖에서도 읽힘, T120). */
+    @Query("select t.name from PostTag pt join pt.tag t where pt.post.id = :postId order by t.name")
+    List<String> findTagNames(@Param("postId") Long postId);
+
     /** 공감 수 늘리기·줄이기 (SOC-01). 댓글 수와 같은 방식이다. */
     @Modifying(clearAutomatically = true)
     @Query("update Post p set p.likeCount = p.likeCount + :delta, p.updatedAt = p.updatedAt where p.id = :postId")

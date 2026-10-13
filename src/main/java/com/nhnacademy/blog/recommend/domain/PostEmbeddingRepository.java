@@ -25,13 +25,14 @@ public class PostEmbeddingRepository {
         this.jdbc = jdbc;
     }
 
-    /** 없으면 넣고, 있으면 바꾼다(글을 고칠 때). */
-    public void save(long postId, float[] embedding) {
+    /** 없으면 넣고, 있으면 바꾼다(글을 고칠 때). textVersion은 넣은 글자의 방식 번호다(PostEmbeddingService.TEXT_VERSION). */
+    public void save(long postId, float[] embedding, int textVersion) {
         jdbc.update("""
-                INSERT INTO post_embedding (post_id, embedding, updated_at)
-                VALUES (:postId, CAST(:embedding AS vector), now())
-                ON CONFLICT (post_id) DO UPDATE SET embedding = EXCLUDED.embedding, updated_at = now()
-                """, Map.of("postId", postId, "embedding", toLiteral(embedding)));
+                INSERT INTO post_embedding (post_id, embedding, text_version, updated_at)
+                VALUES (:postId, CAST(:embedding AS vector), :textVersion, now())
+                ON CONFLICT (post_id) DO UPDATE
+                    SET embedding = EXCLUDED.embedding, text_version = EXCLUDED.text_version, updated_at = now()
+                """, Map.of("postId", postId, "embedding", toLiteral(embedding), "textVersion", textVersion));
     }
 
     public void delete(long postId) {
@@ -46,6 +47,12 @@ public class PostEmbeddingRepository {
 
     public List<Long> findAllPostIds() {
         return jdbc.queryForList("SELECT post_id FROM post_embedding", Map.of(), Long.class);
+    }
+
+    /** 이 방식으로 넣은 글자로 만든 임베딩의 글 번호. 다른 번호는 옛 방식이라 다시 만든다. */
+    public List<Long> findPostIdsByTextVersion(int textVersion) {
+        return jdbc.queryForList("SELECT post_id FROM post_embedding WHERE text_version = :textVersion",
+                Map.of("textVersion", textVersion), Long.class);
     }
 
     /**
