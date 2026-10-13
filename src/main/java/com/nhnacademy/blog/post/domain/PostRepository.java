@@ -20,8 +20,11 @@ import org.springframework.data.repository.query.Param;
 public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificationExecutor<Post>,
         PostCountRepository {
 
-    /** 가시성 판단에 필요한 블로그와 블로그 주인, 글 상세에 쓰는 카테고리를 함께 읽는다. 삭제된 글도 나온다. */
-    @Query("select p from Post p join fetch p.blog b join fetch b.member left join fetch p.category where p.id = :id")
+    /**
+     * 가시성 판단에 필요한 블로그와 블로그 주인, 카테고리와 그 상위(비공개 카테고리 판단)를 함께 읽는다. 삭제된 글도 나온다.
+     * 화면 주소 처리처럼 트랜잭션 밖에서도 쓰므로 판단에 드는 것은 모두 여기서 읽는다.
+     */
+    @Query("select p from Post p join fetch p.blog b join fetch b.member left join fetch p.category c left join fetch c.parent where p.id = :id")
     Optional<Post> findWithBlogById(@Param("id") Long id);
 
     /**
