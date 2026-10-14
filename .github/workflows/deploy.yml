@@ -28,6 +28,8 @@ jobs:
 
   deploy:
     needs: test
+    # 배포는 본 저장소에서만. 제출용 원본(AIP-1/blog-basic-AIGJ_01_017-blog)이나 포크에서는 테스트만 돈다
+    if: github.repository == 'blog-hjiwon203/now-log'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
