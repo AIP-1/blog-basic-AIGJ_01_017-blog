@@ -106,6 +106,31 @@ public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificat
             + " and p.deletedAt is null")
     List<Long> findPublishedIds();
 
+    /** 예약 시각이 지금이거나 지난 예약 글 번호 (POST-13). 지운 글은 뺀다. 발행은 글마다 publishIfDue로 한다. */
+    @Query("select p.id from Post p where p.status = com.nhnacademy.blog.post.domain.PostStatus.SCHEDULED"
+            + " and p.deletedAt is null and p.scheduledAt <= :now")
+    List<Long> findDueScheduledIds(@Param("now") LocalDateTime now);
+
+    /**
+     * 예약 글을 발행한다 (POST-13). 예약 시각이 처음 발행 시각이고(작업이 늦게 돌아도 목록 순서는 정한 시각대로), 공개 범위는 공개.
+     * 읽은 엔티티를 저장하지 않고 조건을 단 UPDATE 한 문장으로 바꾼다. 바뀐 행 수(0 또는 1)를 돌려준다.
+     * <ul>
+     *   <li>앱 여러 대가 같은 글을 동시에 발행하려 해도 1을 받는 쪽은 하나다. 먼저 UPDATE한 쪽이 행을 잠그고, 뒤쪽은 기다렸다가
+     *       커밋된 행으로 WHERE를 다시 보는데(PostgreSQL READ COMMITTED) 이미 PUBLISHED라 0이 된다.</li>
+     *   <li>번호를 읽은 뒤 글쓴이가 예약을 거두거나 시각을 미루거나 글을 지웠으면 조건에 맞지 않아 0이다.</li>
+     *   <li>발행에 필요한 칸만 바꾸므로, 그사이 글쓴이가 고친 제목·본문을 덮어쓰지 않는다.</li>
+     * </ul>
+     * 작성자가 고친 것이 아니라서 updated_at은 그대로 둔다(글 머리에 "수정 …"이 붙지 않게).
+     * SET의 오른쪽은 바꾸기 전 행 값을 보므로 publishedAt에는 지우기 전의 scheduledAt이 들어간다.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update Post p set p.status = com.nhnacademy.blog.post.domain.PostStatus.PUBLISHED,"
+            + " p.publishedAt = p.scheduledAt, p.visibility = com.nhnacademy.blog.post.domain.Visibility.PUBLIC,"
+            + " p.scheduledAt = null"
+            + " where p.id = :id and p.status = com.nhnacademy.blog.post.domain.PostStatus.SCHEDULED"
+            + " and p.deletedAt is null and p.scheduledAt <= :now")
+    int publishIfDue(@Param("id") Long id, @Param("now") LocalDateTime now);
+
     /** 글에 단 태그 이름, 가나다순. 추천 임베딩에 넣는 글자를 만들 때 쓴다(트랜잭션 밖에서도 읽힘, T120). */
     @Query("select t.name from PostTag pt join pt.tag t where pt.post.id = :postId order by t.name")
     List<String> findTagNames(@Param("postId") Long postId);
