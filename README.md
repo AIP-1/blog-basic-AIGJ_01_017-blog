@@ -15,7 +15,7 @@
 | `data-model.md`, `erd/schema.sql` | 데이터 모델, 테이블 |
 | `tasks.md` | 작업 목록과 구현 스텝 |
 | `quickstart.md` | 로컬 실행과 손으로 확인하는 시나리오 |
-| `learning/` | 스텝별 학습 자료 |
+| `learning/` | 스텝별 학습 자료(문서 저장소 맨 위, 파일 이름은 한글) |
 
 ## 기술
 
