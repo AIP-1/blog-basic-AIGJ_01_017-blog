@@ -78,10 +78,65 @@ java -jar target/blog-*.jar --spring.profiles.active=prod
 
 ```
 src/main/java/com/nhnacademy/blog/
-  global/        공통(설정, 오류 응답, 인증, 블로그 주소(`/@주소`·`X-Blog-Address`) 해석, 가시성 판단, 웹 도구)
-  auth/ member/ blog/ post/ category/ tag/ comment/ reaction/ image/
-  search/ home/ manage/ recommend/ subscription/ admin/
-    각 기능 안: domain/(엔티티·Repository) → application/(Service) → presentation/(Controller, dto/)
-src/main/resources/db/migration/   주 DB(PostgreSQL) Flyway
+  global/
+    config/       설정(보안, 캐시, 비동기, 화면 주소 처리 SpaForwardController)
+    host/         블로그 주소 해석(`/@주소`, API의 `X-Blog-Address` 헤더 → @CurrentBlog)
+    visibility/   글·블로그 가시성 판단(PostVisibilityPolicy, 목록용 PostSpecifications)
+    auth/         다른 기능이 쓰는 인증 입구(LoginMember, LoginMembers, BlogOwnerGuard, 정지 안내)
+    security/     본문 HTML 정화, CSP 헤더
+    error/ entity/ web/   오류 응답, 생성·수정 시각, 페이지·커서·중복 요청 방지 같은 웹 도구
+  auth/           로그인 속(JWT, 쿠키, 필터, 비밀번호 해시, 시도 제한, 소셜 로그인)
+  member/ blog/ post/ category/ tag/ comment/ reaction/ bookmark/ image/
+  subscription/ notification/ search/ recommend/ home/ ranking/ manage/ admin/
+src/main/resources/db/migration/   Flyway(V1__init.sql = blog-docs erd/schema.sql)
 frontend/src/                      React 앱(app/ 라우터, pages/, components/, api/)
+deploy/                            서버에서 실행하는 배포 스크립트
 ```
+
+### 기능 패키지 안의 세 계층
+
+```
+post/
+  presentation/   PostController, dto/        요청을 받아 응답 DTO로
+       ↓
+  application/    PostReadService ...         트랜잭션, 업무 규칙
+       ↓
+  domain/         Post, PostRepository ...    엔티티, enum, Repository
+```
+
+의존은 위에서 아래로만 간다. 여러 기능이 같이 쓰는 것은 `global/`에 둔다. 아래 규칙은 `ArchitectureTest`(ArchUnit)가 `./mvnw test` 때마다 검사한다.
+
+- `domain`은 `application`·`presentation`을 모른다.
+- `application`은 `presentation`을 모른다.
+- 인증의 속(토큰, 쿠키, 필터, 비밀번호 해시 등)은 `auth/` 밖에서 쓰지 않는다. 다른 기능은 `global/auth/`의 입구와 `auth`의 `CredentialService`·`LoginSessions`만 쓴다.
+
+### 한 요청이 지나가는 길: 글 읽기
+
+브라우저가 `https://now-log.java21.net/@hjiwon/5`를 열면 두 단계를 거친다.
+
+```mermaid
+sequenceDiagram
+  participant B as 브라우저(React)
+  participant S as 화면 주소 처리<br/>SpaForwardController
+  participant F as 필터<br/>CSRF 헤더 · JWT 쿠키
+  participant C as PostController
+  participant V as PostReadService<br/>→ PostVisibilityPolicy
+  B->>S: GET /@hjiwon/5
+  S->>S: 블로그·글 확인
+  S-->>B: index.html(공유 미리보기 태그) 또는 404 · 301
+  B->>F: GET /api/posts/5 + X-Blog-Address: hjiwon
+  F->>C: 쿠키의 JWT로 로그인한 회원(없으면 비회원)
+  C->>V: @CurrentBlog(hjiwon), 글 5, 보는 사람
+  V-->>C: 보임 / 404 / 구독 안내
+  C-->>B: 글 상세 JSON(공감·북마크 여부 포함)
+```
+
+1. **화면 주소 단계** (`/api` 밖): 서버가 블로그와 글을 먼저 확인한다. 없거나 볼 수 없으면 404 상태로, 다른 블로그 소속 글이면 서버가 직접 301로 보낸다. 볼 수 있으면 React 앱(`index.html`)을 준다. 비회원도 볼 수 있는 글이면 head에 공유 미리보기(Open Graph) 태그도 넣는다.
+2. **API 단계**: React가 `/api/posts/5`를 부르며 `X-Blog-Address` 헤더로 블로그를 알린다.
+   - 필터가 상태를 바꾸는 요청(POST 등)이면 `X-Requested-With` 헤더를 확인하고(CSRF 방지), 쿠키의 JWT로 로그인한 회원을 정한다.
+   - `@CurrentBlog`가 헤더를 블로그로 바꾼다.
+   - `PostVisibilityPolicy`가 판단한다: ① 글이 있나 → ② 이 블로그 소속인가 → ③ 주인인가 → ④ 남이 볼 수 있나(공개 범위, 구독자 공개).
+   - 볼 수 없으면 로그인 여부와 상관없이 404다. API에서는 다른 블로그 글도 301이 아니라 404다.
+3. 본문을 보여 준 뒤 화면이 `POST /api/posts/5/views`로 조회를 남긴다(같은 사람이 5분 안에 다시 보면 세지 않음).
+
+글을 저장하면 커밋된 뒤에 `PostEmbeddingListener`가 다른 스레드에서 Ollama로 임베딩을 만들어 pgvector에 넣는다. 비슷한 글 추천과 의미 검색은 이 임베딩을 쓴다. 저장 응답은 임베딩 계산을 기다리지 않는다.
