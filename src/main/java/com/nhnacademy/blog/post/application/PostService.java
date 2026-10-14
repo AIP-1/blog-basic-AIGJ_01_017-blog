@@ -126,9 +126,11 @@ public class PostService {
      * 수정 (POST-02)과 임시저장 글 다시 저장·발행 (POST-08). 숨긴 글은 고칠 수 없다.
      * 임시저장 글을 PUBLISHED로 저장하면 이때가 처음 발행 시각이다. 발행한 글은 임시저장으로 되돌릴 수 없다(400).
      * findEditable이 이 트랜잭션 안에서 읽은 글이라, 바꾼 값은 트랜잭션이 끝날 때 저장된다(변경 감지).
+     * 읽기 전에 글 행을 잠근다(lockForChange).
      */
     @Transactional
     public Post edit(Blog blog, Long postId, LoginMember member, PostCommand command) {
+        lockForChange(postId);
         Post post = findEditable(blog, postId, member);
         if (command.status() == PostStatus.DRAFT && post.isPublished()) {
             throw BusinessException.invalidField("status", "발행한 글은 임시저장으로 되돌릴 수 없습니다. 비공개로 바꿔 주세요.");
@@ -156,6 +158,17 @@ public class PostService {
         return post;
     }
 
+    /**
+     * 글을 읽고 고쳐 저장하는 요청은 읽기 전에 글 행을 잠근다(SELECT ... FOR UPDATE). 예약 발행 작업(ScheduledPublisher)과 줄을
+     * 세우기 위해서다. 잠그지 않으면, 작업이 발행 UPDATE를 하고 커밋하기 전에 이 요청이 옛 상태(SCHEDULED)를 읽어 "발행한 글은
+     * 되돌릴 수 없다" 검사를 통과하고, 변경 감지의 UPDATE(모든 칸)가 작업 커밋 뒤 발행을 DRAFT로 덮어쓴다.
+     * 잠그면 누가 먼저든 뒤쪽이 앞쪽이 커밋한 상태를 보고 판단한다. 작업이 먼저면 이 요청이 발행된 글을 보고, 이 요청이 먼저면
+     * 작업의 조건부 UPDATE가 바뀐 상태를 보고 0행이 된다. 엔티티를 읽은 뒤에 잠그면 이미 옛 값을 들고 있어 소용없다.
+     */
+    private void lockForChange(Long postId) {
+        postRepository.lockById(postId);
+    }
+
     /** 예약 시각은 지금보다 뒤여야 한다(지난 시각이면 바로 발행과 같아 헷갈린다). 초 아래는 버린다. */
     private LocalDateTime futureSchedule(LocalDateTime scheduledAt) {
         if (!scheduledAt.isAfter(LocalDateTime.now(clock))) {
@@ -175,6 +188,7 @@ public class PostService {
     /** 공개 범위만 바꾼다 (POST-06). */
     @Transactional
     public void changeVisibility(Blog blog, Long postId, LoginMember member, Visibility visibility) {
+        lockForChange(postId);
         findOwned(blog, postId, member).changeVisibility(visibility);
     }
 
@@ -184,6 +198,7 @@ public class PostService {
      */
     @Transactional
     public void delete(Blog blog, Long postId, LoginMember member) {
+        lockForChange(postId);
         Long id = findOwned(blog, postId, member).getId();
         LocalDateTime now = LocalDateTime.now(clock);
         postRepository.deleteNotifications(id);

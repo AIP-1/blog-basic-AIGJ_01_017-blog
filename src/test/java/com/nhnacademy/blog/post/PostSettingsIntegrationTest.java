@@ -26,10 +26,12 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -378,6 +380,83 @@ class PostSettingsIntegrationTest extends IntegrationTestSupport {
                 .isEqualTo("DRAFT");
         // 이미 발행한 글을 다시 발행하지 않는다
         assertThat(publishIfDue(edited, now)).isZero();
+    }
+
+    @Test
+    void cancellingWhilePublishingWaitsAndSeesThePublishedPost() throws Exception {
+        // 작업이 발행 UPDATE를 하고 아직 커밋하기 전에 글쓴이가 예약을 거둔다. 거두기가 옛 상태(SCHEDULED)를 읽고 판단하면
+        // 발행을 DRAFT로 덮어쓴다. 거두기는 작업이 끝날 때까지 기다렸다가 발행된 글을 보고 거절되어야 한다
+        long post = scheduledPostDue("발행 직전 거두기");
+
+        int status = whilePublishing(post, () -> save(post, """
+                {"title":"발행 직전 거두기","contentHtml":"<p>본문</p>","visibility":"PUBLIC","status":"DRAFT"}"""));
+
+        assertThat(status).isEqualTo(400);
+        assertThat(jdbcTemplate.queryForMap("SELECT status, published_at FROM post WHERE id = ?", post))
+                .containsEntry("status", "PUBLISHED").doesNotContainEntry("published_at", null);
+    }
+
+    @Test
+    void bulkVisibilityChangeWhilePublishingKeepsThePublishing() throws Exception {
+        // 관리 화면의 일괄 공개 범위 변경도 글을 읽고 고쳐 저장한다. 작업의 발행을 덮어쓰지 않고, 발행된 글의 공개 범위를 바꾼다
+        long post = scheduledPostDue("발행 직전 일괄 변경");
+
+        int status = whilePublishing(post, () -> send(patch("/api/manage/posts"), ownerCookies,
+                "{\"postIds\":[" + post + "],\"visibility\":\"PRIVATE\"}"));
+
+        assertThat(status).isEqualTo(200);
+        assertThat(jdbcTemplate.queryForMap("SELECT status, visibility FROM post WHERE id = ?", post))
+                .containsEntry("status", "PUBLISHED").containsEntry("visibility", "PRIVATE");
+    }
+
+    /**
+     * 예약 발행 작업이 이 글을 발행 UPDATE하고 커밋하기 전에 request를 보내고, request가 잠금을 기다리기 시작하면 작업을 커밋한다.
+     * request의 응답 상태를 돌려준다.
+     */
+    private int whilePublishing(long post, Callable<ResultActions> request) throws Exception {
+        CountDownLatch published = new CountDownLatch(1);
+        CountDownLatch commit = new CountDownLatch(1);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            Future<Integer> job = pool.submit(() -> transactions.execute(tx -> {
+                int changed = postRepository.publishIfDue(post, LocalDateTime.now());
+                published.countDown();
+                await(commit);
+                return changed;
+            }));
+            assertThat(published.await(10, TimeUnit.SECONDS)).isTrue();
+
+            Future<Integer> response = pool.submit(() -> request.call().andReturn().getResponse().getStatus());
+            waitUntilSomeoneWaitsForALock();
+            commit.countDown();
+
+            assertThat(job.get(10, TimeUnit.SECONDS)).isEqualTo(1);
+            return response.get(10, TimeUnit.SECONDS);
+        } finally {
+            commit.countDown();
+            pool.shutdown();
+        }
+    }
+
+    private static void await(CountDownLatch latch) {
+        try {
+            latch.await(10, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    /** 다른 연결이 행 잠금을 기다리기 시작할 때까지(최대 10초). */
+    private void waitUntilSomeoneWaitsForALock() throws InterruptedException {
+        for (int i = 0; i < 100; i++) {
+            Integer waiting = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM pg_stat_activity WHERE wait_event_type = 'Lock'", Integer.class);
+            if (waiting != null && waiting > 0) {
+                return;
+            }
+            Thread.sleep(100);
+        }
+        throw new AssertionError("잠금을 기다리는 요청이 없습니다");
     }
 
     // ---------- OWN-05 같은 카테고리 다른 글 ----------

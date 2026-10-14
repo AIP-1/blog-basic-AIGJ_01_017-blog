@@ -79,9 +79,11 @@ public class ManagePostService {
     /**
      * 고른 글들의 공개 범위를 바꾼다. 이 블로그의 지우지 않은 글만 바꾸고, 그 수를 돌려준다
      * (다른 블로그 글·지운 글·없는 번호는 조용히 건너뛴다). 숨긴 글도 공개 범위는 바꿀 수 있다(글 하나와 같음).
+     * 읽기 전에 글 행을 잠근다(예약 발행 작업과 줄 세우기, PostRepository.lockAllById).
      */
     @Transactional
     public int changeVisibility(Blog blog, Collection<Long> postIds, Visibility visibility) {
+        postRepository.lockAllById(postIds);
         List<Post> posts = postRepository.findAll(mine(blog).and(idIn(postIds)));
         posts.forEach(post -> post.changeVisibility(visibility));
         return posts.size();

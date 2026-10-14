@@ -150,7 +150,8 @@ public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificat
     int findLikeCount(@Param("postId") Long postId);
 
     /**
-     * 글 행을 잠근다(SELECT ... FOR UPDATE). 공감·댓글·조회 기록을 넣고 수를 고치는 트랜잭션이 맨 먼저 부른다.
+     * 글 행을 잠근다(SELECT ... FOR UPDATE). 공감·댓글·조회 기록을 넣고 수를 고치는 트랜잭션, 글을 고치는 요청(PostService)이
+     * 맨 먼저 부른다.
      * 같은 글을 고치는 트랜잭션을 차례로 줄 세워, 뒤 요청이 앞 요청이 커밋한 기록과 수를 보고 판단하게 한다.
      * (MySQL에서는 공감·댓글 INSERT의 외래 키 공유 잠금과 수 UPDATE의 배타 잠금이 엇갈려 데드락도 났다. PostgreSQL의 외래 키 확인은
      * FOR KEY SHARE라 키가 아닌 칸의 UPDATE와 부딪히지 않지만, 줄 세우기는 그대로 필요하다.)
@@ -158,5 +159,14 @@ public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificat
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select p.id from Post p where p.id = :postId")
     Optional<Long> lockById(@Param("postId") Long postId);
+
+    /**
+     * 여러 글 행을 잠근다(일괄 공개 범위 변경, 블로그 이동). 글을 읽고 고쳐 저장하기 전에 불러 예약 발행 작업과 줄을 세운다
+     * (PostService.lockForChange와 같은 이유). 번호 순서로 잠가, 같은 글들을 다른 순서로 잠그는 두 요청이 서로를 기다리는
+     * 데드락을 막는다. 빈 목록으로 부르지 않는다.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select p.id from Post p where p.id in :ids order by p.id")
+    List<Long> lockAllById(@Param("ids") Collection<Long> ids);
 
 }
