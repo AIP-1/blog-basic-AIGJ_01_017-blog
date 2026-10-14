@@ -1,6 +1,10 @@
-# blog-basic-AIGJ_01_017-blog
+# now-log
 
 티스토리형 멀티 블로그 서비스(지원). 누구나 가입해 자기 블로그(`blog.com/@주소`)를 열고, 에디터로 글을 발행하고, 다른 블로그 글을 읽고 댓글·공감한다.
+
+운영: https://now-log.java21.net
+
+이 저장소는 과제 제출용 [AIP-1/blog-basic-AIGJ_01_017-blog](https://github.com/AIP-1/blog-basic-AIGJ_01_017-blog)에서 커밋 기록째 옮겨 왔다(2026-10-14). 커밋 메시지의 `Merge pull request #1`~`#39`는 그 저장소의 PR이고, PR 본문과 리뷰는 blog-docs `history/pull-requests/`에 옮겨 두었다.
 
 명세·계획·작업 목록·학습 자료는 별도 문서 저장소(blog-docs)에 있다. 옆 폴더 `../blog-docs`의 `specs/001-tistory-blog/`를 본다.
 
