@@ -65,7 +65,7 @@ cd frontend && npm test      # Vitest
 | Ollama | `http://localhost:11434` | 없음 |
 | 서비스 관리자 | `blog.test:8080/login` | `admin@blog.test` / `admin1234!` (Flyway `V2__admin_account.sql`, 운영 전에 바꿀 것) |
 
-운영 환경 변수: `DB_URL`(`jdbc:postgresql://…`), `DB_USERNAME`, `DB_PASSWORD`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`, `OLLAMA_URL`, `APP_RECOMMEND_ENABLED`, `JWT_SECRET`, `APP_UPLOAD_DIR`, `APP_PLATFORM_DOMAIN`. 실습 서버에서는 `deploy/deploy.sh`가 GitHub secrets로 채운다. 운영 데이터를 MySQL에서 옮길 때는 `deploy/migrate-from-mysql.sh`(스텝 24).
+운영 환경 변수: `DB_URL`(`jdbc:postgresql://…`), `DB_USERNAME`, `DB_PASSWORD`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`, `OLLAMA_URL`, `APP_RECOMMEND_ENABLED`, `JWT_SECRET`, `APP_UPLOAD_DIR`, `APP_PLATFORM_DOMAIN`. 실습 서버에서는 `deploy/deploy.sh`가 GitHub secrets로 채운다. 앱은 두 대(`aigj017-app` 8460, `aigj017-app-2` 8461)를 띄우고 학교 nginx upstream이 나눠 보내며, 배포는 한 대씩 바꾸고 `/actuator/health/readiness`가 UP인지 본 뒤 다음 앱으로 넘어간다(롤링, 실패하면 옛 이미지로 되돌림). 운영 데이터를 MySQL에서 옮길 때는 `deploy/migrate-from-mysql.sh`(스텝 24).
 
 ## 배포용 jar
 
