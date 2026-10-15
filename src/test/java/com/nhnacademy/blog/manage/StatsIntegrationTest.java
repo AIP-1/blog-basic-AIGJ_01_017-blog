@@ -18,6 +18,7 @@ import com.nhnacademy.blog.member.domain.Member;
 import com.nhnacademy.blog.support.TestBlogs;
 import com.nhnacademy.blog.support.TestMembers;
 import jakarta.servlet.http.Cookie;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -27,7 +28,14 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import com.nhnacademy.blog.manage.application.StatsAggregator;
+import com.nhnacademy.blog.manage.domain.BlogStatsRepository;
 import java.time.LocalDate;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.junit.jupiter.api.Test;
 
 /** 방문 통계 (스텝 20: T082·T083, MNG-03, spec US13 1). */
@@ -47,6 +55,12 @@ class StatsIntegrationTest extends IntegrationTestSupport {
 
     @Autowired
     StatsAggregator statsAggregator;
+
+    @Autowired
+    BlogStatsRepository blogStatsRepository;
+
+    @Autowired
+    TransactionTemplate transactions;
 
     @Test
     void visitsAreCountedOncePerDayExceptOwnerAndAggregatedAtNight() throws Exception {
@@ -113,6 +127,50 @@ class StatsIntegrationTest extends IntegrationTestSupport {
                 .andExpect(jsonPath("$[0].rank").value(1));
         send(get("/api/manage/stats/popular-posts"), host, ownerCookies, null)
                 .andExpect(jsonPath("$[0].post.title").value("통계 글"));
+    }
+
+    @Test
+    void onlyOneAppAggregatesAtATime() throws Exception {
+        // 다른 앱이 모으는 중(잠금을 잡은 트랜잭션이 아직 안 끝남)이면 이 앱은 건너뛰고, 끝난 뒤에는 모은다
+        Member owner = testMembers.create();
+        Blog blog = testBlogs.createPrimary(owner);
+        LocalDate yesterday = LocalDate.now().minusDays(1);
+        jdbcTemplate.update("INSERT INTO blog_visit (blog_id, visit_date, visitor_key, referrer_type, referrer_host) VALUES (?, ?, 'a:1', 'DIRECT', '')",
+                blog.getId(), yesterday);
+
+        CountDownLatch locked = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        ExecutorService otherApp = Executors.newSingleThreadExecutor();
+        try {
+            Future<Boolean> other = otherApp.submit(() -> transactions.execute(tx -> {
+                boolean got = blogStatsRepository.tryLockAggregation();
+                locked.countDown();
+                try {
+                    release.await(10, TimeUnit.SECONDS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+                return got;
+            }));
+            assertThat(locked.await(10, TimeUnit.SECONDS)).isTrue();
+
+            statsAggregator.run();
+            assertThat(dailyVisitors(blog, yesterday)).isEmpty();
+
+            release.countDown();
+            assertThat(other.get(10, TimeUnit.SECONDS)).isTrue();
+        } finally {
+            release.countDown();
+            otherApp.shutdown();
+        }
+
+        statsAggregator.run();
+        assertThat(dailyVisitors(blog, yesterday)).containsExactly(1);
+    }
+
+    private List<Integer> dailyVisitors(Blog blog, LocalDate date) {
+        return jdbcTemplate.queryForList("SELECT visitor_count FROM blog_daily_stat WHERE blog_id = ? AND stat_date = ?",
+                Integer.class, blog.getId(), date);
     }
 
     private long publish(Blog target, Cookie[] cookies, String title) throws Exception {

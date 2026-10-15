@@ -30,6 +30,18 @@ public class BlogStatsRepository {
 
     // ---------- 새벽 모으기 ----------
 
+    /** 새벽 모으기 잠금 번호. advisory lock은 번호에 거는 잠금이고 번호의 뜻은 앱이 정한다(이 앱에서 쓰는 번호는 이것 하나). */
+    private static final long AGGREGATION_LOCK = 1L;
+
+    /**
+     * 새벽 모으기 잠금을 잡는다(PostgreSQL pg_try_advisory_xact_lock). 다른 앱이 이미 잡고 있으면 기다리지 않고 false다.
+     * 잡은 잠금은 이 트랜잭션이 끝날 때 저절로 풀리므로 트랜잭션 안에서 불러야 한다(밖에서 부르면 바로 풀려 뜻이 없다).
+     */
+    public boolean tryLockAggregation() {
+        return Boolean.TRUE.equals(jdbc.queryForObject("SELECT pg_try_advisory_xact_lock(?)", Boolean.class,
+                AGGREGATION_LOCK));
+    }
+
     /** 그날의 방문자 수·글 조회 수를 블로그마다 모은다. 다시 돌려도 같은 결과가 되게 먼저 지우고 넣는다. */
     public void aggregateDay(LocalDate date) {
         jdbc.update("DELETE FROM blog_daily_stat WHERE stat_date = ?", date);

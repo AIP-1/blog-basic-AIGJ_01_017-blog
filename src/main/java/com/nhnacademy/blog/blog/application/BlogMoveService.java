@@ -50,6 +50,8 @@ public class BlogMoveService {
             throw BusinessException.invalidField("postIds", "옮길 글을 1~" + MAX_POSTS + "개 골라 주세요.");
         }
         Blog target = ownTarget(blog, targetBlogId);
+        // 읽기 전에 잠근다(예약 발행 작업과 줄 세우기, PostRepository.lockAllById)
+        postRepository.lockAllById(postIds);
         List<Post> posts = postRepository.findAll(PostSpecifications.inBlog(blog.getId())
                 .and(PostSpecifications.ownerView())
                 .and((root, query, cb) -> root.get("id").in(postIds)));
