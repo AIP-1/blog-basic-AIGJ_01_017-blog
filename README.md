@@ -1,8 +1,55 @@
 # now-log
 
-티스토리형 멀티 블로그 서비스(지원). 누구나 가입해 자기 블로그(`blog.com/@주소`)를 열고, 에디터로 글을 발행하고, 다른 블로그 글을 읽고 댓글·공감한다.
+[![release](https://img.shields.io/github/v/release/blog-hjiwon203/now-log?label=release)](https://github.com/blog-hjiwon203/now-log/releases)
+[![deploy](https://github.com/blog-hjiwon203/now-log/actions/workflows/deploy.yml/badge.svg)](https://github.com/blog-hjiwon203/now-log/actions/workflows/deploy.yml)
+[![sonar](https://github.com/blog-hjiwon203/now-log/actions/workflows/sonar.yml/badge.svg)](https://github.com/blog-hjiwon203/now-log/actions/workflows/sonar.yml)
+
+티스토리형 멀티 블로그 서비스(지원). 누구나 가입해 자기 블로그(`/@주소`)를 열고, 에디터로 글을 발행하고, 다른 블로그 글을 읽고 댓글·공감·구독한다.
 
 운영: https://now-log.java21.net
+
+| 홈 | 블로그 첫 화면 |
+| --- | --- |
+| ![플랫폼 홈: 인기 글, 인기 블로거, 주제별 글](docs/screenshots/home.jpg) | ![블로그 첫 화면: 프로필, 썸네일 목록, 사이드바](docs/screenshots/blog.jpg) |
+| **글 상세** | **휴대폰** |
+| ![글 상세: 본문과 사이드바](docs/screenshots/post.jpg) | <img src="docs/screenshots/mobile.jpg" alt="휴대폰 화면의 블로그 첫 화면" width="260"> |
+
+## 주요 기능
+
+| 영역 | 기능 |
+| --- | --- |
+| 회원 | 이메일 인증 가입, 카카오·구글 로그인과 계정 연동, 로그인 유지(14일), 틀린 횟수 제한과 메일 잠금 풀기, 비밀번호 재설정, 탈퇴 |
+| 블로그 | 한 사람이 5개까지, 대표 블로그, 스킨 3종·포인트 색·목록 형태, 사이드바 모듈 순서, 블로그 이사(옛 주소 301), 방명록 |
+| 글 | Tiptap 에디터(마크다운 입력·붙여넣기), 이미지와 대표 이미지, 카테고리 2단계·태그·주제, 임시저장(1분 자동), 예약 발행, 공개·비공개·구독자 공개 |
+| 읽기 | 홈(최신·인기 글, 인기 블로거, 주제별), 랭킹, 구독 피드, 글자 검색과 의미 검색, 비슷한 글 추천, 공감·저장·공유 |
+| 소통 | 댓글·답글·비밀댓글, 알림, 차단과 금칙어 |
+| 관리 | 내 글 관리(일괄 비공개·삭제·옮기기), 방문 통계와 유입 경로, 서비스 관리(정지·숨김·신고·공지·이력) |
+
+볼 수 없는 글은 로그인 여부와 상관없이 404이고, 권한은 모두 서버에서 검사한다.
+
+## 릴리스
+
+버전마다 바뀐 것은 [CHANGELOG.md](CHANGELOG.md)와 [GitHub Releases](https://github.com/blog-hjiwon203/now-log/releases)에 있다.
+
+| 버전 | 날짜 | 내용 |
+| --- | --- | --- |
+| [v1.0.0](https://github.com/blog-hjiwon203/now-log/releases/tag/v1.0.0) | 2026-10-16 | 앱 두 대 롤링 배포(무중단), 예약 발행 경합 고침, SonarQube 분석 |
+| [v0.4.0](https://github.com/blog-hjiwon203/now-log/releases/tag/v0.4.0) | 2026-10-14 | 의미 검색, DB를 PostgreSQL + pgvector 하나로 |
+| [v0.3.0](https://github.com/blog-hjiwon203/now-log/releases/tag/v0.3.0) | 2026-10-12 | 첫 운영 배포, 블로그 주소를 `/@주소` 경로로, 소셜 로그인·통계·랭킹 |
+| [v0.2.0](https://github.com/blog-hjiwon203/now-log/releases/tag/v0.2.0) | 2026-10-11 | 임시저장, 구독·알림, 방명록, 블로그 꾸미기, 서비스 관리 |
+| [v0.1.0](https://github.com/blog-hjiwon203/now-log/releases/tag/v0.1.0) | 2026-10-10 | 가입 → 블로그 → 글 → 홈 → 댓글 한 바퀴 |
+
+- 버전은 [유의적 버전](https://semver.org/lang/ko/)을 따르고, v1.0.0부터 `pom.xml`의 `<version>`과 태그를 맞춘다. 지금 main은 다음 개발 버전 `1.1.0-SNAPSHOT`이다.
+- PR을 만들 때 `CHANGELOG.md`의 `[Unreleased]`에 한 줄씩 더한다. 릴리스할 때 그 절에 버전과 날짜를 붙이고 `pom.xml`을 같은 버전으로 바꾼 PR을 병합한 뒤, 그 병합 커밋에 태그(`git tag -a vX.Y.Z`)를 달고 GitHub Release를 만든다.
+- 배포는 태그가 아니라 main 병합 때 일어난다. 태그는 이미 배포된 시점에 붙이는 이름표다.
+
+## 코드 품질
+
+- main에 병합되면 `sonar` 워크플로가 테스트를 커버리지와 함께 돌리고(백엔드 JaCoCo, 프론트 Vitest) 기관 SonarQube로 보낸다. 배포 워크플로와 따로 돌아서 분석이 실패해도 배포는 막히지 않는다.
+- 품질 게이트는 새 코드 기준(Previous version, 즉 지금 `pom.xml` 버전 이후 바뀐 코드)으로 본다. 오탐으로 판단한 지적은 SonarQube 화면에서 이유를 적어 처리했다.
+- 계층 방향과 인증 경계는 `ArchitectureTest`(ArchUnit)가 `./mvnw test` 때마다 검사한다(아래 구조 절).
+
+## 문서
 
 이 저장소는 과제 제출용 [AIP-1/blog-basic-AIGJ_01_017-blog](https://github.com/AIP-1/blog-basic-AIGJ_01_017-blog)에서 커밋 기록째 옮겨 왔다(2026-10-14). 커밋 메시지의 `Merge pull request #1`~`#39`는 그 저장소의 PR이고, PR 본문과 리뷰는 blog-docs `history/pull-requests/`에 옮겨 두었다.
 
@@ -22,8 +69,9 @@
 - 백엔드: Java 21, Spring Boot 4.1(Web MVC, Security, Data JPA, Validation, Cache, Data Redis, Flyway), Maven
 - DB: PostgreSQL 17 + pgvector(주 데이터와 글 임베딩, 스텝 23에서 MySQL을 합침), Redis 7.4(캐시·연타 방지·시도 제한)
 - 임베딩: Ollama + bge-m3(로컬)
-- 프론트: React + TypeScript + Vite, Tiptap 에디터. 빌드 결과를 jar 안 `static/`에 넣어 한 서버로 배포한다
-- 테스트: JUnit 5, MockMvc, Testcontainers(PostgreSQL pgvector·Redis), Vitest
+- 프론트: React + TypeScript + Vite, Tiptap 에디터, 글꼴 Pretendard(npm으로 함께 빌드). 스타일은 CSS 변수를 쓴 `frontend/src/index.css` 하나이고, 블로그 꾸미기는 포인트 색 변수(`--brand`)와 `html[data-skin]`을 바꾼다. 빌드 결과를 jar 안 `static/`에 넣어 한 서버로 배포한다
+- 테스트: JUnit 5, MockMvc, Testcontainers(PostgreSQL pgvector·Redis), ArchUnit, Vitest
+- 배포·품질: GitHub Actions(테스트 → Docker 이미지 → 앱 두 대 롤링 배포), SonarQube, JaCoCo
 
 ## 실행
 
@@ -89,7 +137,8 @@ src/main/java/com/nhnacademy/blog/
   member/ blog/ post/ category/ tag/ comment/ reaction/ bookmark/ image/
   subscription/ notification/ search/ recommend/ home/ ranking/ manage/ admin/
 src/main/resources/db/migration/   Flyway(V1__init.sql = blog-docs erd/schema.sql)
-frontend/src/                      React 앱(app/ 라우터, pages/, components/, api/)
+frontend/src/                      React 앱(app/ 라우터, pages/, components/, api/, index.css 화면 스타일)
+docs/screenshots/                  README 화면 사진
 deploy/                            서버에서 실행하는 배포 스크립트
 ```
 
