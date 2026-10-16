@@ -81,17 +81,15 @@ export default function WithdrawPage() {
               답글이 달린 댓글은 "삭제된 댓글입니다"로 자리만 남습니다.
             </span>
           </div>
-          {me.me.hasPassword
-            ? (
-              <label className="field">
-                <span className="label">비밀번호</span>
-                <input type="password" value={password} autoComplete="current-password"
-                       onChange={(event) => setPassword(event.target.value)} />
-              </label>
-            )
-            : reauthOk
-              ? <p className="ok">본인 확인을 마쳤습니다. 10분 안에 탈퇴해 주세요.</p>
-              : (
+          {me.me.hasPassword && (
+            <label className="field">
+              <span className="label">비밀번호</span>
+              <input type="password" value={password} autoComplete="current-password"
+                     onChange={(event) => setPassword(event.target.value)} />
+            </label>
+          )}
+          {!me.me.hasPassword && reauthOk && <p className="ok">본인 확인을 마쳤습니다. 10분 안에 탈퇴해 주세요.</p>}
+          {!me.me.hasPassword && !reauthOk && (
                 <div className="stack" style={{ gap: 8 }}>
                   <span className="label">본인 확인</span>
                   {SOCIAL_PROVIDERS
@@ -106,7 +104,7 @@ export default function WithdrawPage() {
               )}
           <label className="row small">
             <input type="checkbox" checked={agreed} onChange={(event) => setAgreed(event.target.checked)} />
-            위 내용을 확인했고 탈퇴합니다
+            <span>위 내용을 확인했고 탈퇴합니다</span>
           </label>
           {error && <p className="err" role="alert">{error}</p>}
           <div className="row">

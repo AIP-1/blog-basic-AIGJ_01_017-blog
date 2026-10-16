@@ -73,7 +73,7 @@ export function DesignSection({ blog, onSaved }: { blog: Blog; onSaved: (blog: B
       {error && <p className="err" role="alert">{error}</p>}
       <div className="row">
         <button className="btn primary" type="submit">적용</button>
-        {message && <span className="ok small" role="status">{message}</span>}
+        {message && <output className="ok small inline">{message}</output>}
       </div>
     </form>
   )
@@ -153,7 +153,7 @@ export function SidebarSection() {
                 <label className="row small nowrap">
                   <input type="checkbox" checked={item.isVisible} disabled={item.moduleType === 'PROFILE'}
                          onChange={() => change(toggleModule(items, item.moduleType))} />
-                  보이기
+                  <span>보이기</span>
                 </label>
               </span>
             </li>
@@ -163,7 +163,7 @@ export function SidebarSection() {
       {error && <p className="err" role="alert">{error}</p>}
       <div className="row">
         <button className="btn primary" type="button" disabled={!dirty} onClick={save}>사이드바 저장</button>
-        {message && <span className="ok small" role="status">{message}</span>}
+        {message && <output className="ok small inline">{message}</output>}
       </div>
     </section>
   )
@@ -219,9 +219,9 @@ export function MoveSection({ blog }: { blog: Blog }) {
       <p className="small muted">글을 옮기면 카테고리는 미분류가 되고 태그는 이름으로 다시 연결됩니다. 옛 글 주소는 새 블로그로 이어집니다.
         글은 <Link to="/manage/posts">글 관리</Link>에서 골라 옮깁니다.</p>
       {self?.movedTo && (
-        <p className="box small" role="status">
+        <output className="box small">
           지금 이 블로그는 <b>{self.movedTo}</b>(으)로 이사 중입니다. 방문자는 그 블로그로 갑니다.
-        </p>
+        </output>
       )}
       {blogs && candidates.length === 0 && <p className="small muted">이사할 수 있는 다른 블로그가 없습니다.</p>}
       {candidates.length > 0 && (
@@ -236,7 +236,7 @@ export function MoveSection({ blog }: { blog: Blog }) {
         </form>
       )}
       {error && <p className="err" role="alert">{error}</p>}
-      {message && <p className="ok small" role="status">{message}</p>}
+      {message && <output className="ok small">{message}</output>}
     </section>
   )
 }

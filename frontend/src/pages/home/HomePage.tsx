@@ -24,8 +24,8 @@ export default function HomePage() {
 
   async function load(cursor: string | null) {
     try {
-      const page = await api<CursorResponse<PostSummary>>(
-        `/api/home/latest${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`, { allowAnonymous: true })
+      const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''
+      const page = await api<CursorResponse<PostSummary>>(`/api/home/latest${query}`, { allowAnonymous: true })
       setPosts((previous) => (cursor ? [...previous, ...page.content] : page.content))
       setNextCursor(page.nextCursor)
       setError(null)

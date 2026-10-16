@@ -55,7 +55,7 @@ export default function ManagePage() {
   return (
     <div className="app">
       <header className="site-head">
-        <a className="logo" href={platformUrl('/')}>blog</a>
+        <a className="logo" href={platformUrl('/')}>now-log</a>
         <Link className="blog-name" to="/">{blog.name}</Link>
         <span className="chip">관리</span>
         <span className="grow" />

@@ -126,7 +126,7 @@ export default function PostWritePage() {
       title, html: contentHtml, snapshot: snapshotOf(body), lastSaved: lastSaved.current,
     })
     if (run) {
-      void saveDraft()
+      saveDraft() // 오류는 saveDraft 안에서 잡아 화면에 띄운다
     }
   }
   useEffect(() => {
@@ -247,9 +247,9 @@ export default function PostWritePage() {
           <h2 style={{ fontSize: 20 }}>{postState === 'PUBLISHED' ? '글 수정' : '글쓰기'}</h2>
           <div className="row">
             {drafting && (
-              <span className="small muted" role="status">
+              <output className="small muted inline">
                 {savedAt ? `임시저장됨 ${savedAt}` : '1분마다 자동 저장'}
-              </span>
+              </output>
             )}
             {drafting && (
               <Link className="btn" to="/manage/posts?status=DRAFT">
@@ -258,12 +258,12 @@ export default function PostWritePage() {
             )}
             {editing && <button className="btn" type="button" onClick={remove}>삭제</button>}
             {drafting && (
-              <button className="btn" type="button" disabled={saving || blind !== null} onClick={() => void saveDraft()}>
+              <button className="btn" type="button" disabled={saving || blind !== null} onClick={() => saveDraft()}>
                 임시저장
               </button>
             )}
             <button className="btn primary" type="submit" disabled={saving || blind !== null}>
-              {postState === 'PUBLISHED' ? '수정' : scheduling ? '예약 발행' : '발행'}
+              {submitLabel(postState, scheduling)}
             </button>
           </div>
         </div>
@@ -316,18 +316,19 @@ export default function PostWritePage() {
         {choices.length > 0 && (
           <div className="field">
             <span className="label" id="thumbnail-label">대표 이미지</span>
+            {/* 진짜 라디오 버튼(화면에서는 숨김)을 사진 칸 label로 감싸 방향키·화면 읽기 프로그램이 그대로 동작한다 */}
             <div className="thumb-pick" role="radiogroup" aria-labelledby="thumbnail-label">
-              <button type="button" role="radio" aria-checked={chosenThumbnail === null}
-                      className={chosenThumbnail === null ? 'auto on' : 'auto'} onClick={() => setThumbnailId(null)}>
+              <label className={chosenThumbnail === null ? 'auto on' : 'auto'}>
+                <input type="radio" name="thumbnail" className="sr-only" checked={chosenThumbnail === null}
+                       onChange={() => setThumbnailId(null)} />
                 자동<br /><span className="small">첫 이미지</span>
-              </button>
+              </label>
               {choices.map((image, index) => (
-                <button key={image.id} type="button" role="radio" aria-checked={chosenThumbnail === image.id}
-                        aria-label={`본문 ${index + 1}번째 이미지`}
-                        className={chosenThumbnail === image.id ? 'on' : undefined}
-                        onClick={() => setThumbnailId(image.id)}>
+                <label key={image.id} className={chosenThumbnail === image.id ? 'on' : undefined}>
+                  <input type="radio" name="thumbnail" className="sr-only" checked={chosenThumbnail === image.id}
+                         aria-label={`본문 ${index + 1}번째 이미지`} onChange={() => setThumbnailId(image.id)} />
                   <img src={image.thumbnailUrl} alt="" />
-                </button>
+                </label>
               ))}
             </div>
             <span className="hint">목록과 링크 공유 미리보기에 나오는 사진입니다. 고르지 않으면 본문 첫 이미지입니다.</span>
@@ -366,7 +367,7 @@ export default function PostWritePage() {
 
         <label className="row small">
           <input type="checkbox" checked={commentAllowed} onChange={(event) => setCommentAllowed(event.target.checked)} />
-          댓글 허용
+          <span>댓글 허용</span>
           <span className="muted">끄면 이 글에는 댓글을 쓸 수 없습니다. 이미 달린 댓글은 그대로 보입니다.</span>
         </label>
 
@@ -374,7 +375,7 @@ export default function PostWritePage() {
           <div className="field">
             <label className="row small">
               <input type="checkbox" checked={scheduleOn} onChange={(event) => setScheduleOn(event.target.checked)} />
-              예약 발행
+              <span>예약 발행</span>
             </label>
             {scheduleOn && (
               <input type="datetime-local" value={scheduledAt} style={{ maxWidth: 240 }} aria-label="예약 시각"
@@ -391,6 +392,14 @@ export default function PostWritePage() {
 }
 
 /** 저장할 입력값을 한 줄로. 마지막 저장과 비교해 바뀐 것이 있는지 본다. */
+/** 저장 버튼 글자: 이미 발행한 글은 수정, 예약 시각을 고르면 예약 발행 */
+function submitLabel(postState: PostState, scheduling: boolean): string {
+  if (postState === 'PUBLISHED') {
+    return '수정'
+  }
+  return scheduling ? '예약 발행' : '발행'
+}
+
 function snapshotOf(values: {
   title: string; contentHtml: string; categoryId: number | null; tagNames: string[]; topic: string | null;
   visibility: Visibility; thumbnailImageId: number | null; commentAllowed: boolean

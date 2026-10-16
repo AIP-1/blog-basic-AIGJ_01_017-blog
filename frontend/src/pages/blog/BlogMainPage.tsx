@@ -76,8 +76,7 @@ export default function BlogMainPage() {
     return null
   }
   const blog = blogState.blog
-  const basePath = tagName !== undefined ? `/tag/${encodeURIComponent(tagName)}`
-    : categoryId === undefined ? '/' : `/category/${categoryId}`
+  const basePath = listPath(tagName, categoryId)
 
   return (
     <div className="app">
@@ -150,6 +149,14 @@ function EmptyPosts({ blog }: { blog: Blog }) {
       {blog.viewer.isOwner && <Link className="btn primary" to="/manage/write">첫 글 쓰기</Link>}
     </div>
   )
+}
+
+/** 지금 목록의 주소(쪽 번호 링크에 쓴다): 태그별, 카테고리별, 전체 */
+function listPath(tagName: string | undefined, categoryId: string | undefined): string {
+  if (tagName !== undefined) {
+    return `/tag/${encodeURIComponent(tagName)}`
+  }
+  return categoryId === undefined ? '/' : `/category/${categoryId}`
 }
 
 /** "전체 글", 카테고리 이름, "미분류". 카테고리 이름은 사이드바의 트리에서 찾는다. */

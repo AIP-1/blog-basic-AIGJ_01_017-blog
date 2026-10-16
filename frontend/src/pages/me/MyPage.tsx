@@ -22,7 +22,7 @@ const MAX_BLOGS = 5
 export default function MyPage() {
   const meState = useMe()
   // 저장한 뒤의 내 정보. 저장 전에는 처음 불러온 값을 쓴다
-  const [saved, setMe] = useState<Me | null>(null)
+  const [saved, setSaved] = useState<Me | null>(null)
   const me = saved ?? (meState.status === 'member' ? meState.me : null)
 
   useEffect(() => {
@@ -39,12 +39,12 @@ export default function MyPage() {
           <div className="stack" style={{ gap: 24, maxWidth: 520 }}>
             <MeTabs />
             <h2>내 정보</h2>
-            <ProfileSection me={me} onSaved={setMe} />
-            <MyBlogsSection onPrimaryChanged={setMe} />
+            <ProfileSection me={me} onSaved={setSaved} />
+            <MyBlogsSection onPrimaryChanged={setSaved} />
             {me.hasPassword
               ? <PasswordSection />
               : <p className="small muted">소셜 계정으로 가입해 비밀번호가 없습니다.</p>}
-            <SocialSection me={me} onChanged={setMe} />
+            <SocialSection me={me} onChanged={setSaved} />
             <section className="section">
               <h2>회원 탈퇴</h2>
               <p className="small muted" style={{ margin: 0 }}>블로그·글·댓글이 모두 삭제되고 되돌릴 수 없습니다.</p>
@@ -107,7 +107,7 @@ function MyBlogsSection({ onPrimaryChanged }: { onPrimaryChanged: (me: Me) => vo
               <div className="row">
                 <a className="btn" href={blogUrl(blog.address, '/manage')}>관리</a>
                 {!blog.isPrimary && (
-                  <button className="btn" type="button" disabled={changing} onClick={() => void makePrimary(blog)}>
+                  <button className="btn" type="button" disabled={changing} onClick={() => makePrimary(blog)}>
                     대표로
                   </button>
                 )}
@@ -169,7 +169,7 @@ function ProfileSection({ me, onSaved }: { me: Me; onSaved: (me: Me) => void }) 
           ? <img className="avatar lg" src={me.profileImageUrl} alt="프로필 사진" />
           : <span className="avatar lg" />}
         <label className="btn">
-          사진 바꾸기
+          <span>사진 바꾸기</span>
           <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" hidden onChange={changePhoto} />
         </label>
       </div>
@@ -184,7 +184,7 @@ function ProfileSection({ me, onSaved }: { me: Me; onSaved: (me: Me) => void }) 
         </div>
         {errors.nickname && <p className="err">{errors.nickname}</p>}
       </form>
-      {message && <p className="small" role="status">{message}</p>}
+      {message && <output className="small">{message}</output>}
     </section>
   )
 }
@@ -231,7 +231,7 @@ function PasswordSection() {
         {errors.newPassword && <p className="err">{errors.newPassword}</p>}
       </label>
       {errors.form && <p className="err">{errors.form}</p>}
-      {done && <p className="small" role="status">비밀번호를 바꿨습니다.</p>}
+      {done && <output className="small">비밀번호를 바꿨습니다.</output>}
       <button className="btn primary" type="submit" disabled={!currentPassword || !newPassword}>변경</button>
     </form>
   )
