@@ -32,7 +32,8 @@ export default function BookmarkButton({ postId, me, initialBookmarked }: {
       const result = await api<{ bookmarked: boolean }>(`/api/posts/${postId}/bookmark`, { method: next ? 'PUT' : 'DELETE' })
       setSaved(result.bookmarked)
     } catch (caught) {
-      setSaved(saved)
+      // 누르기 전 값으로 되돌린다
+      setSaved(!next)
       setError(errorMessage(caught))
     } finally {
       inFlight.current = false

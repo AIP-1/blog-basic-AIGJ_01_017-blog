@@ -31,7 +31,7 @@ export default function LikeButton({ postId, me, initialLiked, initialCount }: {
     const next = !liked
     // 먼저 바꿔 보여 주고(낙관적 갱신), 실패하면 되돌린다
     setLiked(next)
-    setCount(count + (next ? 1 : -1))
+    setCount((c) => c + (next ? 1 : -1))
     setError(null)
     try {
       const result = await api<{ liked: boolean; likeCount: number }>(`/api/posts/${postId}/like`,
@@ -39,8 +39,9 @@ export default function LikeButton({ postId, me, initialLiked, initialCount }: {
       setLiked(result.liked)
       setCount(result.likeCount)
     } catch (caught) {
-      setLiked(liked)
-      setCount(count)
+      // 누르기 전 값으로 되돌린다
+      setLiked(!next)
+      setCount((c) => c - (next ? 1 : -1))
       setError(errorMessage(caught))
     } finally {
       inFlight.current = false
