@@ -30,6 +30,7 @@ public class HomeService {
 
     // JPA 조건에 쓰는 엔티티 필드 이름
     private static final String PUBLISHED_AT = "publishedAt";
+    private static final String CATEGORY = "category";
 
     public static final int LATEST_SIZE = 20;
     public static final int POPULAR_SIZE = 10;
@@ -58,7 +59,7 @@ public class HomeService {
             condition = condition.and(after(cursor));
         }
         return postRepository.findBy(condition,
-                query -> query.sortBy(LATEST).project("blog", "category").limit(LATEST_SIZE + 1).all());
+                query -> query.sortBy(LATEST).project("blog", CATEGORY).limit(LATEST_SIZE + 1).all());
     }
 
     /** 인기 점수 순 공개 글 10개. 순위(글 번호)는 5분 캐시에서 읽고, 글은 매번 DB에서 읽으며 가시성을 다시 확인한다. */
@@ -91,7 +92,7 @@ public class HomeService {
         if (!rankedIds.isEmpty()) {
             latest = latest.and((root, query, cb) -> cb.not(root.get("id").in(rankedIds)));
         }
-        List<Post> filler = postRepository.findBy(latest, query -> query.sortBy(LATEST).project("blog", "category")
+        List<Post> filler = postRepository.findBy(latest, query -> query.sortBy(LATEST).project("blog", CATEGORY)
                 .limit(TOPIC_SIZE - ranked.size()).all());
         return Stream.concat(ranked.stream(), filler.stream()).toList();
     }
@@ -107,7 +108,7 @@ public class HomeService {
         }
         Specification<Post> condition = PostSpecifications.visibleTo(null, LocalDateTime.now(clock))
                 .and((root, query, cb) -> root.get("id").in(rankedIds));
-        Map<Long, Post> visible = postRepository.findBy(condition, query -> query.project("blog", "category").all())
+        Map<Long, Post> visible = postRepository.findBy(condition, query -> query.project("blog", CATEGORY).all())
                 .stream()
                 .collect(Collectors.toMap(Post::getId, Function.identity()));
         return rankedIds.stream()

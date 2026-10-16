@@ -54,7 +54,7 @@ public class ManageCommentService {
                 cb.isNull(root.get(DELETED_AT)),
                 cb.notEqual(root.get(MEMBER).get("id"), ownerId));
         Page<Comment> found = commentRepository.findBy(condition,
-                query -> query.project("member", "post").page(page.toPageable(NEWEST)));
+                query -> query.project(MEMBER, "post").page(page.toPageable(NEWEST)));
         List<CommentView> views = commentViews.flat(found.getContent(), blog, ownerId);
         List<ReceivedComment> rows = new ArrayList<>();
         for (int i = 0; i < views.size(); i++) {
@@ -73,7 +73,7 @@ public class ManageCommentService {
                 cb.isNull(root.get(DELETED_AT)),
                 cb.notEqual(root.get(MEMBER).get("id"), ownerId));
         Page<Guestbook> found = guestbookRepository.findBy(condition,
-                query -> query.project("member").page(page.toPageable(NEWEST)));
+                query -> query.project(MEMBER).page(page.toPageable(NEWEST)));
         List<ReceivedComment> rows = commentViews.flat(found.getContent(), blog, ownerId).stream()
                 .map(view -> new ReceivedComment(view, null, null))
                 .toList();
