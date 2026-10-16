@@ -9,6 +9,10 @@ now-log(https://now-log.java21.net)는 티스토리형 블로그 서비스다. �
 - v0.1.0~v0.4.0 태그는 2026-10-16에 그때의 병합 커밋에 붙였다. 그 커밋들의 `pom.xml`은 `0.0.1-SNAPSHOT` 그대로다.
 - 형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/)를 따르되 절 이름은 추가·바뀜·고침·운영·개발 환경을 쓴다.
 
+## [Unreleased]
+
+다음 릴리스(1.1.0)에 들어갈 변경을 여기에 모은다. 릴리스할 때 버전과 날짜를 붙이고 `pom.xml`을 같은 버전으로 바꾼 뒤 태그를 단다.
+
 ## [1.0.0] - 2026-10-16
 
 앱을 두 대 띄우고 한 대씩 바꾸는 롤링 배포로 바꿔 배포 중에도 사이트가 끊기지 않게 했고, 그 과정에서 드러난 예약 발행 경합을 고쳤다. SonarQube 분석을 붙여 처음 나온 지적을 정리했다.
@@ -154,6 +158,7 @@ now-log(https://now-log.java21.net)는 티스토리형 블로그 서비스다. �
 - 공통 오류 응답, 목록 페이지 처리, 같은 요청 연타 방지(`Idempotency-Key`) (스텝 2, 3, #2, #3)
 - quickstart 시나리오를 그대로 따라가는 통합 테스트, README 실행 안내 (스텝 11, #15)
 
+[Unreleased]: https://github.com/blog-hjiwon203/now-log/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/blog-hjiwon203/now-log/releases/tag/v1.0.0
 [0.4.0]: https://github.com/blog-hjiwon203/now-log/releases/tag/v0.4.0
 [0.3.0]: https://github.com/blog-hjiwon203/now-log/releases/tag/v0.3.0
