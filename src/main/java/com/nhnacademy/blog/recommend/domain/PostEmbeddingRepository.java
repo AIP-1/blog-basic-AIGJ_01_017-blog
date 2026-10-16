@@ -32,6 +32,9 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class PostEmbeddingRepository {
 
+    /** SQL 이름 붙인 매개변수 :postId */
+    private static final String POST_ID = "postId";
+
     private final NamedParameterJdbcTemplate jdbc;
     private final EntityManager entityManager;
 
@@ -47,11 +50,11 @@ public class PostEmbeddingRepository {
                 VALUES (:postId, CAST(:embedding AS vector), :textVersion, now())
                 ON CONFLICT (post_id) DO UPDATE
                     SET embedding = EXCLUDED.embedding, text_version = EXCLUDED.text_version, updated_at = now()
-                """, Map.of("postId", postId, "embedding", toLiteral(embedding), "textVersion", textVersion));
+                """, Map.of(POST_ID, postId, "embedding", toLiteral(embedding), "textVersion", textVersion));
     }
 
     public void delete(long postId) {
-        jdbc.update("DELETE FROM post_embedding WHERE post_id = :postId", Map.of("postId", postId));
+        jdbc.update("DELETE FROM post_embedding WHERE post_id = :postId", Map.of(POST_ID, postId));
     }
 
     public void deleteAll(Collection<Long> postIds) {

@@ -28,6 +28,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class PostQueryService {
 
+    // JPA 조건에 쓰는 엔티티 필드 이름
+    private static final String CATEGORY = "category";
+
     public static final int BLOG_PAGE_SIZE = 10;
     /** 미분류를 고르는 categoryId (contracts/rest-api.md POST). */
     public static final long UNCATEGORIZED = 0;
@@ -80,7 +83,7 @@ public class PostQueryService {
         Long categoryId = post.getCategory().getId();
         Specification<Post> condition = PostSpecifications.listedIn(blog, viewerId, LocalDateTime.now(clock))
                 .and((root, query, cb) -> cb.and(
-                        cb.equal(root.get("category").get("id"), categoryId),
+                        cb.equal(root.get(CATEGORY).get("id"), categoryId),
                         cb.notEqual(root.get("id"), post.getId())));
         // 목록 한 줄에 카테고리 이름이 나가므로 함께 읽는다(응답은 트랜잭션 밖에서 만든다)
         return postRepository.findBy(condition, query -> query.sortBy(LATEST).project("category").limit(size).all());
@@ -99,7 +102,7 @@ public class PostQueryService {
 
     private Specification<Post> inCategory(Blog blog, Long viewerId, long categoryId) {
         if (categoryId == UNCATEGORIZED) {
-            return (root, query, cb) -> cb.isNull(root.get("category"));
+            return (root, query, cb) -> cb.isNull(root.get(CATEGORY));
         }
         // 다른 블로그의 카테고리, 주인이 아닌 사람에게 비공개 카테고리는 없는 것과 같다
         Category category = categoryRepository.findById(categoryId)
@@ -107,7 +110,7 @@ public class PostQueryService {
                 .filter(found -> blog.isOwnedBy(viewerId) || !hiddenCategory(found))
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         return (root, query, cb) -> {
-            var postCategory = root.join("category", JoinType.LEFT);
+            var postCategory = root.join(CATEGORY, JoinType.LEFT);
             return cb.or(cb.equal(postCategory.get("id"), category.getId()),
                     cb.equal(postCategory.get("parent").get("id"), category.getId()));
         };

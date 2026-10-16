@@ -33,11 +33,17 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class CommentService {
 
+    // JPA 조건에 쓰는 엔티티 필드 이름
+    private static final String MEMBER = "member";
+    private static final String CREATED_AT = "createdAt";
+    private static final String DELETED_AT = "deletedAt";
+    private static final String PARENT = "parent";
+
     private final SpamGuard spamGuard;
 
     public static final int PAGE_SIZE = 20;
 
-    private static final Sort WRITTEN_ORDER = Sort.by(Sort.Order.asc("createdAt"), Sort.Order.asc("id"));
+    private static final Sort WRITTEN_ORDER = Sort.by(Sort.Order.asc(CREATED_AT), Sort.Order.asc("id"));
 
     private final CommentRepository commentRepository;
     private final PostRepository postRepository;
@@ -74,25 +80,25 @@ public class CommentService {
             Subquery<Long> liveReply = query.subquery(Long.class);
             Root<Comment> reply = liveReply.from(Comment.class);
             liveReply.select(reply.get("id")).where(
-                    cb.equal(reply.get("parent"), root),
-                    cb.isNull(reply.get("deletedAt")));
+                    cb.equal(reply.get(PARENT), root),
+                    cb.isNull(reply.get(DELETED_AT)));
             return cb.and(
                     cb.equal(root.get("post").get("id"), post.getId()),
-                    cb.isNull(root.get("parent")),
-                    cb.or(cb.isNull(root.get("deletedAt")), cb.exists(liveReply)));
+                    cb.isNull(root.get(PARENT)),
+                    cb.or(cb.isNull(root.get(DELETED_AT)), cb.exists(liveReply)));
         };
         if (cursor != null) {
             condition = condition.and((root, query, cb) -> cb.or(
-                    cb.greaterThan(root.get("createdAt"), cursor.time()),
-                    cb.and(cb.equal(root.get("createdAt"), cursor.time()), cb.greaterThan(root.get("id"), cursor.id()))));
+                    cb.greaterThan(root.get(CREATED_AT), cursor.time()),
+                    cb.and(cb.equal(root.get(CREATED_AT), cursor.time()), cb.greaterThan(root.get("id"), cursor.id()))));
         }
         List<Comment> parents = commentRepository.findBy(condition,
-                query -> query.sortBy(WRITTEN_ORDER).project("member").limit(PAGE_SIZE + 1).all());
+                query -> query.sortBy(WRITTEN_ORDER).project(MEMBER).limit(PAGE_SIZE + 1).all());
         List<Comment> replies = parents.isEmpty() ? List.of() : commentRepository.findBy(
                 (root, query, cb) -> cb.and(
-                        root.get("parent").in(parents),
-                        cb.isNull(root.get("deletedAt"))),
-                query -> query.sortBy(WRITTEN_ORDER).project("member").all());
+                        root.get(PARENT).in(parents),
+                        cb.isNull(root.get(DELETED_AT))),
+                query -> query.sortBy(WRITTEN_ORDER).project(MEMBER).all());
 
         List<CommentView> views = commentViews.threads(parents, replies, blog, viewerId);
         return new CommentPage(views, commentRepository.countByPostIdAndDeletedAtIsNull(post.getId()));
@@ -131,7 +137,7 @@ public class CommentService {
         postRepository.addCommentCount(post.getId(), 1);
         Comment saved = commentRepository.findBy(
                 (root, query, cb) -> cb.equal(root.get("id"), comment.getId()),
-                query -> query.project("member").first()).orElseThrow();
+                query -> query.project(MEMBER).first()).orElseThrow();
         notificationService.commented(saved);
         return commentViews.one(saved, blog, member.id());
     }
