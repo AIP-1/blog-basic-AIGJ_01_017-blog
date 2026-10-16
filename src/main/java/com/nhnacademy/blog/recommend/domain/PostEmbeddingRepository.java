@@ -32,7 +32,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class PostEmbeddingRepository {
 
-    /** SQL 이름 붙인 매개변수 :postId */
+    /** post_id 칸: SQL 이름 붙인 매개변수 :postId이자 엔티티 필드 이름 */
     private static final String POST_ID = "postId";
 
     private final NamedParameterJdbcTemplate jdbc;
@@ -133,7 +133,7 @@ public class PostEmbeddingRepository {
                                           Root<PostEmbedding> embedding, Expression<Double> distance,
                                           Specification<Post> visible, Double minSimilarity, Long excludePostId) {
         List<Predicate> conditions = new ArrayList<>();
-        conditions.add(cb.equal(embedding.get("postId"), post.get("id")));
+        conditions.add(cb.equal(embedding.get(POST_ID), post.get("id")));
         conditions.add(visible.toPredicate(post, criteria, cb));
         if (minSimilarity != null) {
             conditions.add(cb.le(distance, 1 - minSimilarity));

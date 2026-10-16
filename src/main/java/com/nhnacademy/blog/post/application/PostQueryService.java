@@ -86,7 +86,7 @@ public class PostQueryService {
                         cb.equal(root.get(CATEGORY).get("id"), categoryId),
                         cb.notEqual(root.get("id"), post.getId())));
         // 목록 한 줄에 카테고리 이름이 나가므로 함께 읽는다(응답은 트랜잭션 밖에서 만든다)
-        return postRepository.findBy(condition, query -> query.sortBy(LATEST).project("category").limit(size).all());
+        return postRepository.findBy(condition, query -> query.sortBy(LATEST).project(CATEGORY).limit(size).all());
     }
 
     private Specification<Post> taggedWith(Blog blog, String name) {
