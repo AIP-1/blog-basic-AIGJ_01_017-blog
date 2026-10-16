@@ -29,6 +29,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class GuestbookService {
 
+    // JPA 조건에 쓰는 엔티티 필드 이름
+    private static final String MEMBER = "member";
+    private static final String DELETED_AT = "deletedAt";
+    private static final String PARENT = "parent";
+
     private final SpamGuard spamGuard;
 
     public static final int PAGE_SIZE = 20;
@@ -62,20 +67,20 @@ public class GuestbookService {
             Subquery<Long> liveReply = query.subquery(Long.class);
             Root<Guestbook> reply = liveReply.from(Guestbook.class);
             liveReply.select(reply.get("id")).where(
-                    cb.equal(reply.get("parent"), root),
-                    cb.isNull(reply.get("deletedAt")));
+                    cb.equal(reply.get(PARENT), root),
+                    cb.isNull(reply.get(DELETED_AT)));
             return cb.and(
                     cb.equal(root.get("blog").get("id"), blog.getId()),
-                    cb.isNull(root.get("parent")),
-                    cb.or(cb.isNull(root.get("deletedAt")), cb.exists(liveReply)));
+                    cb.isNull(root.get(PARENT)),
+                    cb.or(cb.isNull(root.get(DELETED_AT)), cb.exists(liveReply)));
         };
         Page<Guestbook> parents = guestbookRepository.findBy(condition,
-                query -> query.project("member").page(page.toPageable(NEWEST)));
+                query -> query.project(MEMBER).page(page.toPageable(NEWEST)));
         List<Guestbook> replies = parents.isEmpty() ? List.of() : guestbookRepository.findBy(
                 (root, query, cb) -> cb.and(
-                        root.get("parent").in(parents.getContent()),
-                        cb.isNull(root.get("deletedAt"))),
-                query -> query.sortBy(WRITTEN_ORDER).project("member").all());
+                        root.get(PARENT).in(parents.getContent()),
+                        cb.isNull(root.get(DELETED_AT))),
+                query -> query.sortBy(WRITTEN_ORDER).project(MEMBER).all());
         List<CommentView> views = commentViews.threads(parents.getContent(), replies, blog, viewerId);
         return new PageImpl<>(views, parents.getPageable(), parents.getTotalElements());
     }
@@ -105,7 +110,7 @@ public class GuestbookService {
         guestbookRepository.flush();
         Guestbook written = guestbookRepository.findBy(
                 (root, query, cb) -> cb.equal(root.get("id"), saved.getId()),
-                query -> query.project("member").first()).orElseThrow();
+                query -> query.project(MEMBER).first()).orElseThrow();
         return commentViews.one(written, blog, member.id());
     }
 
@@ -159,7 +164,7 @@ public class GuestbookService {
     private Guestbook visible(Blog blog, Long id, LoginMember member) {
         Guestbook guestbook = guestbookRepository.findBy(
                         (root, query, cb) -> cb.equal(root.get("id"), id),
-                        query -> query.project("member").first())
+                        query -> query.project(MEMBER).first())
                 .filter(found -> !found.isDeleted() && found.getBlog().getId().equals(blog.getId()))
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         requireMember(member);

@@ -28,11 +28,14 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class HomeService {
 
+    // JPA 조건에 쓰는 엔티티 필드 이름
+    private static final String PUBLISHED_AT = "publishedAt";
+
     public static final int LATEST_SIZE = 20;
     public static final int POPULAR_SIZE = 10;
     public static final int TOPIC_SIZE = 6;
 
-    private static final Sort LATEST = Sort.by(Sort.Order.desc("publishedAt"), Sort.Order.desc("id"));
+    private static final Sort LATEST = Sort.by(Sort.Order.desc(PUBLISHED_AT), Sort.Order.desc("id"));
 
     private final PostRepository postRepository;
     private final PopularRanking popularRanking;
@@ -117,8 +120,8 @@ public class HomeService {
     /** 최신순에서 커서 뒤: 더 먼저 발행됐거나, 같은 시각이면 id가 더 작은 글. */
     private static Specification<Post> after(TimeIdCursor cursor) {
         return (root, query, cb) -> cb.or(
-                cb.lessThan(root.get("publishedAt"), cursor.time()),
-                cb.and(cb.equal(root.get("publishedAt"), cursor.time()), cb.lessThan(root.get("id"), cursor.id())));
+                cb.lessThan(root.get(PUBLISHED_AT), cursor.time()),
+                cb.and(cb.equal(root.get(PUBLISHED_AT), cursor.time()), cb.lessThan(root.get("id"), cursor.id())));
     }
 
 }

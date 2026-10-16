@@ -31,6 +31,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AdminReportService {
 
+    /** 오류 응답의 칸 이름(fieldErrors[].field) */
+    private static final String RESULT_FIELD = "result";
+
     public static final int PAGE_SIZE = 20;
 
     private final ReportRepository reportRepository;
@@ -94,7 +97,7 @@ public class AdminReportService {
                 switch (type) {
                     case POST -> moderationService.blindPost(adminId, targetId, sanction);
                     case COMMENT -> moderationService.blindComment(adminId, targetId, sanction);
-                    case BLOG -> throw BusinessException.invalidField("result", "블로그는 이용 제한을 골라 주세요.");
+                    case BLOG -> throw BusinessException.invalidField(RESULT_FIELD, "블로그는 이용 제한을 골라 주세요.");
                 }
             }
             case RESTRICT_BLOG -> {
@@ -102,7 +105,7 @@ public class AdminReportService {
                 Long blogId = switch (type) {
                     case BLOG -> targetId;
                     case POST -> moderationService.post(targetId).getBlog().getId();
-                    case COMMENT -> throw BusinessException.invalidField("result",
+                    case COMMENT -> throw BusinessException.invalidField(RESULT_FIELD,
                             "댓글 신고는 블라인드나 작성자 정지를 골라 주세요.");
                 };
                 moderationService.restrictBlog(adminId, blogId, sanction);
@@ -133,7 +136,7 @@ public class AdminReportService {
         return Arrays.stream(ReportResult.values())
                 .filter(result -> result.name().equals(value))
                 .findFirst()
-                .orElseThrow(() -> BusinessException.invalidField("result",
+                .orElseThrow(() -> BusinessException.invalidField(RESULT_FIELD,
                         "BLIND, RESTRICT_BLOG, SUSPEND, REJECT 중 하나입니다."));
     }
 

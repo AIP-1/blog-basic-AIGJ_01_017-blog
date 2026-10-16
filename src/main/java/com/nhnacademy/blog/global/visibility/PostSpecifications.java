@@ -26,6 +26,10 @@ import org.springframework.data.jpa.domain.Specification;
  */
 public final class PostSpecifications {
 
+    // JPA 조건에 쓰는 엔티티 필드 이름
+    private static final String DELETED_AT = "deletedAt";
+    private static final String STATUS = "status";
+
     private PostSpecifications() {
     }
 
@@ -36,7 +40,7 @@ public final class PostSpecifications {
 
     /** 블로그 주인이 자기 블로그에서 보는 글: 삭제되지 않은 모든 글. */
     public static Specification<Post> ownerView() {
-        return (root, query, cb) -> cb.isNull(root.get("deletedAt"));
+        return (root, query, cb) -> cb.isNull(root.get(DELETED_AT));
     }
 
     /**
@@ -53,8 +57,8 @@ public final class PostSpecifications {
                                      Long viewerId, LocalDateTime now) {
         Predicate inBlog = cb.equal(post.get("blog").get("id"), blog.getId());
         if (blog.isOwnedBy(viewerId)) {
-            return cb.and(inBlog, cb.isNull(post.get("deletedAt")),
-                    cb.equal(post.get("status"), PostStatus.PUBLISHED));
+            return cb.and(inBlog, cb.isNull(post.get(DELETED_AT)),
+                    cb.equal(post.get(STATUS), PostStatus.PUBLISHED));
         }
         return cb.and(inBlog, visibleTo(post, query, cb, viewerId, now));
     }
@@ -69,7 +73,7 @@ public final class PostSpecifications {
         Join<Blog, Member> owner = blog.join("member");
 
         Predicate ownerNotSuspended = cb.or(
-                cb.notEqual(owner.get("status"), MemberStatus.SUSPENDED),
+                cb.notEqual(owner.get(STATUS), MemberStatus.SUSPENDED),
                 cb.and(cb.isNotNull(owner.get("suspendedUntil")),
                         cb.lessThanOrEqualTo(owner.<LocalDateTime>get("suspendedUntil"), now)));
 
@@ -94,10 +98,10 @@ public final class PostSpecifications {
                 cb.or(cb.isTrue(category.get("privateCategory")), cb.isTrue(parent.get("privateCategory"))));
 
         return cb.and(
-                cb.isNull(post.get("deletedAt")),
-                cb.isNull(blog.get("deletedAt")),
+                cb.isNull(post.get(DELETED_AT)),
+                cb.isNull(blog.get(DELETED_AT)),
                 cb.not(cb.exists(hiddenCategory)),
-                cb.equal(post.get("status"), PostStatus.PUBLISHED),
+                cb.equal(post.get(STATUS), PostStatus.PUBLISHED),
                 cb.isFalse(post.get("blinded")),
                 cb.isFalse(blog.get("restricted")),
                 ownerNotSuspended,

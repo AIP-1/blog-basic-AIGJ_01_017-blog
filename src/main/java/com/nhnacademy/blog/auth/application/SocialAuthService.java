@@ -45,6 +45,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class SocialAuthService {
 
+    // Redis에 잠깐 담는 state·표 데이터의 키, 실패 코드
+    private static final String PROVIDER = "provider";
+    private static final String PROVIDER_USER_ID = "providerUserId";
+    private static final String OAUTH_FAILED = "OAUTH_FAILED";
+
     public static final Duration STATE_TTL = Duration.ofMinutes(10);
     static final Duration TICKET_TTL = Duration.ofMinutes(2);
     static final Duration SIGNUP_TTL = Duration.ofMinutes(10);
@@ -92,7 +97,7 @@ public class SocialAuthService {
         return clients.configured(provider).map(client -> {
             String state = randomToken();
             Map<String, String> data = new HashMap<>();
-            data.put("provider", provider.name());
+            data.put(PROVIDER, provider.name());
             data.put("mode", mode.name());
             data.put("origin", origin);
             if (redirect != null) {
@@ -112,7 +117,7 @@ public class SocialAuthService {
      */
     public Optional<String> callback(SocialProvider provider, String code, String state, String error) {
         Optional<Map<String, String>> found = take(STATE_PREFIX, state)
-                .filter(data -> provider.name().equals(data.get("provider")));
+                .filter(data -> provider.name().equals(data.get(PROVIDER)));
         if (found.isEmpty()) {
             return Optional.empty();
         }
@@ -127,12 +132,12 @@ public class SocialAuthService {
             providerUserId = clients.configured(provider).orElseThrow().fetchUserId(code);
         } catch (RuntimeException e) {
             log.warn("{} 회원 번호를 받지 못했습니다: {}", provider, e.toString());
-            return Optional.of(origin + failure(mode, "OAUTH_FAILED"));
+            return Optional.of(origin + failure(mode, OAUTH_FAILED));
         }
         String ticket = randomToken();
         Map<String, String> ticketData = new HashMap<>(data);
         ticketData.put("state", state);
-        ticketData.put("providerUserId", providerUserId);
+        ticketData.put(PROVIDER_USER_ID, providerUserId);
         put(TICKET_PREFIX + ticket, ticketData, TICKET_TTL);
         return Optional.of(origin + "/api/auth/oauth/complete?ticket=" + ticket);
     }
@@ -160,16 +165,16 @@ public class SocialAuthService {
             return Completion.to("/login?error=OAUTH_FAILED");
         }
         Map<String, String> data = found.get();
-        SocialProvider provider = SocialProvider.valueOf(data.get("provider"));
-        String providerUserId = data.get("providerUserId");
+        SocialProvider provider = SocialProvider.valueOf(data.get(PROVIDER));
+        String providerUserId = data.get(PROVIDER_USER_ID);
         Long startedBy = Optional.ofNullable(data.get("memberId")).map(Long::valueOf).orElse(null);
         return switch (OAuthMode.valueOf(data.get("mode"))) {
             case LOGIN -> login(provider, providerUserId, data.get("redirect"));
             case LINK -> startedBy == null || !startedBy.equals(currentMemberId)
-                    ? Completion.to(failure(OAuthMode.LINK, "OAUTH_FAILED"))
+                    ? Completion.to(failure(OAuthMode.LINK, OAUTH_FAILED))
                     : link(startedBy, provider, providerUserId);
             case REAUTH -> startedBy == null || !startedBy.equals(currentMemberId)
-                    ? Completion.to(failure(OAuthMode.REAUTH, "OAUTH_FAILED"))
+                    ? Completion.to(failure(OAuthMode.REAUTH, OAUTH_FAILED))
                     : reauth(startedBy, provider, providerUserId);
         };
     }
@@ -183,8 +188,8 @@ public class SocialAuthService {
     public Member signup(String signupToken, String rawNickname) {
         Map<String, String> data = read(SIGNUP_PREFIX, signupToken)
                 .orElseThrow(() -> new BusinessException(ErrorCode.SOCIAL_SIGNUP_EXPIRED));
-        SocialProvider provider = SocialProvider.valueOf(data.get("provider"));
-        String providerUserId = data.get("providerUserId");
+        SocialProvider provider = SocialProvider.valueOf(data.get(PROVIDER));
+        String providerUserId = data.get(PROVIDER_USER_ID);
         String nickname = rawNickname.trim();
         if (memberRepository.existsByNickname(nickname)) {
             throw new BusinessException(ErrorCode.NICKNAME_TAKEN);
@@ -234,7 +239,7 @@ public class SocialAuthService {
                 providerUserId);
         if (account.isEmpty()) {
             String token = randomToken();
-            put(SIGNUP_PREFIX + token, Map.of("provider", provider.name(), "providerUserId", providerUserId),
+            put(SIGNUP_PREFIX + token, Map.of(PROVIDER, provider.name(), PROVIDER_USER_ID, providerUserId),
                     SIGNUP_TTL);
             return Completion.to("/signup/social?token=" + token + "&provider=" + provider.path());
         }
