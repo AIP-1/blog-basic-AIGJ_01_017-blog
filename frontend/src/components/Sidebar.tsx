@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
-import type { CategoryNode, RecentComment, SidebarModule } from '../api/types'
+import type { CategoryNode, RecentComment, SidebarModule, TagCount } from '../api/types'
 import type { MeState } from '../app/useMe'
 import SubscribeButton from './SubscribeButton'
 
@@ -9,14 +9,17 @@ import SubscribeButton from './SubscribeButton'
  * 사용자가 쓴 글자(이름, 제목, 댓글)는 React가 글자 그대로 넣는다(HTML로 해석하지 않음).
  * 구독 모듈의 버튼은 로그인 상태(me)가 있어야 그리고, 블로그 주인에게는 그리지 않는다(자기 블로그는 구독할 수 없다).
  */
-export default function Sidebar({ modules, me, isOwner = false }: {
+export default function Sidebar({ modules, me, isOwner = false, hideProfile = false }: {
   modules: SidebarModule[]
   me?: MeState
   isOwner?: boolean
+  /** 블로그 첫 화면은 본문 위에 프로필 상자가 따로 있어 사이드바 프로필을 빼서 두 번 나오지 않게 한다 */
+  hideProfile?: boolean
 }) {
+  const shown = hideProfile ? modules.filter((module) => module.type !== 'PROFILE') : modules
   return (
     <aside className="sidebar" aria-label="사이드바">
-      {modules.map((module) => <SidebarItem key={module.type} module={module} me={isOwner ? undefined : me} />)}
+      {shown.map((module) => <SidebarItem key={module.type} module={module} me={isOwner ? undefined : me} />)}
     </aside>
   )
 }
@@ -58,15 +61,7 @@ function SidebarItem({ module, me }: { module: SidebarModule; me?: MeState }) {
           <h4>태그</h4>
           {module.data.length === 0
             ? <p className="small muted">아직 태그가 없습니다.</p>
-            : (
-              <div className="tag-cloud">
-                {module.data.map((tag) => (
-                  <Link key={tag.id} className="chip" to={`/tag/${encodeURIComponent(tag.name)}`}>
-                    {tag.name} <span className="num">{tag.postCount}</span>
-                  </Link>
-                ))}
-              </div>
-            )}
+            : <TagCloud tags={module.data} />}
         </div>
       )
     case 'RECENT_POST':
@@ -154,10 +149,42 @@ function CategoryItem({ category }: { category: CategoryNode }) {
   )
 }
 
+/** 태그가 많으면 몇 줄만 보이고 '태그 모두 보기'로 펼친다. 몇 줄인지는 CSS(.tag-cloud.folded)가 정한다 */
+const FOLD_OVER = 16
+
+function TagCloud({ tags }: { tags: TagCount[] }) {
+  const [open, setOpen] = useState(false)
+  const foldable = tags.length > FOLD_OVER
+  return (
+    <>
+      <div className={foldable && !open ? 'tag-cloud folded' : 'tag-cloud'}>
+        {tags.map((tag) => (
+          <Link key={tag.id} className="chip" to={`/tag/${encodeURIComponent(tag.name)}`}>
+            {tag.name} <span className="num">{tag.postCount}</span>
+          </Link>
+        ))}
+      </div>
+      {foldable && (
+        <button type="button" className="link-btn" aria-expanded={open} onClick={() => setOpen(!open)}>
+          {open ? '태그 접기' : `태그 모두 보기 (${tags.length})`}
+        </button>
+      )}
+    </>
+  )
+}
+
+function commentText(comment: RecentComment): string {
+  if (comment.state === 'SECRET') {
+    return '비밀댓글입니다'
+  }
+  if (comment.state === 'BLINDED') {
+    return '관리자가 숨긴 댓글입니다'
+  }
+  return `${comment.content} · ${comment.authorNickname}`
+}
+
 function CommentItem({ comment }: { comment: RecentComment }) {
-  const text = comment.state === 'SECRET' ? '비밀댓글입니다'
-    : comment.state === 'BLINDED' ? '관리자가 숨긴 댓글입니다'
-      : `${comment.content} · ${comment.authorNickname}`
+  const text = commentText(comment)
   return (
     <li className="small">
       <Link to={`/${comment.postId}#comment-${comment.id}`}>{text}</Link>
