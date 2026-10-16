@@ -1,7 +1,7 @@
 # main에 병합되면 테스트를 커버리지와 함께 돌리고 결과를 기관 SonarQube(s4.java21.net:9000)로 보낸다.
 # 배포(deploy.yml)와 따로 돈다. SonarQube가 꺼져 있어도 배포는 막히지 않는다.
 # 기관 서버는 Community Build라 브랜치·PR 분석이 없다. 그래서 main만 분석한다(PR을 분석하면 main 결과를 덮어씀).
-# 토큰은 Repository secrets의 SONAR_TOKEN에서 온다. 서버 주소는 비밀이 아니라 여기 적는다.
+# 토큰과 서버 주소는 Repository secrets의 SONAR_TOKEN, SONAR_HOST_URL에서 온다.
 name: sonar
 
 on:
@@ -47,5 +47,5 @@ jobs:
       - name: 백엔드 테스트 + SonarQube 분석
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: http://s4.java21.net:9000
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         run: ./mvnw -B verify sonar:sonar
