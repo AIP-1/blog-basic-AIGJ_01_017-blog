@@ -32,6 +32,9 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class PostEmbeddingRepository {
 
+    /** post_id 칸: SQL 이름 붙인 매개변수 :postId이자 엔티티 필드 이름 */
+    private static final String POST_ID = "postId";
+
     private final NamedParameterJdbcTemplate jdbc;
     private final EntityManager entityManager;
 
@@ -47,11 +50,11 @@ public class PostEmbeddingRepository {
                 VALUES (:postId, CAST(:embedding AS vector), :textVersion, now())
                 ON CONFLICT (post_id) DO UPDATE
                     SET embedding = EXCLUDED.embedding, text_version = EXCLUDED.text_version, updated_at = now()
-                """, Map.of("postId", postId, "embedding", toLiteral(embedding), "textVersion", textVersion));
+                """, Map.of(POST_ID, postId, "embedding", toLiteral(embedding), "textVersion", textVersion));
     }
 
     public void delete(long postId) {
-        jdbc.update("DELETE FROM post_embedding WHERE post_id = :postId", Map.of("postId", postId));
+        jdbc.update("DELETE FROM post_embedding WHERE post_id = :postId", Map.of(POST_ID, postId));
     }
 
     public void deleteAll(Collection<Long> postIds) {
@@ -130,7 +133,7 @@ public class PostEmbeddingRepository {
                                           Root<PostEmbedding> embedding, Expression<Double> distance,
                                           Specification<Post> visible, Double minSimilarity, Long excludePostId) {
         List<Predicate> conditions = new ArrayList<>();
-        conditions.add(cb.equal(embedding.get("postId"), post.get("id")));
+        conditions.add(cb.equal(embedding.get(POST_ID), post.get("id")));
         conditions.add(visible.toPredicate(post, criteria, cb));
         if (minSimilarity != null) {
             conditions.add(cb.le(distance, 1 - minSimilarity));

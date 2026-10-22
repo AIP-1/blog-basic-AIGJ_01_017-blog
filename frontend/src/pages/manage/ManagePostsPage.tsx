@@ -12,6 +12,12 @@ const STATUS_LABEL: Record<ManagedPostSummary['status'], string> = {
   SCHEDULED: '예약',
 }
 
+const STATUS_CHIP: Record<ManagedPostSummary['status'], string> = {
+  PUBLISHED: 'chip brand',
+  DRAFT: 'chip',
+  SCHEDULED: 'chip warn',
+}
+
 const VISIBILITY_LABEL: Record<ManagedPostSummary['visibility'], string> = {
   PUBLIC: '공개',
   PRIVATE: '비공개',
@@ -213,7 +219,7 @@ export default function ManagePostsPage({ blogId }: { blogId: number }) {
           )}
         </div>
         {error && <p className="err" role="alert">{error}</p>}
-        {message && <p className="small" role="status">{message}</p>}
+        {message && <output className="small">{message}</output>}
 
         {posts && posts.content.length === 0
           ? <p className="muted">조건에 맞는 글이 없습니다.</p>
@@ -254,7 +260,7 @@ function PostRow({ post, checked, onToggle }: { post: ManagedPostSummary; checke
         {post.blinded && <> <span className="chip danger">숨김: {post.blind?.reasonMessage ?? '관리자 조치'}</span></>}
       </td>
       <td data-label="상태">
-        <span className={post.status === 'PUBLISHED' ? 'chip brand' : post.status === 'SCHEDULED' ? 'chip warn' : 'chip'}>
+        <span className={STATUS_CHIP[post.status]}>
           {STATUS_LABEL[post.status]}
           {post.status === 'SCHEDULED' && post.scheduledAt && ` ${formatDateTime(post.scheduledAt)}`}
         </span>

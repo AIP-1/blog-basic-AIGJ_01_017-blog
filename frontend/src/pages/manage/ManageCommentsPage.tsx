@@ -91,7 +91,7 @@ export default function ManageCommentsPage() {
           <button type="button" role="tab" aria-selected={tab === 'guestbook'}
                   className={tab === 'guestbook' ? 'on' : undefined} onClick={() => changeTab('guestbook')}>방명록</button>
         </div>
-        {message && <p className="ok" role="status">{message}</p>}
+        {message && <output className="ok">{message}</output>}
         {error && <p className="err" role="alert">{error}</p>}
         {result && result.content.length === 0 && (
           <p className="muted">{tab === 'comment' ? '받은 댓글이 없습니다.' : '받은 방명록이 없습니다.'}</p>

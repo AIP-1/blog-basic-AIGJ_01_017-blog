@@ -26,6 +26,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class PostReadService {
 
+    // JPA 조건에 쓰는 엔티티 필드 이름
+    private static final String PUBLISHED_AT = "publishedAt";
+
     private final PostRepository postRepository;
     private final PostVisibilityPolicy postVisibilityPolicy;
     private final PostService postService;
@@ -80,13 +83,13 @@ public class PostReadService {
             return null;
         }
         Specification<Post> side = (root, query, cb) -> newer
-                ? cb.or(cb.greaterThan(root.get("publishedAt"), publishedAt),
-                        cb.and(cb.equal(root.get("publishedAt"), publishedAt), cb.greaterThan(root.get("id"), post.getId())))
-                : cb.or(cb.lessThan(root.get("publishedAt"), publishedAt),
-                        cb.and(cb.equal(root.get("publishedAt"), publishedAt), cb.lessThan(root.get("id"), post.getId())));
+                ? cb.or(cb.greaterThan(root.get(PUBLISHED_AT), publishedAt),
+                        cb.and(cb.equal(root.get(PUBLISHED_AT), publishedAt), cb.greaterThan(root.get("id"), post.getId())))
+                : cb.or(cb.lessThan(root.get(PUBLISHED_AT), publishedAt),
+                        cb.and(cb.equal(root.get(PUBLISHED_AT), publishedAt), cb.lessThan(root.get("id"), post.getId())));
         Sort order = newer
-                ? Sort.by(Sort.Order.asc("publishedAt"), Sort.Order.asc("id"))
-                : Sort.by(Sort.Order.desc("publishedAt"), Sort.Order.desc("id"));
+                ? Sort.by(Sort.Order.asc(PUBLISHED_AT), Sort.Order.asc("id"))
+                : Sort.by(Sort.Order.desc(PUBLISHED_AT), Sort.Order.desc("id"));
         return postRepository.findBy(PostSpecifications.listedIn(blog, viewerId, LocalDateTime.now(clock)).and(side),
                         query -> query.sortBy(order).limit(1).all())
                 .stream()

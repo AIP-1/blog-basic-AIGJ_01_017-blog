@@ -16,12 +16,22 @@ import com.nhnacademy.blog.IntegrationTestSupport;
 import com.nhnacademy.blog.blog.domain.Blog;
 import com.nhnacademy.blog.member.domain.Member;
 import com.nhnacademy.blog.post.application.ScheduledPublisher;
+import com.nhnacademy.blog.post.domain.PostRepository;
 import com.nhnacademy.blog.support.TestBlogs;
 import com.nhnacademy.blog.support.TestMembers;
 import jakarta.servlet.http.Cookie;
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +41,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 글·댓글·카테고리·태그 설정 (스텝 17: T060a CAT-04, T097 CAT-05, T098 TAG-04, T101 CMT-06, T102 CMT-07,
@@ -52,6 +63,12 @@ class PostSettingsIntegrationTest extends IntegrationTestSupport {
 
     @Autowired
     JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    PostRepository postRepository;
+
+    @Autowired
+    TransactionTemplate transactions;
 
     Member owner;
     Member reader;
@@ -308,19 +325,138 @@ class PostSettingsIntegrationTest extends IntegrationTestSupport {
     void schedulerEntryPointPersistsThePublishing() throws Exception {
         // 스케줄러가 부르는 run()을 거쳐도 발행이 저장되어야 한다. run()이 같은 객체의 publishDue()를 부를 때
         // 트랜잭션이 걸리지 않아 저장되지 않던 버그(확인용 서버에서 매분 "예약 발행 1개"가 반복됨)를 막는다
-        LocalDateTime at = LocalDateTime.now().plusHours(1).withNano(0);
-        String response = send(post("/api/posts").header("Idempotency-Key", UUID.randomUUID().toString()),
-                ownerCookies, """
-                        {"title":"예약 글","contentHtml":"<p>본문</p>","visibility":"PUBLIC","status":"SCHEDULED",
-                         "scheduledAt":"%s"}""".formatted(at.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)))
-                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
-        long post = ((Number) JsonPath.read(response, "$.id")).longValue();
-        jdbcTemplate.update("UPDATE post SET scheduled_at = ? WHERE id = ?", LocalDateTime.now().minusMinutes(1), post);
+        long post = scheduledPostDue("예약 글");
 
         scheduledPublisher.run();
 
         assertThat(jdbcTemplate.queryForObject("SELECT status FROM post WHERE id = ?", String.class, post))
                 .isEqualTo("PUBLISHED");
+    }
+
+    @Test
+    void twoAppsPublishingAtOnceReportOnePublishing() throws Exception {
+        // 앱 두 대의 예약 발행 작업이 같은 때 돈다. 같은 글을 발행했다고 답하는 쪽(= 발행 이벤트를 보내는 쪽)은 하나여야 한다
+        long post = scheduledPostDue("동시 발행");
+        CyclicBarrier start = new CyclicBarrier(2);
+        Callable<Integer> app = () -> {
+            start.await();
+            return scheduledPublisher.publishDue();
+        };
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            List<Future<Integer>> results = pool.invokeAll(List.of(app, app));
+            assertThat(results.get(0).get() + results.get(1).get()).isEqualTo(1);
+        } finally {
+            pool.shutdown();
+        }
+        assertThat(jdbcTemplate.queryForObject("SELECT status FROM post WHERE id = ?", String.class, post))
+                .isEqualTo("PUBLISHED");
+        assertThat(scheduledPublisher.publishDue()).isZero();
+    }
+
+    @Test
+    void publishingAfterTheListWasReadKeepsTheAuthorsChanges() throws Exception {
+        // 작업이 번호를 읽은 뒤 발행하기 전에 글쓴이가 손댄 경우
+        long edited = scheduledPostDue("예약 글");
+        long cancelled = scheduledPostDue("거둘 글");
+        LocalDateTime now = LocalDateTime.now();
+        assertThat(postRepository.findDueScheduledIds(now)).contains(edited, cancelled);
+        LocalDateTime updatedAt = jdbcTemplate.queryForObject("SELECT updated_at FROM post WHERE id = ?",
+                LocalDateTime.class, edited);
+
+        // 그사이 제목을 고친 글, 예약을 거둔 글
+        jdbcTemplate.update("UPDATE post SET title = '고친 제목' WHERE id = ?", edited);
+        save(cancelled, """
+                {"title":"거둘 글","contentHtml":"<p>본문</p>","visibility":"PUBLIC","status":"DRAFT"}""")
+                .andExpect(status().isOk());
+
+        // 고친 글은 발행되지만 제목은 고친 그대로, 수정 시각도 그대로(작성자가 고친 것이 아니다). 거둔 글은 발행하지 않는다
+        assertThat(publishIfDue(edited, now)).isEqualTo(1);
+        assertThat(publishIfDue(cancelled, now)).isZero();
+        assertThat(jdbcTemplate.queryForMap("SELECT title, status, updated_at FROM post WHERE id = ?", edited))
+                .containsEntry("title", "고친 제목").containsEntry("status", "PUBLISHED")
+                .containsEntry("updated_at", Timestamp.valueOf(updatedAt));
+        assertThat(jdbcTemplate.queryForObject("SELECT status FROM post WHERE id = ?", String.class, cancelled))
+                .isEqualTo("DRAFT");
+        // 이미 발행한 글을 다시 발행하지 않는다
+        assertThat(publishIfDue(edited, now)).isZero();
+    }
+
+    @Test
+    void cancellingWhilePublishingWaitsAndSeesThePublishedPost() throws Exception {
+        // 작업이 발행 UPDATE를 하고 아직 커밋하기 전에 글쓴이가 예약을 거둔다. 거두기가 옛 상태(SCHEDULED)를 읽고 판단하면
+        // 발행을 DRAFT로 덮어쓴다. 거두기는 작업이 끝날 때까지 기다렸다가 발행된 글을 보고 거절되어야 한다
+        long post = scheduledPostDue("발행 직전 거두기");
+
+        int status = whilePublishing(post, () -> save(post, """
+                {"title":"발행 직전 거두기","contentHtml":"<p>본문</p>","visibility":"PUBLIC","status":"DRAFT"}"""));
+
+        assertThat(status).isEqualTo(400);
+        assertThat(jdbcTemplate.queryForMap("SELECT status, published_at FROM post WHERE id = ?", post))
+                .containsEntry("status", "PUBLISHED").doesNotContainEntry("published_at", null);
+    }
+
+    @Test
+    void bulkVisibilityChangeWhilePublishingKeepsThePublishing() throws Exception {
+        // 관리 화면의 일괄 공개 범위 변경도 글을 읽고 고쳐 저장한다. 작업의 발행을 덮어쓰지 않고, 발행된 글의 공개 범위를 바꾼다
+        long post = scheduledPostDue("발행 직전 일괄 변경");
+
+        int status = whilePublishing(post, () -> send(patch("/api/manage/posts"), ownerCookies,
+                "{\"postIds\":[" + post + "],\"visibility\":\"PRIVATE\"}"));
+
+        assertThat(status).isEqualTo(200);
+        assertThat(jdbcTemplate.queryForMap("SELECT status, visibility FROM post WHERE id = ?", post))
+                .containsEntry("status", "PUBLISHED").containsEntry("visibility", "PRIVATE");
+    }
+
+    /**
+     * 예약 발행 작업이 이 글을 발행 UPDATE하고 커밋하기 전에 request를 보내고, request가 잠금을 기다리기 시작하면 작업을 커밋한다.
+     * request의 응답 상태를 돌려준다.
+     */
+    private int whilePublishing(long post, Callable<ResultActions> request) throws Exception {
+        CountDownLatch published = new CountDownLatch(1);
+        CountDownLatch commit = new CountDownLatch(1);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            Future<Integer> job = pool.submit(() -> transactions.execute(tx -> {
+                int changed = postRepository.publishIfDue(post, LocalDateTime.now());
+                published.countDown();
+                await(commit);
+                return changed;
+            }));
+            assertThat(published.await(10, TimeUnit.SECONDS)).isTrue();
+
+            Future<Integer> response = pool.submit(() -> request.call().andReturn().getResponse().getStatus());
+            waitUntilSomeoneWaitsForALock();
+            commit.countDown();
+
+            assertThat(job.get(10, TimeUnit.SECONDS)).isEqualTo(1);
+            return response.get(10, TimeUnit.SECONDS);
+        } finally {
+            commit.countDown();
+            pool.shutdown();
+        }
+    }
+
+    private static void await(CountDownLatch latch) {
+        try {
+            latch.await(10, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    /** 다른 연결이 행 잠금을 기다리기 시작할 때까지(최대 10초). */
+    private void waitUntilSomeoneWaitsForALock() throws InterruptedException {
+        for (int i = 0; i < 100; i++) {
+            Integer waiting = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM pg_stat_activity WHERE wait_event_type = 'Lock'", Integer.class);
+            if (waiting != null && waiting > 0) {
+                return;
+            }
+            Thread.sleep(100);
+        }
+        throw new AssertionError("잠금을 기다리는 요청이 없습니다");
     }
 
     // ---------- OWN-05 같은 카테고리 다른 글 ----------
@@ -378,6 +514,25 @@ class PostSettingsIntegrationTest extends IntegrationTestSupport {
     private long tagId(String name) {
         return jdbcTemplate.queryForObject("SELECT id FROM tag WHERE blog_id = ? AND name = ?", Long.class,
                 blog.getId(), name);
+    }
+
+    /** 예약 글을 만들고 예약 시각을 1분 전으로 당긴다(예약은 지금 뒤로만 받으므로). */
+    private long scheduledPostDue(String title) throws Exception {
+        LocalDateTime at = LocalDateTime.now().plusHours(1).withNano(0);
+        String response = send(post("/api/posts").header("Idempotency-Key", UUID.randomUUID().toString()),
+                ownerCookies, """
+                        {"title":"%s","contentHtml":"<p>본문</p>","visibility":"PUBLIC","status":"SCHEDULED",
+                         "scheduledAt":"%s"}""".formatted(title, at.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        long post = ((Number) JsonPath.read(response, "$.id")).longValue();
+        jdbcTemplate.update("UPDATE post SET scheduled_at = ? WHERE id = ?", LocalDateTime.now().minusMinutes(1), post);
+        return post;
+    }
+
+    /** 발행 UPDATE는 트랜잭션 안에서만 돈다(작업에서는 publishDue의 트랜잭션). */
+    private int publishIfDue(long post, LocalDateTime now) {
+        Integer changed = transactions.execute(tx -> postRepository.publishIfDue(post, now));
+        return changed;
     }
 
     private ResultActions save(long post, String body) throws Exception {

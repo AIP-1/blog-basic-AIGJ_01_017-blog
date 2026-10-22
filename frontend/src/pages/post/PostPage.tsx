@@ -209,9 +209,9 @@ function Article({ post, me, onDelete, onVisibilityChange, actionError, onCommen
         )}
       </div>
       {adminBlinded && (
-        <p className="err" role="status">
+        <output className="err">
           이 글을 숨겼습니다. 이제 작성자 말고는 볼 수 없습니다. 해제는 서비스 관리의 관리 이력이나 회원 상세에서 "해제"로 합니다.
-        </p>
+        </output>
       )}
       <nav className="row between small" aria-label="이전·다음 글">
         <span>이전 글 {post.prev ? <Link to={`/${post.prev.id}`}>{post.prev.title}</Link> : <span className="muted">없음</span>}</span>

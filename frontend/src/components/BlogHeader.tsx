@@ -33,7 +33,7 @@ export default function BlogHeader({ blog, me }: { blog: Blog; me: MeState }) {
   return (
     <>
     <header className="site-head">
-      <a className="logo" href={platformUrl('/')} title="플랫폼 홈">blog</a>
+      <a className="logo" href={platformUrl('/')} title="now-log 홈">now-log</a>
       <Link className="blog-name" to="/">{blog.name}</Link>
       <nav className="nav-links"><Link to="/">홈</Link><Link to="/guestbook">방명록</Link></nav>
       <span className="grow" />

@@ -21,8 +21,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class ModerationLogService {
 
+    // JPA 조건에 쓰는 엔티티 필드 이름
+    private static final String CREATED_AT = "createdAt";
+
     public static final int PAGE_SIZE = 20;
-    private static final Sort NEWEST = Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"));
+    private static final Sort NEWEST = Sort.by(Sort.Order.desc(CREATED_AT), Sort.Order.desc("id"));
 
     private final ModerationLogRepository moderationLogRepository;
     private final ModerationTargets moderationTargets;
@@ -55,11 +58,11 @@ public class ModerationLogService {
         }
         if (fromDate != null) {
             condition = condition.and((root, query, cb) ->
-                    cb.greaterThanOrEqualTo(root.get("createdAt"), fromDate.atStartOfDay()));
+                    cb.greaterThanOrEqualTo(root.get(CREATED_AT), fromDate.atStartOfDay()));
         }
         if (toDate != null) {
             condition = condition.and((root, query, cb) ->
-                    cb.lessThan(root.get("createdAt"), toDate.plusDays(1).atStartOfDay()));
+                    cb.lessThan(root.get(CREATED_AT), toDate.plusDays(1).atStartOfDay()));
         }
         return moderationLogRepository.findAll(condition, page.toPageable(NEWEST)).map(this::line);
     }

@@ -98,7 +98,7 @@ export default function RankingPage() {
               : '최근 7일 블로그 점수(조회·공감·댓글·새 구독자), 1시간마다 갱신'}
           </p>
         )}
-        {notice && <p className="box small" role="status">{notice}</p>}
+        {notice && <output className="box small">{notice}</output>}
         {error && <p className="err" role="alert">{error}</p>}
         {tab === 'posts' && (
           posts.length === 0

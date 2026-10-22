@@ -76,6 +76,7 @@ public class SpaForwardController {
             "/" + FIRST + "/{s2:[^.]+}/{s3:[^.]+}",
             "/" + FIRST + "/{s2:[^.]+}/{s3:[^.]+}/{s4:[^.]+}",
             "/" + FIRST + "/{s2:[^.]+}/{s3:[^.]+}/{s4:[^.]+}/{s5:[^.]+}",
+            // 경로 변수(s1~s5, name)는 칸 모양(점 없음 = 정적 파일이 아님)을 정하려고 둔 것이고, 값은 아래에서 경로 전체로 읽는다
             // 태그 이름에는 점이 들어갈 수 있다(node.js). 확장자로 보지 않는다 (TAG-02)
             "/{s1:@[^.]+}/tag/{name:.+}"})
     public ResponseEntity<Resource> page(HttpServletRequest request, HttpServletResponse response) {
@@ -165,22 +166,28 @@ public class SpaForwardController {
                 .append(meta("og:url", blogAddressResolver.blogUrl(request, blog, "/" + preview.postId())));
         if (preview.description() != null && !preview.description().isBlank()) {
             tags.append(meta("og:description", preview.description()))
-                    .append("<meta name=\"description\" content=\"").append(HtmlUtils.htmlEscape(preview.description()))
-                    .append("\">\n");
+                    .append(namedMeta("description", preview.description()));
         }
         if (preview.imagePath() != null) {
             // 이미지는 블로그 경로가 아니라 /uploads/…에서 나간다(스텝 21)
             tags.append(meta("og:image", blogAddressResolver.platformUrl(request, preview.imagePath())));
         }
-        tags.append("<meta name=\"twitter:card\" content=\"")
-                .append(preview.imagePath() != null ? "summary_large_image" : "summary").append("\">\n");
+        tags.append(namedMeta("twitter:card", preview.imagePath() != null ? "summary_large_image" : "summary"));
         String titleTag = "<title>" + HtmlUtils.htmlEscape(title) + "</title>";
         return html.replaceFirst("<title>[^<]*</title>", Matcher.quoteReplacement(titleTag))
                 .replace("</head>", tags + "</head>");
     }
 
     private static String meta(String property, String content) {
-        return "<meta property=\"" + property + "\" content=\"" + HtmlUtils.htmlEscape(content) + "\">\n";
+        return metaTag("property", property, content);
+    }
+
+    private static String namedMeta(String name, String content) {
+        return metaTag("name", name, content);
+    }
+
+    private static String metaTag(String attribute, String key, String content) {
+        return "<meta " + attribute + "=\"" + key + "\" content=\"" + HtmlUtils.htmlEscape(content) + "\">\n";
     }
 
     private String indexHtml() {

@@ -38,7 +38,7 @@ export default function AdminReportsPage() {
     <main className="page stack">
       <h1 style={{ fontSize: 20 }}>신고 처리</h1>
       <p className="small muted">처리 대기 신고를 대상별로 묶어 신고 수가 많은 순으로 보여 줍니다.</p>
-      {message && <p className="ok small" role="status">{message}</p>}
+      {message && <output className="ok small">{message}</output>}
       {error && <p className="err" role="alert">{error}</p>}
       {result && result.content.length === 0 && <p className="small muted">처리할 신고가 없습니다.</p>}
       {result && result.content.length > 0 && (

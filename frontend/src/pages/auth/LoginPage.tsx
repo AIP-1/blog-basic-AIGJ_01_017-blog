@@ -75,7 +75,7 @@ export default function LoginPage() {
           </label>
           <label className="row small">
             <input type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} />
-            로그인 상태 유지
+            <span>로그인 상태 유지</span>
           </label>
           <span className="hint" style={{ marginTop: -8 }}>
             {rememberMe

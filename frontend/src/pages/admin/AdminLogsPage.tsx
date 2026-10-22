@@ -199,7 +199,7 @@ function NoticeAdmin() {
                   onChange={(event) => setContent(event.target.value)} />
         {errors.content && <p className="err">{errors.content}</p>}
         {errors.form && <p className="err" role="alert">{errors.form}</p>}
-        {message && <p className="ok small" role="status">{message}</p>}
+        {message && <output className="ok small">{message}</output>}
         <div className="row">
           <button className="btn primary" type="submit" disabled={!title.trim() || !content.trim()}>
             {editing === null ? '등록' : '수정'}

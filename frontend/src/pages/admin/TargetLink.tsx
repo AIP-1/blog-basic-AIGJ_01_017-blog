@@ -9,11 +9,9 @@ export default function TargetLink({ target, showType = true }: { target: Modera
   const text = showType ? `${targetTypeLabel(target.type)} · ${name}` : name
   return (
     <span className="row nowrap small">
-      {link === null
-        ? <span className="muted">{text}{target.exists ? '' : ' (삭제됨)'}</span>
-        : link.external
-          ? <a href={link.href} target="_blank" rel="noreferrer">{text}</a>
-          : <Link to={link.href}>{text}</Link>}
+      {link === null && <span className="muted">{text}{target.exists ? '' : ' (삭제됨)'}</span>}
+      {link?.external === true && <a href={link.href} target="_blank" rel="noreferrer">{text}</a>}
+      {link?.external === false && <Link to={link.href}>{text}</Link>}
       {target.sanctioned && <span className="chip danger">조치 중</span>}
     </span>
   )

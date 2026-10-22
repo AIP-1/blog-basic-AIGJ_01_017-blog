@@ -20,7 +20,7 @@ export default function ShareButtons({ postId, title }: { postId: number; title:
       {shareLinks(url, title).map((link) => (
         <a key={link.name} className="btn" href={link.href} target="_blank" rel="noopener noreferrer">{link.name}</a>
       ))}
-      {message && <span className="muted" role="status">{message}</span>}
+      {message && <output className="muted inline">{message}</output>}
     </span>
   )
 }

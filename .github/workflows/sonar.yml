@@ -1,0 +1,51 @@
+# main에 병합되면 테스트를 커버리지와 함께 돌리고 결과를 기관 SonarQube(s4.java21.net:9000)로 보낸다.
+# 배포(deploy.yml)와 따로 돈다. SonarQube가 꺼져 있어도 배포는 막히지 않는다.
+# 기관 서버는 Community Build라 브랜치·PR 분석이 없다. 그래서 main만 분석한다(PR을 분석하면 main 결과를 덮어씀).
+# 토큰과 서버 주소는 Repository secrets의 SONAR_TOKEN, SONAR_HOST_URL에서 온다.
+name: sonar
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: sonar
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    # 제출용 원본 저장소·포크에는 토큰이 없다
+    if: github.repository == 'blog-hjiwon203/now-log'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # 새 코드와 옛 코드를 git 기록(blame)으로 가른다. 얕게 받으면 전부 새 코드로 보인다
+          fetch-depth: 0
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      # 앱 이미지(Dockerfile)의 node:24와 맞춘다
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 프론트 테스트 + 커버리지
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run test -- --coverage
+          # lcov의 파일 경로는 frontend/ 기준이다. SonarQube는 저장소 루트 기준으로 찾으므로 앞에 붙인다
+          sed -i 's#^SF:#SF:frontend/#' coverage/lcov.info
+
+      # verify: 테스트(Testcontainers) → JaCoCo 보고서. 이어서 sonar:sonar가 소스·커버리지를 보낸다
+      - name: 백엔드 테스트 + SonarQube 분석
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        run: ./mvnw -B verify sonar:sonar

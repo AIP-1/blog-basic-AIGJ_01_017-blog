@@ -69,7 +69,7 @@ export default function BookmarksPage() {
         <MeTabs />
         <section className="section">
           <h2>저장한 글</h2>
-          {notice && <p className="box small" role="status">{notice}</p>}
+          {notice && <output className="box small">{notice}</output>}
           {error && <p className="err" role="alert">{error}</p>}
           {loaded && items.length === 0 && (
             <p className="muted">저장한 글이 없습니다. 글 아래 저장 버튼으로 나중에 읽을 글을 모아 보세요.</p>

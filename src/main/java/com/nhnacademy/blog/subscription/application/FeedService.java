@@ -22,9 +22,12 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class FeedService {
 
+    // JPA 조건에 쓰는 엔티티 필드 이름
+    private static final String PUBLISHED_AT = "publishedAt";
+
     public static final int PAGE_SIZE = 20;
 
-    private static final Sort LATEST = Sort.by(Sort.Order.desc("publishedAt"), Sort.Order.desc("id"));
+    private static final Sort LATEST = Sort.by(Sort.Order.desc(PUBLISHED_AT), Sort.Order.desc("id"));
 
     private final PostRepository postRepository;
     private final Clock clock;
@@ -49,8 +52,8 @@ public class FeedService {
                 .and(subscribed);
         if (cursor != null) {
             condition = condition.and((root, query, cb) -> cb.or(
-                    cb.lessThan(root.get("publishedAt"), cursor.time()),
-                    cb.and(cb.equal(root.get("publishedAt"), cursor.time()), cb.lessThan(root.get("id"), cursor.id()))));
+                    cb.lessThan(root.get(PUBLISHED_AT), cursor.time()),
+                    cb.and(cb.equal(root.get(PUBLISHED_AT), cursor.time()), cb.lessThan(root.get("id"), cursor.id()))));
         }
         return postRepository.findBy(condition,
                 query -> query.sortBy(LATEST).project("blog", "category").limit(PAGE_SIZE + 1).all());

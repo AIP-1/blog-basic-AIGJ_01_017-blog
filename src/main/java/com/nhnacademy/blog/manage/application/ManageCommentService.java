@@ -25,6 +25,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class ManageCommentService {
 
+    // JPA 조건에 쓰는 엔티티 필드 이름
+    private static final String DELETED_AT = "deletedAt";
+    private static final String MEMBER = "member";
+
     public static final int PAGE_SIZE = 20;
 
     private static final Sort NEWEST = Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"));
@@ -46,11 +50,11 @@ public class ManageCommentService {
         Long ownerId = blog.getMember().getId();
         Specification<Comment> condition = (root, query, cb) -> cb.and(
                 cb.equal(root.get("post").get("blog").get("id"), blog.getId()),
-                cb.isNull(root.get("post").get("deletedAt")),
-                cb.isNull(root.get("deletedAt")),
-                cb.notEqual(root.get("member").get("id"), ownerId));
+                cb.isNull(root.get("post").get(DELETED_AT)),
+                cb.isNull(root.get(DELETED_AT)),
+                cb.notEqual(root.get(MEMBER).get("id"), ownerId));
         Page<Comment> found = commentRepository.findBy(condition,
-                query -> query.project("member", "post").page(page.toPageable(NEWEST)));
+                query -> query.project(MEMBER, "post").page(page.toPageable(NEWEST)));
         List<CommentView> views = commentViews.flat(found.getContent(), blog, ownerId);
         List<ReceivedComment> rows = new ArrayList<>();
         for (int i = 0; i < views.size(); i++) {
@@ -66,10 +70,10 @@ public class ManageCommentService {
         Long ownerId = blog.getMember().getId();
         Specification<Guestbook> condition = (root, query, cb) -> cb.and(
                 cb.equal(root.get("blog").get("id"), blog.getId()),
-                cb.isNull(root.get("deletedAt")),
-                cb.notEqual(root.get("member").get("id"), ownerId));
+                cb.isNull(root.get(DELETED_AT)),
+                cb.notEqual(root.get(MEMBER).get("id"), ownerId));
         Page<Guestbook> found = guestbookRepository.findBy(condition,
-                query -> query.project("member").page(page.toPageable(NEWEST)));
+                query -> query.project(MEMBER).page(page.toPageable(NEWEST)));
         List<ReceivedComment> rows = commentViews.flat(found.getContent(), blog, ownerId).stream()
                 .map(view -> new ReceivedComment(view, null, null))
                 .toList();

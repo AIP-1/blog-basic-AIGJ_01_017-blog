@@ -16,6 +16,18 @@ type Tab = 'post' | 'blog'
 type Result = { tab: 'post'; page: PageResponse<PostSummary> } | { tab: 'blog'; page: PageResponse<FoundBlog> }
   | { tab: 'semantic'; page: PageResponse<SemanticHit> }
 
+/** 탭(글자로 찾기의 글·블로그, 의미로 찾기)마다 같은 API를 부르고 응답 모양을 탭 이름과 묶는다 */
+function fetchResult(tab: Result['tab'], query: URLSearchParams): Promise<Result> {
+  const path = `/api/search?${query}`
+  if (tab === 'semantic') {
+    return api<PageResponse<SemanticHit>>(path, { allowAnonymous: true }).then((page) => ({ tab, page }))
+  }
+  if (tab === 'post') {
+    return api<PageResponse<PostSummary>>(path, { allowAnonymous: true }).then((page) => ({ tab, page }))
+  }
+  return api<PageResponse<FoundBlog>>(path, { allowAnonymous: true }).then((page) => ({ tab, page }))
+}
+
 /**
  * 전체 검색 (SRCH-02, 목업 search). 플랫폼 머리글의 검색창으로 온다. 글·블로그 탭은 같은 API를 type만 바꿔 부르고,
  * 검색어·탭·페이지는 주소(?q=&type=&page=)에 둬서 새로고침·공유해도 같다. 서버가 남에게 보이는 글·블로그만 준다.
@@ -39,14 +51,7 @@ export default function GlobalSearchPage() {
       return
     }
     const query = searchQuery({ q, type: tab, page: String(page) }, mode)
-    const loading = mode === 'semantic'
-      ? api<PageResponse<SemanticHit>>(`/api/search?${query}`, { allowAnonymous: true })
-        .then((found): Result => ({ tab: 'semantic', page: found }))
-      : tab === 'post'
-        ? api<PageResponse<PostSummary>>(`/api/search?${query}`, { allowAnonymous: true })
-          .then((found): Result => ({ tab: 'post', page: found }))
-        : api<PageResponse<FoundBlog>>(`/api/search?${query}`, { allowAnonymous: true })
-          .then((found): Result => ({ tab: 'blog', page: found }))
+    const loading = fetchResult(mode === 'semantic' ? 'semantic' : tab, query)
     loading
       .then((found) => {
         if (active) {
@@ -86,7 +91,8 @@ export default function GlobalSearchPage() {
     }
   }
 
-  const shown = result && result.tab === (mode === 'semantic' ? 'semantic' : tab) ? result : null
+  const shownTab = mode === 'semantic' ? 'semantic' : tab
+  const shown = result?.tab === shownTab ? result : null
 
   return (
     <div className="app">

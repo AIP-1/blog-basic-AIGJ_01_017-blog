@@ -8,7 +8,6 @@ import com.nhnacademy.blog.global.visibility.BlogVisibilityPolicy;
 import com.nhnacademy.blog.global.web.DateTimes;
 import com.nhnacademy.blog.home.application.HomeService;
 import com.nhnacademy.blog.home.application.PopularPosts;
-import com.nhnacademy.blog.post.domain.Post;
 import com.nhnacademy.blog.ranking.domain.BlogScore;
 import com.nhnacademy.blog.subscription.domain.SubscriptionRepository;
 import java.time.Clock;

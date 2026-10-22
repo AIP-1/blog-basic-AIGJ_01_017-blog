@@ -14,9 +14,13 @@ import org.springframework.transaction.annotation.Transactional;
  * 새벽 통계 작업 (T082 MNG-03, T079 조회 기록 정리). 매일 0시 10분(서버 시간대 Asia/Seoul)에
  * ① 지난 7일을 다시 모으고(blog_daily_stat, blog_referrer_daily) ② 누적 방문자를 다시 계산하고
  * ③ 7일 지난 방문 기록·조회 기록을 지운다.
+ * 정각이 아니라 10분인 이유: 자정 직전에 들어온 요청은 날짜를 어제로 정하고도 커밋이 자정을 넘길 수 있다. 정각에 모으면 그 행이 아직
+ * 보이지 않아 "어제 방문자"가 하루 동안 모자란다(다음 새벽에 7일을 다시 모으며 고쳐지긴 한다). 정각에 몰리는 다른 서버 작업도 비킨다.
  * 어제 하루만 모으지 않고 7일을 다시 모으는 이유: 서버가 꺼져 있던 날이 있어도 다음 새벽에 저절로 채워지게(모으기는 지우고 다시 넣어
  * 몇 번 돌려도 같다). 방문 기록을 7일 남기므로 7일 안은 언제든 다시 모을 수 있다.
  * 스케줄러가 부르는 run()에 트랜잭션을 건다(같은 객체 안 호출은 프록시를 거치지 않는다, 학습 문서 52).
+ * 앱이 여러 대면 같은 시각에 모두 돈다. 지우고 다시 넣는 일이 겹치면 UNIQUE 위반으로 한쪽이 실패하므로, advisory lock을 잡은
+ * 앱 하나만 모으고 나머지는 건너뛴다. 한 앱이 끝난 뒤 다른 앱이 또 모으는 것은 결과가 같아 괜찮다(겹치지만 않으면 된다).
  */
 @Component
 public class StatsAggregator {
@@ -35,6 +39,10 @@ public class StatsAggregator {
     @Scheduled(cron = "${app.scheduling.stats-cron:0 10 0 * * *}")
     @Transactional
     public void run() {
+        if (!blogStatsRepository.tryLockAggregation()) {
+            log.info("통계 모으기 건너뜀: 다른 앱이 모으는 중");
+            return;
+        }
         LocalDate today = LocalDate.now(clock);
         for (int back = KEEP_DAYS; back >= 1; back--) {
             blogStatsRepository.aggregateDay(today.minusDays(back));

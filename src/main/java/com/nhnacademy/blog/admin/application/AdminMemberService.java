@@ -27,6 +27,12 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AdminMemberService {
 
+    // JPA 조건에 쓰는 엔티티 필드 이름
+    private static final String STATUS = "status";
+    private static final String SUSPENDED_UNTIL = "suspendedUntil";
+    /** 오류 응답의 칸 이름(fieldErrors[].field). 값은 같지만 위 STATUS(엔티티 필드)와 뜻이 다르다 */
+    private static final String STATUS_FIELD = "status";
+
     public static final int PAGE_SIZE = 20;
     private static final Sort NEWEST = Sort.by(Sort.Order.desc("id"));
 
@@ -91,14 +97,14 @@ public class AdminMemberService {
     private static Specification<Member> status(String value, LocalDateTime now) {
         return switch (value) {
             case "ACTIVE" -> (root, query, cb) -> cb.or(
-                    cb.equal(root.get("status"), MemberStatus.ACTIVE),
-                    cb.and(cb.equal(root.get("status"), MemberStatus.SUSPENDED),
-                            cb.lessThanOrEqualTo(root.get("suspendedUntil"), now)));
+                    cb.equal(root.get(STATUS), MemberStatus.ACTIVE),
+                    cb.and(cb.equal(root.get(STATUS), MemberStatus.SUSPENDED),
+                            cb.lessThanOrEqualTo(root.get(SUSPENDED_UNTIL), now)));
             case "SUSPENDED" -> (root, query, cb) -> cb.and(
-                    cb.equal(root.get("status"), MemberStatus.SUSPENDED),
-                    cb.or(cb.isNull(root.get("suspendedUntil")), cb.greaterThan(root.get("suspendedUntil"), now)));
-            case "WITHDRAWN" -> (root, query, cb) -> cb.equal(root.get("status"), MemberStatus.WITHDRAWN);
-            default -> throw BusinessException.invalidField("status", "ACTIVE, SUSPENDED, WITHDRAWN 중 하나입니다.");
+                    cb.equal(root.get(STATUS), MemberStatus.SUSPENDED),
+                    cb.or(cb.isNull(root.get(SUSPENDED_UNTIL)), cb.greaterThan(root.get(SUSPENDED_UNTIL), now)));
+            case "WITHDRAWN" -> (root, query, cb) -> cb.equal(root.get(STATUS), MemberStatus.WITHDRAWN);
+            default -> throw BusinessException.invalidField(STATUS_FIELD, "ACTIVE, SUSPENDED, WITHDRAWN 중 하나입니다.");
         };
     }
 

@@ -16,5 +16,11 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
+    // npm run test -- --coverage 일 때만 잰다. SonarQube가 coverage/lcov.info를 읽는다
+    coverage: {
+      provider: 'v8',
+      reporter: ['text-summary', 'lcov'],
+      include: ['src/**/*.{ts,tsx}'],
+    },
   },
 })

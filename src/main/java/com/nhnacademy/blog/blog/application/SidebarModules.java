@@ -22,6 +22,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class SidebarModules {
 
+    /** 오류 응답의 칸 이름(fieldErrors[].field) */
+    private static final String MODULES_FIELD = "modules";
+
     private final BlogSidebarModuleRepository repository;
 
     public SidebarModules(BlogSidebarModuleRepository repository) {
@@ -73,19 +76,19 @@ public class SidebarModules {
         return Arrays.stream(SidebarModuleType.values())
                 .filter(type -> type.name().equals(value))
                 .findFirst()
-                .orElseThrow(() -> BusinessException.invalidField("modules", "알 수 없는 모듈입니다: " + value));
+                .orElseThrow(() -> BusinessException.invalidField(MODULES_FIELD, "알 수 없는 모듈입니다: " + value));
     }
 
     private static void validate(List<Slot> requested) {
         Set<SidebarModuleType> types = requested.stream().map(Slot::type)
                 .collect(Collectors.toCollection(() -> EnumSet.noneOf(SidebarModuleType.class)));
         if (requested.size() != SidebarModuleType.values().length || types.size() != requested.size()) {
-            throw BusinessException.invalidField("modules", "모듈 8종을 한 번씩 보내 주세요.");
+            throw BusinessException.invalidField(MODULES_FIELD, "모듈 8종을 한 번씩 보내 주세요.");
         }
         boolean profileHidden = requested.stream()
                 .anyMatch(slot -> slot.type() == SidebarModuleType.PROFILE && !slot.visible());
         if (profileHidden) {
-            throw BusinessException.invalidField("modules", "블로그 홈 바로가기는 숨길 수 없습니다.");
+            throw BusinessException.invalidField(MODULES_FIELD, "블로그 홈 바로가기는 숨길 수 없습니다.");
         }
     }
 

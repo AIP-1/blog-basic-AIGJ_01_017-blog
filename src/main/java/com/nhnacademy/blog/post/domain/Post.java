@@ -190,20 +190,6 @@ public class Post extends BaseTimeEntity {
         }
     }
 
-    /**
-     * 정한 시각이 되어 발행한다 (POST-13, contracts 글 저장 본문 status 표). 그 예약 시각이 처음 발행 시각이고
-     * (작업이 몇십 초 늦게 돌아도 글 목록 순서는 정한 시각대로), 공개 범위는 공개로 바뀐다.
-     */
-    public void publishScheduled() {
-        if (status != PostStatus.SCHEDULED) {
-            return;
-        }
-        this.status = PostStatus.PUBLISHED;
-        this.publishedAt = scheduledAt;
-        this.visibility = Visibility.PUBLIC;
-        this.scheduledAt = null;
-    }
-
     /** 댓글 허용·막기 (CMT-07). 막아도 이미 달린 댓글은 그대로 보인다. */
     public void changeCommentAllowed(boolean commentAllowed) {
         this.commentAllowed = commentAllowed;

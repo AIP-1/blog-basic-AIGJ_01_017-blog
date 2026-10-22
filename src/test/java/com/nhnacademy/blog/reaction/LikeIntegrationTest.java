@@ -9,7 +9,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.nhnacademy.blog.IntegrationTestSupport;
 import com.nhnacademy.blog.blog.domain.Blog;
-import com.nhnacademy.blog.member.domain.Member;
 import com.nhnacademy.blog.post.domain.Post;
 import com.nhnacademy.blog.post.domain.Visibility;
 import com.nhnacademy.blog.support.TestBlogs;
@@ -25,7 +24,6 @@ import java.util.concurrent.Future;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;

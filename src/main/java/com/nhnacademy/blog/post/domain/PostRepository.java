@@ -106,6 +106,31 @@ public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificat
             + " and p.deletedAt is null")
     List<Long> findPublishedIds();
 
+    /** 예약 시각이 지금이거나 지난 예약 글 번호 (POST-13). 지운 글은 뺀다. 발행은 글마다 publishIfDue로 한다. */
+    @Query("select p.id from Post p where p.status = com.nhnacademy.blog.post.domain.PostStatus.SCHEDULED"
+            + " and p.deletedAt is null and p.scheduledAt <= :now")
+    List<Long> findDueScheduledIds(@Param("now") LocalDateTime now);
+
+    /**
+     * 예약 글을 발행한다 (POST-13). 예약 시각이 처음 발행 시각이고(작업이 늦게 돌아도 목록 순서는 정한 시각대로), 공개 범위는 공개.
+     * 읽은 엔티티를 저장하지 않고 조건을 단 UPDATE 한 문장으로 바꾼다. 바뀐 행 수(0 또는 1)를 돌려준다.
+     * <ul>
+     *   <li>앱 여러 대가 같은 글을 동시에 발행하려 해도 1을 받는 쪽은 하나다. 먼저 UPDATE한 쪽이 행을 잠그고, 뒤쪽은 기다렸다가
+     *       커밋된 행으로 WHERE를 다시 보는데(PostgreSQL READ COMMITTED) 이미 PUBLISHED라 0이 된다.</li>
+     *   <li>번호를 읽은 뒤 글쓴이가 예약을 거두거나 시각을 미루거나 글을 지웠으면 조건에 맞지 않아 0이다.</li>
+     *   <li>발행에 필요한 칸만 바꾸므로, 그사이 글쓴이가 고친 제목·본문을 덮어쓰지 않는다.</li>
+     * </ul>
+     * 작성자가 고친 것이 아니라서 updated_at은 그대로 둔다(글 머리에 "수정 …"이 붙지 않게).
+     * SET의 오른쪽은 바꾸기 전 행 값을 보므로 publishedAt에는 지우기 전의 scheduledAt이 들어간다.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update Post p set p.status = com.nhnacademy.blog.post.domain.PostStatus.PUBLISHED,"
+            + " p.publishedAt = p.scheduledAt, p.visibility = com.nhnacademy.blog.post.domain.Visibility.PUBLIC,"
+            + " p.scheduledAt = null"
+            + " where p.id = :id and p.status = com.nhnacademy.blog.post.domain.PostStatus.SCHEDULED"
+            + " and p.deletedAt is null and p.scheduledAt <= :now")
+    int publishIfDue(@Param("id") Long id, @Param("now") LocalDateTime now);
+
     /** 글에 단 태그 이름, 가나다순. 추천 임베딩에 넣는 글자를 만들 때 쓴다(트랜잭션 밖에서도 읽힘, T120). */
     @Query("select t.name from PostTag pt join pt.tag t where pt.post.id = :postId order by t.name")
     List<String> findTagNames(@Param("postId") Long postId);
@@ -125,7 +150,8 @@ public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificat
     int findLikeCount(@Param("postId") Long postId);
 
     /**
-     * 글 행을 잠근다(SELECT ... FOR UPDATE). 공감·댓글·조회 기록을 넣고 수를 고치는 트랜잭션이 맨 먼저 부른다.
+     * 글 행을 잠근다(SELECT ... FOR UPDATE). 공감·댓글·조회 기록을 넣고 수를 고치는 트랜잭션, 글을 고치는 요청(PostService)이
+     * 맨 먼저 부른다.
      * 같은 글을 고치는 트랜잭션을 차례로 줄 세워, 뒤 요청이 앞 요청이 커밋한 기록과 수를 보고 판단하게 한다.
      * (MySQL에서는 공감·댓글 INSERT의 외래 키 공유 잠금과 수 UPDATE의 배타 잠금이 엇갈려 데드락도 났다. PostgreSQL의 외래 키 확인은
      * FOR KEY SHARE라 키가 아닌 칸의 UPDATE와 부딪히지 않지만, 줄 세우기는 그대로 필요하다.)
@@ -133,5 +159,14 @@ public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificat
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select p.id from Post p where p.id = :postId")
     Optional<Long> lockById(@Param("postId") Long postId);
+
+    /**
+     * 여러 글 행을 잠근다(일괄 공개 범위 변경, 블로그 이동). 글을 읽고 고쳐 저장하기 전에 불러 예약 발행 작업과 줄을 세운다
+     * (PostService.lockForChange와 같은 이유). 번호 순서로 잠가, 같은 글들을 다른 순서로 잠그는 두 요청이 서로를 기다리는
+     * 데드락을 막는다. 빈 목록으로 부르지 않는다.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select p.id from Post p where p.id in :ids order by p.id")
+    List<Long> lockAllById(@Param("ids") Collection<Long> ids);
 
 }

@@ -77,6 +77,12 @@ export interface PostSummary {
 }
 
 /** 내 글 관리 목록 한 줄 (GET /api/manage/posts). PostSummary에 주인용 칸이 더 붙는다 */
+/** 글 상태: 발행, 임시저장, 예약 */
+export type PostStatus = 'PUBLISHED' | 'DRAFT' | 'SCHEDULED'
+
+/** 공개 범위: 공개, 비공개, 구독자 공개 */
+export type PostVisibility = 'PUBLIC' | 'PRIVATE' | 'SUBSCRIBERS'
+
 export interface ManagedPostSummary {
   id: number
   title: string
@@ -88,8 +94,8 @@ export interface ManagedPostSummary {
   likeCount: number
   commentCount: number
   viewCount: number
-  status: 'PUBLISHED' | 'DRAFT' | 'SCHEDULED'
-  visibility: 'PUBLIC' | 'PRIVATE' | 'SUBSCRIBERS'
+  status: PostStatus
+  visibility: PostVisibility
   scheduledAt: string | null
   blinded: boolean
   blind: { reason: string; reasonMessage: string } | null
@@ -182,7 +188,7 @@ export interface ManagedPost {
   tagNames: string[]
   categoryId: number | null
   topic: string | null
-  visibility: 'PUBLIC' | 'PRIVATE' | 'SUBSCRIBERS'
+  visibility: PostVisibility
   status: 'DRAFT' | 'PUBLISHED' | 'SCHEDULED'
   publishedAt: string | null
   updatedAt: string | null
@@ -217,7 +223,7 @@ export interface PostDetail {
   category: { id: number; name: string } | null
   tags: string[]
   topic: string | null
-  visibility: 'PUBLIC' | 'PRIVATE' | 'SUBSCRIBERS'
+  visibility: PostVisibility
   publishedAt: string | null
   updatedAt: string | null
   viewCount: number
