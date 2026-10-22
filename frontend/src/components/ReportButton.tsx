@@ -57,7 +57,7 @@ export default function ReportButton({ targetType, targetId, me, small = false }
   }
 
   if (message) {
-    return <span className="small muted" role="status">{message}</span>
+    return <output className="small muted inline">{message}</output>
   }
   return (
     <span className="stack" style={{ gap: 6 }}>

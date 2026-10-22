@@ -100,7 +100,7 @@ export default function CategoriesPage() {
       <section className="section" style={{ maxWidth: 560 }}>
         <h2>카테고리</h2>
         {error && <p className="err" role="alert">{error}</p>}
-        {message && <p className="ok" role="status">{message}</p>}
+        {message && <output className="ok">{message}</output>}
         {tree.categories.length === 0 && <p className="small muted">아직 카테고리가 없습니다.</p>}
         {tree.categories.length > 1 && (
           <span className="hint">⋮⋮를 잡고 끌어서 다른 카테고리 위에 놓으면 그 위로, "하위로 넣기"에 놓으면 하위가 됩니다.</span>
@@ -242,9 +242,7 @@ function TagSection() {
                           <button className="btn small" type="button" onClick={() => setEditing(null)}>취소</button>
                         </form>
                       )
-                      : tag.publishedCount > 0
-                        ? <Link to={`/tag/${encodeURIComponent(tag.name)}`}>{tag.name}</Link>
-                        : <span>{tag.name}</span>}
+                      : <TagName tag={tag} />}
                   </td>
                   <td className="num">
                     {tag.postCount}
@@ -388,4 +386,11 @@ function categoryError(error: unknown): string {
     return '카테고리는 2단계까지입니다. 하위가 있는 카테고리는 다른 카테고리의 하위로 넣을 수 없습니다.'
   }
   return fieldMessages(error).name ?? fieldMessages(error).order ?? errorMessage(error)
+}
+
+/** 발행한 글이 있는 태그만 태그별 목록으로 이어진다 */
+function TagName({ tag }: { tag: { name: string; publishedCount: number } }) {
+  return tag.publishedCount > 0
+    ? <Link to={`/tag/${encodeURIComponent(tag.name)}`}>{tag.name}</Link>
+    : <span>{tag.name}</span>
 }

@@ -31,7 +31,7 @@ export default function PlatformHeader({ me }: { me: MeState }) {
   return (
     <>
     <header className="site-head">
-      <Link className="logo" to="/">blog</Link>
+      <Link className="logo" to="/">now-log</Link>
       <nav className="nav-links">
         <Link to="/">홈</Link>
         {me.status === 'member' && <Link to="/feed">구독 피드</Link>}

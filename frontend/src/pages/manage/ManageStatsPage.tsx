@@ -47,8 +47,8 @@ export default function ManageStatsPage() {
           </div>
         </div>
         {points && (
-          <div role="img" aria-label="방문자 막대 그래프"
-               style={{ display: 'grid', gridTemplateColumns: `repeat(${points.length}, 1fr)`, gap: 4, alignItems: 'end', height: 180 }}>
+          <figure aria-label="방문자 막대 그래프"
+               style={{ margin: 0, display: 'grid', gridTemplateColumns: `repeat(${points.length}, 1fr)`, gap: 4, alignItems: 'end', height: 180 }}>
             {points.map((point, i) => (
               <div key={point.date} className="stack" style={{ gap: 2, alignItems: 'end', height: '100%', alignContent: 'end' }}
                    title={`${point.date} 방문자 ${point.visitorCount} · 조회 ${point.viewCount}`}>
@@ -57,7 +57,7 @@ export default function ManageStatsPage() {
                 <span className="small num muted" style={{ textAlign: 'center', fontSize: 11 }}>{bucketLabel(point.date, unit)}</span>
               </div>
             ))}
-          </div>
+          </figure>
         )}
       </section>
       <section className="section" aria-label="인기 글">

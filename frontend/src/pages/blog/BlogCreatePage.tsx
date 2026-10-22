@@ -79,10 +79,10 @@ export default function BlogCreatePage() {
       <main className="page narrow">
         <h2 style={{ fontSize: 22 }}>블로그 만들기</h2>
         {fromWrite && (
-          <div className="box" role="status">
+          <output className="box">
             <b>글을 쓰려면 먼저 블로그가 필요합니다</b>
             <span className="small">블로그를 만들면 바로 글쓰기 화면으로 이어집니다.</span>
-          </div>
+          </output>
         )}
         <form className="stack" style={{ gap: 14 }} onSubmit={submit} noValidate>
           <div className="field">

@@ -11,7 +11,7 @@ export function PostCard({ post }: { post: PostSummary }) {
     <Link className="card" to={`/${post.id}`}>
       {post.thumbnailUrl
         ? <img className="thumb" src={post.thumbnailUrl} alt="" loading="lazy" />
-        : <span className="thumb placeholder" aria-hidden="true">{post.title.slice(0, 1)}</span>}
+        : <span className="thumb placeholder" aria-hidden="true">{post.summary}</span>}
       <h3>{post.title}</h3>
       <span className="small muted">{formatDate(post.publishedAt)} · 공감 {post.likeCount} · 댓글 {post.commentCount}</span>
     </Link>

@@ -41,9 +41,7 @@ export default function ManageSpamPage() {
       setWords((previous) => [...previous, added])
       setWord('')
     } catch (caught) {
-      setWordError(caught instanceof ApiError && caught.code === 'NAME_TAKEN' ? '이미 있는 금칙어입니다.'
-        : caught instanceof ApiError && caught.code === 'BANNED_WORD_LIMIT' ? '금칙어는 100개까지 등록할 수 있습니다.'
-          : fieldMessages(caught).word ?? errorMessage(caught))
+      setWordError(wordErrorMessage(caught))
     }
   }
 
@@ -102,4 +100,14 @@ export default function ManageSpamPage() {
       </section>
     </main>
   )
+}
+
+function wordErrorMessage(caught: unknown): string {
+  if (caught instanceof ApiError && caught.code === 'NAME_TAKEN') {
+    return '이미 있는 금칙어입니다.'
+  }
+  if (caught instanceof ApiError && caught.code === 'BANNED_WORD_LIMIT') {
+    return '금칙어는 100개까지 등록할 수 있습니다.'
+  }
+  return fieldMessages(caught).word ?? errorMessage(caught)
 }

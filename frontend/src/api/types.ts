@@ -77,6 +77,9 @@ export interface PostSummary {
 }
 
 /** 내 글 관리 목록 한 줄 (GET /api/manage/posts). PostSummary에 주인용 칸이 더 붙는다 */
+/** 글 상태: 발행, 임시저장, 예약 */
+export type PostStatus = 'PUBLISHED' | 'DRAFT' | 'SCHEDULED'
+
 export interface ManagedPostSummary {
   id: number
   title: string
@@ -88,7 +91,7 @@ export interface ManagedPostSummary {
   likeCount: number
   commentCount: number
   viewCount: number
-  status: 'PUBLISHED' | 'DRAFT' | 'SCHEDULED'
+  status: PostStatus
   visibility: 'PUBLIC' | 'PRIVATE' | 'SUBSCRIBERS'
   scheduledAt: string | null
   blinded: boolean

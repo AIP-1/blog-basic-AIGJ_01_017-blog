@@ -24,8 +24,8 @@ export default function HomePage() {
 
   async function load(cursor: string | null) {
     try {
-      const page = await api<CursorResponse<PostSummary>>(
-        `/api/home/latest${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`, { allowAnonymous: true })
+      const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''
+      const page = await api<CursorResponse<PostSummary>>(`/api/home/latest${query}`, { allowAnonymous: true })
       setPosts((previous) => (cursor ? [...previous, ...page.content] : page.content))
       setNextCursor(page.nextCursor)
       setError(null)
@@ -57,8 +57,10 @@ export default function HomePage() {
       <PlatformHeader me={me} />
       <main className="page">
         <NoticeBand />
-        <PopularSection />
-        <BloggerSection />
+        <div className="home-pair">
+          <PopularSection />
+          <BloggerSection />
+        </div>
         <TopicSection />
         <section className="section">
           <h2>최신 글</h2>
@@ -185,7 +187,7 @@ function TopicSection() {
       <div className="grid-cards">
         {posts?.map((post) => (
           <a key={post.id} className="card" href={blogUrl(post.blog.address, `/${post.id}`)}>
-            {post.thumbnailUrl ? <img className="thumb" src={post.thumbnailUrl} alt="" loading="lazy" /> : <div className="thumb" />}
+            {post.thumbnailUrl ? <img className="thumb" src={post.thumbnailUrl} alt="" loading="lazy" /> : <div className="thumb placeholder" aria-hidden="true">{post.summary}</div>}
             <h3>{post.title}</h3>
             <span className="small muted">{post.blog.name} · 공감 {post.likeCount}</span>
           </a>
