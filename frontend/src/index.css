@@ -39,7 +39,6 @@ h1, h2, h3 { text-wrap: balance; line-height: 1.3; margin: 0; letter-spacing: -0
 button, input, select, textarea { font: inherit; color: inherit; letter-spacing: inherit; }
 button:disabled { opacity: 0.5; cursor: not-allowed; }
 :focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
-output { display: block; }
 .app { max-width: 1120px; margin: 0 auto; background: var(--surface); min-height: 100vh; box-shadow: 0 0 0 1px var(--line); }
 
 /* 머리글: 스크롤해도 위에 붙어 있다. 뒤 내용이 살짝 비친다 */

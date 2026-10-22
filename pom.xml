@@ -46,6 +46,8 @@
         <sonar.test.inclusions>src/test/java/**,frontend/src/**/*.test.ts,frontend/src/**/*.test.tsx</sonar.test.inclusions>
         <!-- static/은 프론트 빌드 결과물(git 제외)이라 분석하지 않는다 -->
         <sonar.exclusions>src/main/resources/static/**,frontend/src/**/*.test.ts,frontend/src/**/*.test.tsx</sonar.exclusions>
+        <!-- 화면 컴포넌트(.tsx)는 단위 테스트 대신 화면 캡처·quickstart 시나리오로 확인한다. 이슈 검사는 받고 커버리지 계산에서만 뺀다 -->
+        <sonar.coverage.exclusions>frontend/src/**/*.tsx</sonar.coverage.exclusions>
         <sonar.coverage.jacoco.xmlReportPaths>${project.build.directory}/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
         <sonar.javascript.lcov.reportPaths>frontend/coverage/lcov.info</sonar.javascript.lcov.reportPaths>
     </properties>

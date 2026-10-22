@@ -3,14 +3,14 @@ import { Link, useNavigate, useParams } from 'react-router'
 import { ApiError, api, newIdempotencyKey } from '../../api/client'
 import { type FieldMessages, errorMessage, fieldMessages } from '../../api/errors'
 import type {
-  CategoryTree, ManagedPost, ManagedPostSummary, PageResponse, PostSaved, Topic, UploadedImage,
+  CategoryTree, ManagedPost, ManagedPostSummary, PageResponse, PostSaved, PostVisibility, Topic, UploadedImage,
 } from '../../api/types'
 import Editor from '../../components/editor/Editor'
 import TagInput from '../../components/editor/TagInput'
 import { AUTO_SAVE_MS, autoSaveNeeded } from '../../components/editor/draft'
 import { effectiveThumbnail, thumbnailChoices } from '../../components/editor/thumbnail'
 
-type Visibility = 'PUBLIC' | 'PRIVATE' | 'SUBSCRIBERS'
+type Visibility = PostVisibility
 // LOADING: 고칠 글을 불러오는 중. 불러오기 전에 빈 입력값을 자동 저장해 글을 덮지 않도록 저장하지 않는다
 type PostState = 'NEW' | 'LOADING' | ManagedPost['status']
 
