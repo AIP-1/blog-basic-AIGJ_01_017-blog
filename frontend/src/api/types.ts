@@ -80,6 +80,9 @@ export interface PostSummary {
 /** 글 상태: 발행, 임시저장, 예약 */
 export type PostStatus = 'PUBLISHED' | 'DRAFT' | 'SCHEDULED'
 
+/** 공개 범위: 공개, 비공개, 구독자 공개 */
+export type PostVisibility = 'PUBLIC' | 'PRIVATE' | 'SUBSCRIBERS'
+
 export interface ManagedPostSummary {
   id: number
   title: string
@@ -92,7 +95,7 @@ export interface ManagedPostSummary {
   commentCount: number
   viewCount: number
   status: PostStatus
-  visibility: 'PUBLIC' | 'PRIVATE' | 'SUBSCRIBERS'
+  visibility: PostVisibility
   scheduledAt: string | null
   blinded: boolean
   blind: { reason: string; reasonMessage: string } | null
@@ -185,7 +188,7 @@ export interface ManagedPost {
   tagNames: string[]
   categoryId: number | null
   topic: string | null
-  visibility: 'PUBLIC' | 'PRIVATE' | 'SUBSCRIBERS'
+  visibility: PostVisibility
   status: 'DRAFT' | 'PUBLISHED' | 'SCHEDULED'
   publishedAt: string | null
   updatedAt: string | null
@@ -220,7 +223,7 @@ export interface PostDetail {
   category: { id: number; name: string } | null
   tags: string[]
   topic: string | null
-  visibility: 'PUBLIC' | 'PRIVATE' | 'SUBSCRIBERS'
+  visibility: PostVisibility
   publishedAt: string | null
   updatedAt: string | null
   viewCount: number
