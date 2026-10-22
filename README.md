@@ -14,6 +14,23 @@
 | **글 상세** | **휴대폰** |
 | ![글 상세: 본문과 사이드바](docs/screenshots/post.jpg) | <img src="docs/screenshots/mobile.jpg" alt="휴대폰 화면의 블로그 첫 화면" width="260"> |
 
+## 프로젝트 상태
+
+2026-10-08에 시작해 2026-10-22 v1.1.0으로 마무리했다. 운영 사이트는 계속 돌고, main에 병합하면 지금처럼 배포된다.
+
+- 작업 목록(blog-docs `tasks.md`) 163개를 모두 끝냈다. 스텝 1~25, 2주 범위와 백로그 포함
+- 테스트: 백엔드 417개, 프론트 86개. SonarQube 품질 게이트 통과, 보안·신뢰성·유지보수성 A
+- 운영: 앱 두 대 롤링 배포, 배포 중 요청 362번 모두 200
+
+### 남은 일
+
+| 할 일 | 내용 |
+| --- | --- |
+| 카테고리 순서를 키보드로 바꾸기 | 지금은 끌어 놓기로만 바꾼다. 위·아래 버튼을 더하면 SonarQube S6848 두 곳도 없어진다 |
+| 백엔드 SonarQube 지적 43개 | record 패턴(S6878), 테스트의 `Thread.sleep`(S2925), 예약어 이름(S6213) 등 작은 정리. 게이트에는 영향 없음 |
+| 목록 요약에 사진 출처가 섞임 | 본문 맨 앞이 사진 설명이면 요약도 "사진: …"으로 시작한다. 요약을 만들 때 `figcaption`을 뺄지 정해야 한다 |
+| 화면 컴포넌트 테스트 | 화면(`.tsx`)은 캡처와 quickstart 시나리오로만 확인했고 커버리지 계산에서 뺐다. 필요하면 Testing Library로 시작 |
+
 ## 주요 기능
 
 | 영역 | 기능 |
@@ -33,13 +50,14 @@
 
 | 버전 | 날짜 | 내용 |
 | --- | --- | --- |
+| [v1.1.0](https://github.com/blog-hjiwon203/now-log/releases/tag/v1.1.0) | 2026-10-22 | 화면 다듬기(글꼴·여백·한글 줄바꿈), SonarQube 프론트 지적 정리 |
 | [v1.0.0](https://github.com/blog-hjiwon203/now-log/releases/tag/v1.0.0) | 2026-10-16 | 앱 두 대 롤링 배포(무중단), 예약 발행 경합 고침, SonarQube 분석 |
 | [v0.4.0](https://github.com/blog-hjiwon203/now-log/releases/tag/v0.4.0) | 2026-10-14 | 의미 검색, DB를 PostgreSQL + pgvector 하나로 |
 | [v0.3.0](https://github.com/blog-hjiwon203/now-log/releases/tag/v0.3.0) | 2026-10-12 | 첫 운영 배포, 블로그 주소를 `/@주소` 경로로, 소셜 로그인·통계·랭킹 |
 | [v0.2.0](https://github.com/blog-hjiwon203/now-log/releases/tag/v0.2.0) | 2026-10-11 | 임시저장, 구독·알림, 방명록, 블로그 꾸미기, 서비스 관리 |
 | [v0.1.0](https://github.com/blog-hjiwon203/now-log/releases/tag/v0.1.0) | 2026-10-10 | 가입 → 블로그 → 글 → 홈 → 댓글 한 바퀴 |
 
-- 버전은 [유의적 버전](https://semver.org/lang/ko/)을 따르고, v1.0.0부터 `pom.xml`의 `<version>`과 태그를 맞춘다. 지금 main은 다음 개발 버전 `1.1.0-SNAPSHOT`이다.
+- 버전은 [유의적 버전](https://semver.org/lang/ko/)을 따르고, v1.0.0부터 `pom.xml`의 `<version>`과 태그를 맞춘다. 지금 main은 마지막 릴리스 `1.1.0`이다. 다시 개발을 시작하면 먼저 `pom.xml`을 다음 개발 버전(`1.2.0-SNAPSHOT`)으로 올린다.
 - PR을 만들 때 `CHANGELOG.md`의 `[Unreleased]`에 한 줄씩 더한다. 릴리스할 때 그 절에 버전과 날짜를 붙이고 `pom.xml`을 같은 버전으로 바꾼 PR을 병합한 뒤, 그 병합 커밋에 태그(`git tag -a vX.Y.Z`)를 달고 GitHub Release를 만든다.
 - 배포는 태그가 아니라 main 병합 때 일어난다. 태그는 이미 배포된 시점에 붙이는 이름표다.
 
